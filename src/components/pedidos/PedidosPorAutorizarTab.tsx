@@ -113,9 +113,44 @@ export function PedidosPorAutorizarTab({ autoOpenPedidoId }: PedidosPorAutorizar
   const [expandedHistorial, setExpandedHistorial] = useState<string | null>(null);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [selectedMobileIndex, setSelectedMobileIndex] = useState(0);
+  const [showBajoCostoDialog, setShowBajoCostoDialog] = useState(false);
+  const [motivoBajoCosto, setMotivoBajoCosto] = useState("");
+  const [motivoBajoCostoRapido, setMotivoBajoCostoRapido] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
+
+  // Helper to detect if order has below-cost items
+  const tieneProductosBajoCosto = (pedido: PedidoPorAutorizar | null) => {
+    if (!pedido) return false;
+    return pedido.pedidos_detalles.some(d => {
+      const price = editingPrices[d.id] ?? d.precio_unitario;
+      const costo = d.productos?.ultimo_costo_compra || d.productos?.costo_promedio_ponderado || 0;
+      return costo > 0 && price < costo;
+    });
+  };
+
+  const handleAutorizarClick = () => {
+    if (!selectedPedido) return;
+    if (tieneProductosBajoCosto(selectedPedido)) {
+      setShowBajoCostoDialog(true);
+      setMotivoBajoCosto("");
+      setMotivoBajoCostoRapido("");
+    } else {
+      authorizeMutation.mutate(selectedPedido.id);
+    }
+  };
+
+  const handleConfirmBajoCosto = () => {
+    if (!selectedPedido) return;
+    const motivo = motivoBajoCostoRapido === "Otro" ? motivoBajoCosto : (motivoBajoCostoRapido || motivoBajoCosto);
+    authorizeMutation.mutate(selectedPedido.id, { onSuccess: undefined } as any);
+    // We pass the motivo through a ref-like approach
+    pendingMotivoBajoCosto.current = motivo;
+    authorizeMutation.mutate(selectedPedido.id);
+  };
+
+  const pendingMotivoBajoCosto = { current: "" } as { current: string };
 
   // Fetch pedidos por autorizar
   const { data: pedidos, isLoading } = useQuery({
