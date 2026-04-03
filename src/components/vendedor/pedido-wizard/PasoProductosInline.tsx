@@ -208,6 +208,9 @@ function FilaProducto({
             </span>
           )}
         </div>
+        {enCarrito && cantidad > producto.stock_actual && (
+          <p className="text-xs text-destructive">⚠️ Solo hay {producto.stock_actual} en stock, estás pidiendo {cantidad}</p>
+        )}
 
         {excedeLimite && linea && linea.autorizacionStatus !== 'aprobado' && (
           <div className="flex items-center gap-2 pt-1">
