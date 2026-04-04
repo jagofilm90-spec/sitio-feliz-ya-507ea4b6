@@ -3,13 +3,14 @@ import { Button } from "@/components/ui/button";
 import { getDisplayName } from "@/lib/productUtils";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { 
-  AlertTriangle, 
-  Calculator, 
-  CheckCircle2, 
-  Pencil, 
-  TrendingDown, 
-  XCircle 
+import {
+  AlertTriangle,
+  Calculator,
+  CheckCircle2,
+  History,
+  Pencil,
+  TrendingDown,
+  XCircle
 } from "lucide-react";
 
 interface ProductoConAnalisis {
@@ -46,6 +47,7 @@ interface ProductoPrecioCardMobileProps {
   producto: ProductoConAnalisis;
   onSimular: (producto: ProductoConAnalisis) => void;
   onEditar: (producto: ProductoConAnalisis) => void;
+  onHistorial?: (producto: ProductoConAnalisis) => void;
 }
 
 const formatCurrency = (amount: number) => {
@@ -88,10 +90,11 @@ const getEstadoBadge = (estado: 'perdida' | 'critico' | 'bajo' | 'saludable') =>
   }
 };
 
-export const ProductoPrecioCardMobile = ({ 
-  producto, 
-  onSimular, 
-  onEditar 
+export const ProductoPrecioCardMobile = ({
+  producto,
+  onSimular,
+  onEditar,
+  onHistorial
 }: ProductoPrecioCardMobileProps) => {
   const { analisis } = producto;
   
@@ -176,24 +179,17 @@ export const ProductoPrecioCardMobile = ({
 
         {/* Acciones */}
         <div className="flex gap-2 pt-1">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1 h-8 text-xs"
-            onClick={() => onSimular(producto)}
-          >
-            <Calculator className="h-3.5 w-3.5 mr-1" />
-            Simular
+          <Button variant="outline" size="sm" className="flex-1 h-8 text-xs" onClick={() => onSimular(producto)}>
+            <Calculator className="h-3.5 w-3.5 mr-1" /> Simular
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1 h-8 text-xs"
-            onClick={() => onEditar(producto)}
-          >
-            <Pencil className="h-3.5 w-3.5 mr-1" />
-            Editar
+          <Button variant="outline" size="sm" className="flex-1 h-8 text-xs" onClick={() => onEditar(producto)}>
+            <Pencil className="h-3.5 w-3.5 mr-1" /> Editar
           </Button>
+          {onHistorial && (
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => onHistorial(producto)}>
+              <History className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

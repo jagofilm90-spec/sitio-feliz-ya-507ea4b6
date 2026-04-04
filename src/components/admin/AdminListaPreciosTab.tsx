@@ -34,7 +34,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { 
-  Loader2, Search, TrendingUp, TrendingDown, DollarSign, 
+  Loader2, Search, TrendingUp, TrendingDown, DollarSign, Download,
   AlertTriangle, CheckCircle2, XCircle, Calculator, Pencil,
   ArrowUpDown, ChevronDown, ChevronUp, Check, Clock, ListChecks, History, Minus
 } from "lucide-react";
@@ -47,6 +47,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Separator } from "@/components/ui/separator";
 import { analizarMargen, simularPrecioPropuesto, calcularPrecioSugerido, redondear } from "@/lib/calculos";
 import { ProductoPrecioCardMobile } from "./ProductoPrecioCardMobile";
+import { exportToExcel } from "@/utils/exportData";
 
 interface Producto {
   id: string;
@@ -416,6 +417,17 @@ export const AdminListaPreciosTab = () => {
   // Get unique categories
   const categorias = [...new Set(productos?.map((p) => p.categoria).filter(Boolean))] as string[];
 
+  // Group by category for table rendering
+  const productosPorCategoria = useMemo(() => {
+    const grupos: Record<string, typeof filteredProductos> = {};
+    for (const p of filteredProductos) {
+      const cat = p.categoria || "Sin categoría";
+      if (!grupos[cat]) grupos[cat] = [];
+      grupos[cat].push(p);
+    }
+    return Object.entries(grupos).sort(([a], [b]) => a.localeCompare(b));
+  }, [filteredProductos]);
+
   // Filter and sort
   const filteredProductos = useMemo(() => {
     let result = productosConAnalisis.filter((p) => {
@@ -470,6 +482,30 @@ export const AdminListaPreciosTab = () => {
     const saludable = productosConAnalisis.filter(p => p.analisis.estado_margen === 'saludable').length;
     return { total, perdida, critico, bajo, saludable };
   }, [productosConAnalisis]);
+
+  const handleExportExcel = () => {
+    const columns = [
+      { key: "codigo", header: "Código" },
+      { key: "displayName", header: "Producto" },
+      { key: "categoria", header: "Categoría" },
+      { key: "costo", header: "Costo" },
+      { key: "precio_venta", header: "Precio" },
+      { key: "descuento_maximo", header: "Desc. Máx" },
+      { key: "margen", header: "Margen %" },
+      { key: "iva_ieps", header: "IVA/IEPS" },
+    ];
+    const data = filteredProductos.map(p => ({
+      codigo: p.codigo,
+      displayName: getDisplayName(p),
+      categoria: p.categoria || "",
+      costo: p.analisis.costo_referencia || 0,
+      precio_venta: p.precio_venta,
+      descuento_maximo: p.descuento_maximo || 0,
+      margen: parseFloat(p.analisis.margen_porcentaje.toFixed(1)),
+      iva_ieps: [p.aplica_iva && "IVA", p.aplica_ieps && "IEPS"].filter(Boolean).join("+") || "—",
+    }));
+    exportToExcel(data, "Lista_Precios_Admin", columns, "Precios");
+  };
 
   // Handle sort
   const handleSort = (field: SortField) => {
@@ -821,6 +857,7 @@ export const AdminListaPreciosTab = () => {
                 producto={producto}
                 onSimular={openSimulador}
                 onEditar={openEditor}
+                onHistorial={(p) => { setSelectedProductForHistory(p); setHistorialDialogOpen(true); }}
               />
             ))
           )}
@@ -843,9 +880,14 @@ export const AdminListaPreciosTab = () => {
             <DollarSign className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">Análisis de Precios y Márgenes</h2>
           </div>
-          <Button size="sm" variant="outline" onClick={() => setBulkSheetOpen(true)}>
-            <ListChecks className="h-4 w-4 mr-1" /> Actualizar en masa
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={handleExportExcel}>
+              <Download className="h-4 w-4 mr-1" /> Excel
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setBulkSheetOpen(true)}>
+              <ListChecks className="h-4 w-4 mr-1" /> Actualizar en masa
+            </Button>
+          </div>
         </div>
         
         {/* Stats badges */}
@@ -1012,14 +1054,21 @@ export const AdminListaPreciosTab = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredProductos.map((producto) => {
+            {productosPorCategoria.map(([categoria, prods]) => (
+              <>{/* Category group */}
+                <TableRow key={`cat-${categoria}`} className="bg-muted/60 hover:bg-muted/60">
+                  <TableCell colSpan={11} className="py-1 px-2 font-bold text-[10px] uppercase tracking-wider text-muted-foreground">
+                    ═══ {categoria} ({prods.length}) ═══
+                  </TableCell>
+                </TableRow>
+                {prods.map((producto) => {
               const { analisis } = producto;
               const rowClass = cn(
                 "h-8",
                 analisis.estado_margen === 'perdida' && "bg-red-100/80 dark:bg-red-950/40 border-l-2 border-l-red-500",
                 analisis.estado_margen === 'critico' && "bg-orange-100/60 dark:bg-orange-950/30 border-l-2 border-l-orange-500"
               );
-              
+
               return (
                 <TableRow key={producto.id} className={rowClass}>
                   <TableCell className="py-1 px-1.5 text-[10px] font-mono text-muted-foreground">
@@ -1143,6 +1192,8 @@ export const AdminListaPreciosTab = () => {
                 </TableRow>
               );
             })}
+              </>
+            ))}
           </TableBody>
         </Table>
       </div>
@@ -1272,7 +1323,8 @@ export const AdminListaPreciosTab = () => {
                 {simulacionResult && (
                   <Button
                     className="w-full"
-                    disabled={!simulacionResult || simulacionResult.es_perdida || updatePriceMutation.isPending}
+                    disabled={!simulacionResult || updatePriceMutation.isPending}
+                    variant={simulacionResult?.es_perdida ? "destructive" : "default"}
                     onClick={() => {
                       const precio = parseFloat(precioPropuesto);
                       if (!simuladorProduct || isNaN(precio)) return;

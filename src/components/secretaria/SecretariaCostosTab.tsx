@@ -51,6 +51,7 @@ import {
   ShieldMinus,
 } from "lucide-react";
 import { analizarMargen, simularPrecioPropuesto } from "@/lib/calculos";
+import { getDisplayName } from "@/lib/productUtils";
 
 // Formateo de moneda
 const formatCurrency = (amount: number) => {
@@ -494,10 +495,7 @@ export const SecretariaCostosTab = () => {
                                 </TableCell>
                                 <TableCell className="py-1.5 px-2">
                                   <div className="min-w-0">
-                                    <p className="text-xs font-medium truncate">{producto.nombre}</p>
-                                    {producto.marca && (
-                                      <p className="text-[10px] text-blue-600">{producto.marca}</p>
-                                    )}
+                                    <p className="text-xs font-medium truncate">{getDisplayName(producto)}</p>
                                   </div>
                                 </TableCell>
                                 <TableCell className="py-1.5 px-2 text-right">
