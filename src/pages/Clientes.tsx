@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
+import { ClientesMapaTab } from "@/components/clientes/ClientesMapaTab";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,6 +104,7 @@ const Clientes = () => {
   const [clientes, setClientes] = useState<any[]>([]);
   const [zonas, setZonas] = useState<Zona[]>([]);
   const [loading, setLoading] = useState(true);
+  const [vistaActiva, setVistaActiva] = useState<"lista" | "mapa">("lista");
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<any>(null);
@@ -1340,6 +1342,21 @@ const Clientes = () => {
           </div>
         )}
 
+        {/* Vista selector: Lista | Mapa */}
+        <div className="flex gap-2 border-b pb-3">
+          <Button variant={vistaActiva === "lista" ? "default" : "outline"} size="sm" onClick={() => setVistaActiva("lista")} className="cursor-pointer">
+            Lista
+          </Button>
+          <Button variant={vistaActiva === "mapa" ? "default" : "outline"} size="sm" onClick={() => setVistaActiva("mapa")} className="cursor-pointer">
+            <MapPin className="h-4 w-4 mr-1.5" />
+            Mapa
+          </Button>
+        </div>
+
+        {vistaActiva === "mapa" ? (
+          <ClientesMapaTab />
+        ) : (
+        <>
         <div className="space-y-3">
           <div className="flex gap-4">
             <div className="relative flex-1">
@@ -1428,6 +1445,8 @@ const Clientes = () => {
             </TabsContent>
           ))}
         </Tabs>
+        </>
+        )}
       </div>
 
       <ClienteSucursalesDialog
