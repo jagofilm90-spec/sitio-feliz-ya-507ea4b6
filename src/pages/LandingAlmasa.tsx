@@ -251,8 +251,8 @@ const LandingAlmasa = () => {
 
             <div className="aspect-[4/5] rounded-3xl overflow-hidden bg-slate-100">
               <img
-                src="/landing/latas-frutas.jpeg"
-                alt="Piña, duraznos y cóctel de frutas ALMASA"
+                src="/landing/latas-nosotros.jpeg"
+                alt="Productos ALMASA — Piña, Duraznos y Cóctel de Frutas"
                 className="w-full h-full object-cover"
                 loading="lazy"
               />
