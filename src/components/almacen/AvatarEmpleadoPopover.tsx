@@ -51,7 +51,7 @@ interface EmpleadoDetalle {
   beneficiario: string | null;
   contacto_emergencia_nombre: string | null;
   contacto_emergencia_telefono: string | null;
-  emergencia_parentesco: string | null;
+  
   licencia_numero: string | null;
   licencia_tipo: string | null;
   licencia_vencimiento: string | null;
@@ -94,7 +94,7 @@ export const AvatarEmpleadoPopover = ({
       setLoadingDetalle(true);
       const { data } = await supabase
         .from("empleados")
-        .select("id, nombre_completo, puesto, activo, fecha_ingreso, sueldo_bruto, premio_asistencia_semanal, telefono, email, curp, rfc, numero_seguro_social, beneficiario, contacto_emergencia_nombre, contacto_emergencia_telefono, emergencia_parentesco, licencia_numero, licencia_tipo, licencia_vencimiento")
+        .select("id, nombre_completo, puesto, activo, fecha_ingreso, sueldo_bruto, premio_asistencia_semanal, telefono, email, curp, rfc, numero_seguro_social, beneficiario, contacto_emergencia_nombre, contacto_emergencia_telefono, licencia_numero, licencia_tipo, licencia_vencimiento")
         .eq("id", empleadoId)
         .single();
       setEmpleadoDetalle(data as EmpleadoDetalle | null);
@@ -244,7 +244,7 @@ export const AvatarEmpleadoPopover = ({
                   <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Contacto de emergencia</p>
                   <InfoRow label="Nombre" value={empleadoDetalle.contacto_emergencia_nombre} />
                   <InfoRow label="Teléfono" value={empleadoDetalle.contacto_emergencia_telefono} />
-                  <InfoRow label="Parentesco" value={empleadoDetalle.emergencia_parentesco} />
+                  <InfoRow label="Teléfono" value={empleadoDetalle.contacto_emergencia_telefono} />
                 </div>
               )}
 
