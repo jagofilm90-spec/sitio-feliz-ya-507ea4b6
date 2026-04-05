@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Truck, Shield, Clock, MapPin, Phone, Mail,
@@ -6,21 +6,20 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logoAlmasa from "@/assets/logo-almasa.png";
-import logoBlanco from "@/assets/logos/logo-blanco.png";
 
-// ==================== VIDEOS (free stock - Pexels) ====================
-const HERO_VIDEOS = [
+// ==================== HERO IMAGES (fallback — videos se agregan cuando tengamos URLs propias) ====================
+const HERO_SLIDES = [
   {
-    url: "https://videos.pexels.com/video-files/5529530/5529530-hd_1920_1080_25fps.mp4",
-    label: "Semillas",
+    imagen: "https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=1600&q=80",
+    label: "Semillas y granos al mayoreo",
   },
   {
-    url: "https://videos.pexels.com/video-files/2539108/2539108-hd_1920_1080_30fps.mp4",
-    label: "Campo",
+    imagen: "https://images.unsplash.com/photo-1500651230702-0e2d8a49d4ad?w=1600&q=80",
+    label: "Campos de cultivo mexicanos",
   },
   {
-    url: "https://videos.pexels.com/video-files/3195394/3195394-uhd_2560_1440_25fps.mp4",
-    label: "Abarrotes",
+    imagen: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=1600&q=80",
+    label: "Abarrotes y distribución",
   },
 ];
 
@@ -38,8 +37,7 @@ const COBERTURA = ["Ciudad de México", "Estado de México", "Toluca", "Puebla",
 const LandingAlmasa = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [currentVideo, setCurrentVideo] = useState(0);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -47,17 +45,13 @@ const LandingAlmasa = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Rotate videos
-  const handleVideoEnd = () => {
-    setCurrentVideo((prev) => (prev + 1) % HERO_VIDEOS.length);
-  };
-
+  // Auto-rotate hero slides
   useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.load();
-      videoRef.current.play().catch(() => {});
-    }
-  }, [currentVideo]);
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, []);
 
   const scrollTo = (id: string) => {
     setMenuOpen(false);
@@ -75,9 +69,9 @@ const LandingAlmasa = () => {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             <img
-              src={scrolled ? logoAlmasa : logoBlanco}
+              src={logoAlmasa}
               alt="ALMASA"
-              className="h-8 sm:h-9 transition-all duration-300"
+              className={cn("h-8 sm:h-9 transition-all duration-300", !scrolled && "brightness-0 invert")}
             />
 
             {/* Desktop */}
@@ -139,30 +133,35 @@ const LandingAlmasa = () => {
         )}
       </nav>
 
-      {/* ==================== HERO — VIDEO FULLSCREEN MINIMAL ==================== */}
+      {/* ==================== HERO — IMAGE SLIDESHOW MINIMAL ==================== */}
       <section className="relative h-screen overflow-hidden">
-        {/* Video background */}
-        <video
-          ref={videoRef}
-          className="absolute inset-0 w-full h-full object-cover"
-          autoPlay
-          muted
-          playsInline
-          onEnded={handleVideoEnd}
-          key={currentVideo}
-        >
-          <source src={HERO_VIDEOS[currentVideo].url} type="video/mp4" />
-        </video>
+        {/* Slideshow background with crossfade */}
+        {HERO_SLIDES.map((slide, i) => (
+          <div
+            key={i}
+            className={cn(
+              "absolute inset-0 transition-opacity duration-[2000ms] ease-in-out",
+              i === currentSlide ? "opacity-100" : "opacity-0"
+            )}
+          >
+            <img
+              src={slide.imagen}
+              alt={slide.label}
+              className="w-full h-full object-cover scale-105"
+              style={{ animation: i === currentSlide ? "kenburns 8s ease-in-out forwards" : "none" }}
+            />
+          </div>
+        ))}
 
         {/* Dark overlay */}
-        <div className="absolute inset-0 bg-black/50" />
+        <div className="absolute inset-0 bg-black/45" />
 
         {/* Content — centered minimal */}
         <div className="relative h-full flex flex-col items-center justify-center text-center px-6">
           <img
-            src={logoBlanco}
+            src={logoAlmasa}
             alt="ALMASA"
-            className="h-14 sm:h-20 mb-10 opacity-95"
+            className="h-14 sm:h-20 mb-10 brightness-0 invert"
           />
 
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-light text-white tracking-tight leading-[1.15] max-w-3xl">
@@ -192,15 +191,15 @@ const LandingAlmasa = () => {
             </button>
           </div>
 
-          {/* Video indicators */}
+          {/* Slide indicators */}
           <div className="absolute bottom-20 flex gap-2">
-            {HERO_VIDEOS.map((v, i) => (
+            {HERO_SLIDES.map((_, i) => (
               <button
                 key={i}
-                onClick={() => setCurrentVideo(i)}
+                onClick={() => setCurrentSlide(i)}
                 className={cn(
                   "h-[2px] rounded-full transition-all duration-500 cursor-pointer",
-                  i === currentVideo ? "w-10 bg-white" : "w-5 bg-white/30"
+                  i === currentSlide ? "w-10 bg-white" : "w-5 bg-white/30"
                 )}
               />
             ))}
@@ -214,6 +213,14 @@ const LandingAlmasa = () => {
             <ChevronDown className="h-6 w-6" />
           </button>
         </div>
+
+        {/* Ken Burns animation */}
+        <style>{`
+          @keyframes kenburns {
+            0% { transform: scale(1.05); }
+            100% { transform: scale(1.15); }
+          }
+        `}</style>
       </section>
 
       {/* ==================== NOSOTROS — Minimal split ==================== */}
@@ -311,17 +318,17 @@ const LandingAlmasa = () => {
         </div>
       </section>
 
-      {/* ==================== QUOTE — Full width video ==================== */}
+      {/* ==================== QUOTE — Full width image ==================== */}
       <section className="relative py-40 overflow-hidden">
-        <video
+        <img
+          src="https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1600&q=80"
+          alt="Campo de trigo"
           className="absolute inset-0 w-full h-full object-cover"
-          autoPlay muted loop playsInline
-        >
-          <source src="https://videos.pexels.com/video-files/6810220/6810220-uhd_2560_1440_25fps.mp4" type="video/mp4" />
-        </video>
-        <div className="absolute inset-0 bg-black/60" />
+          loading="lazy"
+        />
+        <div className="absolute inset-0 bg-black/55" />
         <div className="relative text-center px-6">
-          <img src={logoBlanco} alt="ALMASA" className="h-10 mx-auto mb-10 opacity-80" />
+          <img src={logoAlmasa} alt="ALMASA" className="h-10 mx-auto mb-10 brightness-0 invert opacity-80" />
           <p className="text-2xl sm:text-4xl font-light text-white max-w-2xl mx-auto leading-relaxed italic">
             "Lo natural, siempre mejor"
           </p>
@@ -358,8 +365,8 @@ const LandingAlmasa = () => {
 
             <div className="aspect-square rounded-3xl overflow-hidden bg-slate-100">
               <img
-                src="/camion-almasa.jpg"
-                alt="Camión de reparto ALMASA"
+                src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800&q=80"
+                alt="Camión de reparto"
                 className="w-full h-full object-cover"
                 loading="lazy"
               />
