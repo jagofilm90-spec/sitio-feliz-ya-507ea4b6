@@ -1,41 +1,11 @@
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarTrigger,
-  useSidebar,
-} from "@/components/ui/sidebar";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { 
-  Users, 
-  ShoppingCart, 
-  ClipboardList, 
-  Sparkles, 
-  List, 
-  Wallet, 
-  Percent, 
-  BarChart3, 
-  LogOut, 
-  User, 
-  IdCard,
-  HandCoins,
-  TrendingUp,
+  Users, ShoppingCart, ClipboardList, Sparkles, List, Wallet,
+  Percent, BarChart3, LogOut, HandCoins, TrendingUp,
 } from "lucide-react";
 import logoAlmasa from "@/assets/logo-almasa.png";
+import { AvatarEmpleadoPopover } from "@/components/almacen/AvatarEmpleadoPopover";
 
 interface NavItem {
   id: string;
@@ -43,7 +13,6 @@ interface NavItem {
   icon: any;
   badge?: number;
   isLink?: boolean;
-  href?: string;
 }
 
 interface VendedorSidebarProps {
@@ -54,6 +23,11 @@ interface VendedorSidebarProps {
   onNavigateAnalisis: () => void;
   vendedorNombre: string;
   novedadesCount: number;
+  vendedorId?: string | null;
+  vendedorPuesto?: string;
+  vendedorEmail?: string;
+  vendedorFotoUrl?: string | null;
+  onFotoUpdated?: (url: string) => void;
 }
 
 export const VendedorSidebar = ({
@@ -64,9 +38,12 @@ export const VendedorSidebar = ({
   onNavigateAnalisis,
   vendedorNombre,
   novedadesCount,
+  vendedorId = null,
+  vendedorPuesto = "Ejecutivo de Ventas",
+  vendedorEmail,
+  vendedorFotoUrl = null,
+  onFotoUpdated = () => {},
 }: VendedorSidebarProps) => {
-  const { state } = useSidebar();
-  const isCollapsed = state === "collapsed";
 
   const navItems: NavItem[] = [
     { id: "clientes", label: "Clientes", icon: Users },
@@ -78,163 +55,76 @@ export const VendedorSidebar = ({
     { id: "precios", label: "Precios", icon: List },
     { id: "saldos", label: "Saldos", icon: Wallet },
     { id: "comisiones", label: "Comisiones", icon: Percent },
-    { id: "analisis", label: "Análisis", icon: BarChart3 },
+    { id: "analisis", label: "Análisis", icon: BarChart3, isLink: true },
   ];
 
-  return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
-        {/* Header con Logo y Toggle */}
-        <SidebarHeader className="border-b border-sidebar-border">
-          <div className="flex items-center justify-between py-2 px-2">
-            <img 
-              src={logoAlmasa} 
-              alt="ALMASA" 
-              className={cn(
-                "object-contain transition-all duration-200",
-                isCollapsed ? "h-6 w-auto" : "h-8 w-auto"
-              )} 
-            />
-            {!isCollapsed && (
-              <SidebarTrigger className="h-7 w-7 text-sidebar-foreground/70 hover:text-sidebar-foreground" />
-            )}
-          </div>
-          {isCollapsed && (
-            <div className="flex justify-center py-1">
-              <SidebarTrigger className="h-7 w-7 text-sidebar-foreground/70 hover:text-sidebar-foreground" />
-            </div>
-          )}
-        </SidebarHeader>
+  const renderNavItem = (item: NavItem) => {
+    const isActive = activeTab === item.id && !item.isLink;
+    const hasBadge = item.badge && item.badge > 0;
 
-        {/* User Info - Nombre siempre visible, avatar solo expandido */}
-        <div className="border-b border-sidebar-border">
-          <div className={cn(
-            "flex items-center gap-2 p-2",
-            isCollapsed ? "flex-col justify-center" : "flex-row"
-          )}>
-            {/* Avatar - Solo cuando expandido */}
-            {!isCollapsed && (
-              <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-md ring-2 ring-primary/20 shrink-0">
-                <User className="h-4 w-4 text-primary-foreground" />
-              </div>
-            )}
-            
-            {/* Nombre - Siempre visible */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className={cn(
-                  "min-w-0",
-                  isCollapsed ? "w-full text-center" : "flex-1 text-left"
-                )}>
-                  <p className={cn(
-                    "text-sidebar-foreground font-semibold truncate",
-                    isCollapsed ? "text-[10px]" : "text-sm"
-                  )}>
-                    {isCollapsed 
-                      ? (vendedorNombre?.split(' ')[0] || "Vendedor")
-                      : vendedorNombre
-                    }
-                  </p>
-                  {!isCollapsed && (
-                    <p className="text-xs text-muted-foreground font-medium">Ejecutivo de Ventas</p>
-                  )}
-                </div>
-              </TooltipTrigger>
-              {isCollapsed && (
-                <TooltipContent side="right">
-                  <p>{vendedorNombre}</p>
-                  <p className="text-xs text-muted-foreground">Ejecutivo de Ventas</p>
-                </TooltipContent>
-              )}
-            </Tooltip>
-            
-            {/* Tarjeta Digital button - Solo expandido */}
-            {!isCollapsed && (
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={onNavigateTarjeta}
-                className="shrink-0 hover:bg-primary/10 h-8 w-8"
-                title="Mi Tarjeta Digital"
-              >
-                <IdCard className="h-4 w-4 text-muted-foreground" />
-              </Button>
-            )}
+    return (
+      <button
+        key={item.id}
+        onClick={() => item.isLink ? onNavigateAnalisis() : onTabChange(item.id)}
+        className={cn(
+          "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer",
+          isActive
+            ? "bg-primary text-primary-foreground shadow-sm"
+            : "text-foreground/70 hover:bg-muted hover:text-foreground"
+        )}
+      >
+        <item.icon className="h-4 w-4 shrink-0" />
+        <span className="truncate flex-1 text-left">{item.label}</span>
+        {hasBadge && (
+          <Badge variant={isActive ? "secondary" : "destructive"} className="text-[10px] h-5 min-w-5 px-1.5 shrink-0">
+            {item.badge! > 99 ? "99+" : item.badge}
+          </Badge>
+        )}
+      </button>
+    );
+  };
+
+  return (
+    <aside className="hidden md:flex w-56 lg:w-64 min-h-screen border-r bg-card flex-col shrink-0">
+      {/* Logo */}
+      <div className="p-4 border-b">
+        <img src={logoAlmasa} alt="ALMASA" className="h-8" />
+      </div>
+
+      {/* User */}
+      <div className="p-3 border-b">
+        <div className="flex items-center gap-3">
+          <AvatarEmpleadoPopover
+            empleadoId={vendedorId}
+            empleadoNombre={vendedorNombre || "Vendedor"}
+            empleadoPuesto={vendedorPuesto}
+            empleadoEmail={vendedorEmail}
+            fotoUrl={vendedorFotoUrl}
+            onFotoUpdated={onFotoUpdated}
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold truncate">{vendedorNombre || "Vendedor"}</p>
+            <p className="text-xs text-muted-foreground truncate">{vendedorPuesto}</p>
           </div>
         </div>
+      </div>
 
-      {/* Navegación */}
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Menú Principal</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id && !item.isLink;
-                const hasBadge = item.badge && item.badge > 0;
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto p-3">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 px-3">Menú</p>
+        <div className="space-y-0.5">
+          {navItems.map(renderNavItem)}
+        </div>
+      </nav>
 
-                return (
-                  <SidebarMenuItem key={item.id}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      tooltip={item.label}
-                      onClick={() => item.isLink ? onNavigateAnalisis() : onTabChange(item.id)}
-                      className={cn(
-                        "transition-all duration-200",
-                        isActive && "bg-primary text-primary-foreground shadow-sm"
-                      )}
-                    >
-                      <div className="relative">
-                        <Icon className="h-4 w-4" />
-                        {hasBadge && isCollapsed && (
-                          <span className="absolute -top-1 -right-1 h-3 w-3 flex items-center justify-center bg-destructive text-destructive-foreground text-[8px] font-bold rounded-full">
-                            {item.badge! > 9 ? "+" : item.badge}
-                          </span>
-                        )}
-                      </div>
-                      <span className="font-medium">{item.label}</span>
-                      {hasBadge && !isCollapsed && (
-                        <Badge 
-                          variant={isActive ? "secondary" : "secondary"} 
-                          className="ml-auto text-xs"
-                        >
-                          {item.badge}
-                        </Badge>
-                      )}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-
-        {/* Footer */}
-        <SidebarFooter className="border-t border-sidebar-border">
-
-          {/* Tarjeta Digital - solo en colapsado */}
-          {isCollapsed && (
-            <SidebarMenuButton
-              tooltip="Mi Tarjeta Digital"
-              onClick={onNavigateTarjeta}
-              className="hover:bg-primary/10"
-            >
-              <IdCard className="h-4 w-4" />
-              <span>Mi Tarjeta</span>
-            </SidebarMenuButton>
-          )}
-
-          {/* Logout button */}
-          <SidebarMenuButton
-            tooltip="Cerrar sesión"
-            onClick={onLogout}
-            className="hover:bg-destructive/10 hover:text-destructive"
-          >
-            <LogOut className="h-4 w-4" />
-            <span>Cerrar sesión</span>
-          </SidebarMenuButton>
-        </SidebarFooter>
-      </Sidebar>
+      {/* Footer */}
+      <div className="p-3 border-t">
+        <button onClick={onLogout}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive/70 hover:bg-destructive/10 hover:text-destructive transition-all duration-150 cursor-pointer">
+          <LogOut className="h-4 w-4 shrink-0" />
+          <span>Cerrar sesión</span>
+        </button>
+      </div>
+    </aside>
   );
 };

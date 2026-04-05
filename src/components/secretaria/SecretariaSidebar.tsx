@@ -1,45 +1,13 @@
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarTrigger,
-  useSidebar,
-} from "@/components/ui/sidebar";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  Package,
-  DollarSign,
-  ClipboardList,
-  ShoppingCart,
-  Warehouse,
-  FileText,
-  MessageCircle,
-  Mail,
-  Users,
-  LogOut,
-  LayoutDashboard,
-  Store,
-  Coins,
-  User,
-  Truck,
-  CreditCard,
+  Package, DollarSign, ClipboardList, ShoppingCart, Warehouse,
+  FileText, MessageCircle, Mail, Users, LogOut, LayoutDashboard,
+  Store, Coins, Truck, CreditCard,
 } from "lucide-react";
 import logoAlmasa from "@/assets/logo-almasa.png";
 import { LiveIndicator } from "@/components/ui/live-indicator";
+import { AvatarEmpleadoPopover } from "@/components/almacen/AvatarEmpleadoPopover";
 
 interface NavItem {
   id: string;
@@ -64,6 +32,11 @@ interface SecretariaSidebarProps {
     pagosValidar: number;
   };
   hasMultipleRoles?: boolean;
+  empleadoId?: string | null;
+  empleadoPuesto?: string;
+  empleadoEmail?: string;
+  empleadoFotoUrl?: string | null;
+  onFotoUpdated?: (url: string) => void;
 }
 
 export const SecretariaSidebar = ({
@@ -74,9 +47,12 @@ export const SecretariaSidebar = ({
   userName,
   counters,
   hasMultipleRoles = false,
+  empleadoId = null,
+  empleadoPuesto = "Secretaria",
+  empleadoEmail,
+  empleadoFotoUrl = null,
+  onFotoUpdated = () => {},
 }: SecretariaSidebarProps) => {
-  const { state } = useSidebar();
-  const isCollapsed = state === "collapsed";
 
   const navItems: NavItem[] = [
     { id: "productos", label: "Productos", icon: Package },
@@ -94,151 +70,81 @@ export const SecretariaSidebar = ({
     { id: "clientes", label: "Clientes", icon: Users },
   ];
 
-  return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
-      {/* Header con Logo y Toggle */}
-      <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center justify-between py-2 px-2">
-          <img 
-            src={logoAlmasa} 
-            alt="ALMASA" 
-            className={cn(
-              "object-contain transition-all duration-200",
-              isCollapsed ? "h-6 w-auto" : "h-8 w-auto"
-            )} 
-          />
-          {!isCollapsed && (
-            <SidebarTrigger className="h-7 w-7 text-sidebar-foreground/70 hover:text-sidebar-foreground" />
-          )}
-        </div>
-        {isCollapsed && (
-          <div className="flex justify-center py-1">
-            <SidebarTrigger className="h-7 w-7 text-sidebar-foreground/70 hover:text-sidebar-foreground" />
-          </div>
-        )}
-      </SidebarHeader>
+  const renderNavItem = (item: NavItem) => {
+    const isActive = activeTab === item.id;
+    const hasBadge = item.badge && item.badge > 0;
 
-      {/* User Info */}
-      <div className="border-b border-sidebar-border">
-        <div className={cn(
-          "flex items-center gap-2 p-2",
-          isCollapsed ? "flex-col justify-center" : "flex-row"
-        )}>
-          {!isCollapsed && (
-            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-md ring-2 ring-primary/20 shrink-0">
-              <User className="h-4 w-4 text-primary-foreground" />
-            </div>
-          )}
-          
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className={cn(
-                "min-w-0",
-                isCollapsed ? "w-full text-center" : "flex-1 text-left"
-              )}>
-                <p className={cn(
-                  "text-sidebar-foreground font-semibold truncate",
-                  isCollapsed ? "text-[10px]" : "text-sm"
-                )}>
-                  {isCollapsed 
-                    ? (userName?.split(' ')[0] || "Secretaria")
-                    : (userName || "Secretaria")
-                  }
-                </p>
-                {!isCollapsed && (
-                  <p className="text-xs text-muted-foreground font-medium">Panel Secretaria</p>
-                )}
-              </div>
-            </TooltipTrigger>
-            {isCollapsed && (
-              <TooltipContent side="right">
-                <p>{userName || "Secretaria"}</p>
-                <p className="text-xs text-muted-foreground">Panel Secretaria</p>
-              </TooltipContent>
-            )}
-          </Tooltip>
+    return (
+      <button
+        key={item.id}
+        onClick={() => onTabChange(item.id)}
+        className={cn(
+          "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer",
+          isActive
+            ? "bg-primary text-primary-foreground shadow-sm"
+            : "text-foreground/70 hover:bg-muted hover:text-foreground"
+        )}
+      >
+        <item.icon className="h-4 w-4 shrink-0" />
+        <span className="truncate flex-1 text-left">{item.label}</span>
+        {hasBadge && (
+          <Badge variant={isActive ? "secondary" : "destructive"} className="text-[10px] h-5 min-w-5 px-1.5 shrink-0">
+            {item.badge! > 99 ? "99+" : item.badge}
+          </Badge>
+        )}
+      </button>
+    );
+  };
+
+  return (
+    <aside className="hidden md:flex w-56 lg:w-64 min-h-screen border-r bg-card flex-col shrink-0">
+      {/* Logo */}
+      <div className="p-4 border-b">
+        <img src={logoAlmasa} alt="ALMASA" className="h-8" />
+      </div>
+
+      {/* User */}
+      <div className="p-3 border-b">
+        <div className="flex items-center gap-3">
+          <AvatarEmpleadoPopover
+            empleadoId={empleadoId}
+            empleadoNombre={userName || "Secretaria"}
+            empleadoPuesto={empleadoPuesto}
+            empleadoEmail={empleadoEmail}
+            fotoUrl={empleadoFotoUrl}
+            onFotoUpdated={onFotoUpdated}
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold truncate">{userName || "Secretaria"}</p>
+            <p className="text-xs text-muted-foreground truncate">{empleadoPuesto}</p>
+          </div>
         </div>
       </div>
 
       {/* Navigation */}
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Módulos</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id;
-                const hasBadge = item.badge && item.badge > 0;
-
-                return (
-                  <SidebarMenuItem key={item.id}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      tooltip={item.label}
-                      onClick={() => onTabChange(item.id)}
-                      className={cn(
-                        "transition-all duration-200",
-                        isActive && "bg-primary text-primary-foreground shadow-sm"
-                      )}
-                    >
-                      <div className="relative">
-                        <Icon className="h-4 w-4" />
-                        {hasBadge && isCollapsed && (
-                          <span className="absolute -top-1 -right-1 h-3 w-3 flex items-center justify-center bg-destructive text-destructive-foreground text-[8px] font-bold rounded-full">
-                            {item.badge! > 9 ? "+" : item.badge}
-                          </span>
-                        )}
-                      </div>
-                      <span className="font-medium">{item.label}</span>
-                      {hasBadge && !isCollapsed && (
-                        <Badge 
-                          variant="secondary"
-                          className="ml-auto text-xs"
-                        >
-                          {item.badge! > 99 ? "99+" : item.badge}
-                        </Badge>
-                      )}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
+      <nav className="flex-1 overflow-y-auto p-3">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 px-3">Módulos</p>
+        <div className="space-y-0.5">
+          {navItems.map(renderNavItem)}
+        </div>
+      </nav>
 
       {/* Footer */}
-      <SidebarFooter className="border-t border-sidebar-border">
-        {/* Live indicator */}
-        {!isCollapsed && (
-          <div className="px-2 py-1">
-            <LiveIndicator label="Sincronizado" className="text-sidebar-foreground/60 text-xs" />
-          </div>
-        )}
-
-        {/* Dashboard button for multiple roles */}
+      <div className="p-3 border-t space-y-1">
+        <LiveIndicator label="Sincronizado" className="text-xs text-muted-foreground px-3 mb-1" />
         {hasMultipleRoles && (
-          <SidebarMenuButton
-            tooltip="Dashboard"
-            onClick={onNavigateDashboard}
-            className="hover:bg-sidebar-accent"
-          >
-            <LayoutDashboard className="h-4 w-4" />
+          <button onClick={onNavigateDashboard}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-foreground/70 hover:bg-muted hover:text-foreground transition-all duration-150 cursor-pointer">
+            <LayoutDashboard className="h-4 w-4 shrink-0" />
             <span>Dashboard</span>
-          </SidebarMenuButton>
+          </button>
         )}
-
-        {/* Logout button */}
-        <SidebarMenuButton
-          tooltip="Cerrar sesión"
-          onClick={onLogout}
-          className="hover:bg-destructive/10 hover:text-destructive"
-        >
-          <LogOut className="h-4 w-4" />
+        <button onClick={onLogout}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive/70 hover:bg-destructive/10 hover:text-destructive transition-all duration-150 cursor-pointer">
+          <LogOut className="h-4 w-4 shrink-0" />
           <span>Cerrar sesión</span>
-        </SidebarMenuButton>
-      </SidebarFooter>
-    </Sidebar>
+        </button>
+      </div>
+    </aside>
   );
 };
