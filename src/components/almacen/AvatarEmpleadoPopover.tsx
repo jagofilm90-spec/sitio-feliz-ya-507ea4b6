@@ -244,7 +244,7 @@ export const AvatarEmpleadoPopover = ({
                   <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Contacto de emergencia</p>
                   <InfoRow label="Nombre" value={empleadoDetalle.contacto_emergencia_nombre} />
                   <InfoRow label="Teléfono" value={empleadoDetalle.contacto_emergencia_telefono} />
-                  <InfoRow label="Parentesco" value={empleadoDetalle.emergencia_parentesco} />
+                  <InfoRow label="Teléfono" value={empleadoDetalle.contacto_emergencia_telefono} />
                 </div>
               )}
 
