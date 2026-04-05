@@ -42,6 +42,7 @@ import SecretariaPanel from "./pages/SecretariaPanel";
 import AppMobileGuide from "./pages/AppMobileGuide";
 import TestFirma from "./pages/TestFirma";
 import Precios from "./pages/Precios";
+import LandingAlmasa from "./pages/LandingAlmasa";
 import Configuracion from "./pages/Configuracion";
 import Asistencia from "./pages/Asistencia";
 import VehiculosPage from "./pages/VehiculosPage";
@@ -121,6 +122,7 @@ const App = () => (
             <PushNotificationsGate />
             <Routes>
               <Route path="/" element={<Navigate to="/auth" replace />} />
+              <Route path="/landing" element={<LandingAlmasa />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/mi-perfil" element={<ProtectedRoute allowedRoles={['admin','secretaria','vendedor','chofer','almacen','gerente_almacen','contadora']} redirectTo="/auth"><MiPerfil /></ProtectedRoute>} />
