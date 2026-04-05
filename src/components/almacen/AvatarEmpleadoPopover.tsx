@@ -94,7 +94,7 @@ export const AvatarEmpleadoPopover = ({
       setLoadingDetalle(true);
       const { data } = await supabase
         .from("empleados")
-        .select("id, nombre_completo, puesto, activo, fecha_ingreso, sueldo_bruto, premio_asistencia_semanal, telefono, email, curp, rfc, numero_seguro_social, beneficiario, contacto_emergencia_nombre, contacto_emergencia_telefono, emergencia_parentesco, licencia_numero, licencia_tipo, licencia_vencimiento")
+        .select("id, nombre_completo, puesto, activo, fecha_ingreso, sueldo_bruto, premio_asistencia_semanal, telefono, email, curp, rfc, numero_seguro_social, beneficiario, contacto_emergencia_nombre, contacto_emergencia_telefono, licencia_numero, licencia_tipo, licencia_vencimiento")
         .eq("id", empleadoId)
         .single();
       setEmpleadoDetalle(data as EmpleadoDetalle | null);
