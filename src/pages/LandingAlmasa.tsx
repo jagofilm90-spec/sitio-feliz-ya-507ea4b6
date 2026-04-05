@@ -1,20 +1,16 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import {
-  Truck, Shield, Clock, MapPin, Phone, Mail,
-  ArrowRight, Menu, X, ChevronDown,
-} from "lucide-react";
+import { Phone, Mail, MapPin, Clock, ArrowRight, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logoAlmasa from "@/assets/logo-almasa.png";
 
-// ==================== HERO IMAGES — productos estrella ALMASA ====================
-const HERO_SLIDES = [
-  { imagen: "/landing/cacahuate.jpeg", label: "Cacahuate al mayoreo" },
-  { imagen: "/landing/azucar.jpeg", label: "Azúcar — producto estrella" },
-  { imagen: "/landing/frijol.jpeg", label: "Frijol y granos a granel" },
-];
+/*
+ * ALMASA Landing — Apple Design System
+ * Binary light/dark sections, product-as-hero, tight typography,
+ * glass nav, pill CTAs, single accent color, cinematic whitespace.
+ */
 
-const CATEGORIAS = [
+const PRODUCTOS = [
   { nombre: "Cacahuate y Botanas", imagen: "/landing/cacahuate.jpeg" },
   { nombre: "Azúcar", imagen: "/landing/azucar.jpeg" },
   { nombre: "Frijol y Granos", imagen: "/landing/frijol.jpeg" },
@@ -26,24 +22,20 @@ const CATEGORIAS = [
 
 const COBERTURA = ["Ciudad de México", "Estado de México", "Toluca", "Puebla", "Querétaro", "Morelos"];
 
-// ==================== COMPONENT ====================
-
 const LandingAlmasa = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const [heroSlide, setHeroSlide] = useState(0);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
+    const handleScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Auto-rotate hero slides
+  const heroImages = ["/landing/frijol.jpeg", "/landing/cacahuate.jpeg", "/landing/azucar.jpeg"];
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
-    }, 6000);
+    const interval = setInterval(() => setHeroSlide(p => (p + 1) % heroImages.length), 7000);
     return () => clearInterval(interval);
   }, []);
 
@@ -53,417 +45,295 @@ const LandingAlmasa = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 antialiased">
+    <div className="min-h-screen bg-black text-white antialiased" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif' }}>
 
-      {/* ==================== NAVBAR ==================== */}
+      {/* ==================== NAV — Glass ==================== */}
       <nav className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
-        scrolled ? "bg-white/95 backdrop-blur-md shadow-sm" : "bg-transparent"
+        "fixed top-0 left-0 right-0 z-50 h-12 transition-all duration-300",
+        "bg-black/80 backdrop-blur-xl backdrop-saturate-[180%]"
       )}>
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
-            <img
-              src={logoAlmasa}
-              alt="ALMASA"
-              className={cn("h-8 sm:h-9 transition-all duration-300", !scrolled && "brightness-0 invert")}
-            />
+        <div className="max-w-[980px] mx-auto px-6 h-full flex items-center justify-between">
+          <img src={logoAlmasa} alt="ALMASA" className="h-5 brightness-0 invert opacity-90" />
 
-            {/* Desktop */}
-            <div className="hidden md:flex items-center gap-10">
-              {[
-                { label: "Nosotros", id: "nosotros" },
-                { label: "Productos", id: "productos" },
-                { label: "Cobertura", id: "cobertura" },
-                { label: "Contacto", id: "contacto" },
-              ].map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => scrollTo(item.id)}
-                  className={cn(
-                    "text-[13px] font-medium tracking-wide uppercase cursor-pointer transition-colors duration-200",
-                    scrolled ? "text-slate-500 hover:text-slate-900" : "text-white/70 hover:text-white"
-                  )}
-                >
-                  {item.label}
-                </button>
-              ))}
-              <Link
-                to="/auth"
-                className={cn(
-                  "text-[13px] font-semibold tracking-wide px-5 py-2 rounded-full transition-all duration-200 cursor-pointer",
-                  scrolled
-                    ? "bg-slate-900 text-white hover:bg-slate-800"
-                    : "bg-white/10 text-white border border-white/20 hover:bg-white/20"
-                )}
-              >
-                Acceso ERP
-              </Link>
-            </div>
-
-            {/* Mobile */}
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className={cn("md:hidden p-2 cursor-pointer", scrolled ? "text-slate-900" : "text-white")}
-            >
-              {menuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </button>
+          <div className="hidden md:flex items-center gap-8">
+            {[
+              { label: "Productos", id: "productos" },
+              { label: "Nosotros", id: "nosotros" },
+              { label: "Entrega", id: "entrega" },
+              { label: "Contacto", id: "contacto" },
+            ].map(item => (
+              <button key={item.id} onClick={() => scrollTo(item.id)}
+                className="text-xs text-white/80 hover:text-white transition-colors cursor-pointer tracking-[-0.01em]">
+                {item.label}
+              </button>
+            ))}
+            <Link to="/auth" className="text-xs text-[#2997ff] hover:underline cursor-pointer">
+              Portal ERP
+            </Link>
           </div>
+
+          <button onClick={() => setMenuOpen(!menuOpen)} className="md:hidden text-white/80 cursor-pointer">
+            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
         </div>
 
         {menuOpen && (
-          <div className="md:hidden bg-white/95 backdrop-blur-md border-t">
-            <div className="px-6 py-6 space-y-1">
-              {["nosotros", "productos", "cobertura", "contacto"].map((id) => (
+          <div className="md:hidden bg-black/95 backdrop-blur-xl border-t border-white/10">
+            <div className="max-w-[980px] mx-auto px-6 py-6 space-y-4">
+              {["productos", "nosotros", "entrega", "contacto"].map(id => (
                 <button key={id} onClick={() => scrollTo(id)}
-                  className="block w-full text-left py-3 text-sm font-medium text-slate-600 hover:text-slate-900 capitalize cursor-pointer">
-                  {id}
-                </button>
+                  className="block text-sm text-white/80 hover:text-white capitalize cursor-pointer">{id}</button>
               ))}
-              <Link to="/auth" className="block mt-4 text-center bg-slate-900 text-white text-sm font-semibold py-3 rounded-full cursor-pointer">
-                Acceso ERP
-              </Link>
+              <Link to="/auth" className="block text-sm text-[#2997ff]">Portal ERP</Link>
             </div>
           </div>
         )}
       </nav>
 
-      {/* ==================== HERO — IMAGE SLIDESHOW MINIMAL ==================== */}
-      <section className="relative h-screen overflow-hidden">
-        {/* Slideshow background with crossfade */}
-        {HERO_SLIDES.map((slide, i) => (
-          <div
-            key={i}
-            className={cn(
-              "absolute inset-0 transition-opacity duration-[2000ms] ease-in-out",
-              i === currentSlide ? "opacity-100" : "opacity-0"
-            )}
-          >
-            <img
-              src={slide.imagen}
-              alt={slide.label}
-              className="w-full h-full object-cover scale-105"
-              style={{ animation: i === currentSlide ? "kenburns 8s ease-in-out forwards" : "none" }}
-            />
+      {/* ==================== HERO — Black, cinematic ==================== */}
+      <section className="relative min-h-screen flex flex-col items-center justify-center text-center overflow-hidden bg-black pt-12">
+        {/* Background image crossfade */}
+        {heroImages.map((img, i) => (
+          <div key={i} className={cn(
+            "absolute inset-0 transition-opacity duration-[2500ms]",
+            i === heroSlide ? "opacity-30" : "opacity-0"
+          )}>
+            <img src={img} alt="" className="w-full h-full object-cover" />
           </div>
         ))}
 
-        {/* Dark overlay */}
-        <div className="absolute inset-0 bg-black/45" />
+        <div className="relative z-10 px-6 max-w-[980px]">
+          <img src={logoAlmasa} alt="ALMASA" className="h-12 sm:h-16 mx-auto mb-4 brightness-0 invert" />
 
-        {/* Content — centered minimal */}
-        <div className="relative h-full flex flex-col items-center justify-center text-center px-6">
-          <img
-            src={logoAlmasa}
-            alt="ALMASA"
-            className="h-14 sm:h-20 mb-10 brightness-0 invert"
-          />
+          <p className="text-sm sm:text-base text-white/50 tracking-[0.02em] mb-6">Desde 1904</p>
 
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-light text-white tracking-tight leading-[1.15] max-w-3xl">
-            Surtimos tu negocio
-            <br />
-            <span className="font-semibold">a domicilio</span>
+          <h1 className="text-[40px] sm:text-[56px] lg:text-[72px] font-semibold leading-[1.07] tracking-[-0.003em] text-white">
+            Surtimos tu negocio.
           </h1>
 
-          <p className="mt-6 text-base sm:text-lg text-white/60 font-light max-w-lg leading-relaxed">
-            Distribuidora de abarrotes al mayoreo con más de 120 años en México.
+          <p className="mt-4 text-lg sm:text-xl text-white/60 font-light leading-[1.47] tracking-[-0.022em] max-w-lg mx-auto">
+            Distribuidora de abarrotes al mayoreo. Más de 120 años en México.
           </p>
 
-          {/* Minimal CTAs */}
-          <div className="flex items-center gap-6 mt-10">
-            <button
-              onClick={() => scrollTo("productos")}
-              className="group flex items-center gap-2 bg-white text-slate-900 font-medium text-sm px-7 py-3.5 rounded-full hover:bg-slate-50 transition-all duration-200 cursor-pointer"
-            >
-              Ver productos
-              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
+          {/* Pill CTAs */}
+          <div className="flex items-center justify-center gap-5 mt-8">
+            <button onClick={() => scrollTo("productos")}
+              className="text-[#2997ff] text-sm font-normal hover:underline flex items-center gap-1 cursor-pointer">
+              Ver productos <ArrowRight className="h-3.5 w-3.5" />
             </button>
-            <button
-              onClick={() => scrollTo("contacto")}
-              className="text-white/70 hover:text-white text-sm font-medium transition-colors duration-200 cursor-pointer"
-            >
+            <button onClick={() => scrollTo("contacto")}
+              className="text-sm text-white/80 border border-white/30 px-5 py-2 rounded-full hover:bg-white/10 transition-colors cursor-pointer">
               Contacto
             </button>
           </div>
-
-          {/* Slide indicators */}
-          <div className="absolute bottom-20 flex gap-2">
-            {HERO_SLIDES.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setCurrentSlide(i)}
-                className={cn(
-                  "h-[2px] rounded-full transition-all duration-500 cursor-pointer",
-                  i === currentSlide ? "w-10 bg-white" : "w-5 bg-white/30"
-                )}
-              />
-            ))}
-          </div>
-
-          {/* Scroll hint */}
-          <button
-            onClick={() => scrollTo("nosotros")}
-            className="absolute bottom-8 text-white/30 animate-bounce cursor-pointer"
-          >
-            <ChevronDown className="h-6 w-6" />
-          </button>
         </div>
 
-        {/* Ken Burns animation */}
-        <style>{`
-          @keyframes kenburns {
-            0% { transform: scale(1.05); }
-            100% { transform: scale(1.15); }
-          }
-        `}</style>
+        {/* Slide indicators */}
+        <div className="absolute bottom-10 flex gap-2 z-10">
+          {heroImages.map((_, i) => (
+            <button key={i} onClick={() => setHeroSlide(i)}
+              className={cn("h-[2px] rounded-full transition-all duration-700 cursor-pointer",
+                i === heroSlide ? "w-8 bg-white/70" : "w-4 bg-white/20")} />
+          ))}
+        </div>
       </section>
 
-      {/* ==================== NOSOTROS — Minimal split ==================== */}
-      <section id="nosotros" className="py-32 sm:py-40">
-        <div className="max-w-6xl mx-auto px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-20 items-center">
+      {/* ==================== STATS — Light gray ==================== */}
+      <section className="bg-[#f5f5f7] py-20">
+        <div className="max-w-[980px] mx-auto px-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 text-center">
+            {[
+              { num: "120+", label: "Años" },
+              { num: "500+", label: "Clientes" },
+              { num: "200+", label: "Productos" },
+              { num: "5", label: "Estados" },
+            ].map(s => (
+              <div key={s.label}>
+                <p className="text-[40px] sm:text-[48px] font-semibold text-[#1d1d1f] leading-[1.07] tracking-[-0.003em]">{s.num}</p>
+                <p className="text-sm text-[rgba(0,0,0,0.48)] mt-1 tracking-[-0.016em]">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ==================== PRODUCTOS — Black, grid ==================== */}
+      <section id="productos" className="bg-black py-24 sm:py-32">
+        <div className="max-w-[980px] mx-auto px-6">
+          <p className="text-sm text-[#2997ff] text-center mb-3 tracking-[-0.016em]">Catálogo</p>
+          <h2 className="text-[40px] sm:text-[56px] font-semibold text-white text-center leading-[1.07] tracking-[-0.003em]">
+            Nuestros productos.
+          </h2>
+          <p className="text-center text-lg text-white/50 mt-4 font-light leading-[1.47] tracking-[-0.022em] max-w-md mx-auto">
+            Más de 200 productos para tu negocio. Calidad garantizada.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-16">
+            {PRODUCTOS.map(p => (
+              <div key={p.nombre} className="group relative overflow-hidden rounded-lg bg-[#1d1d1f] cursor-pointer">
+                <div className="aspect-[4/3] overflow-hidden">
+                  <img src={p.imagen} alt={p.nombre}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-90 group-hover:opacity-100"
+                    loading="lazy" />
+                </div>
+                <div className="p-5">
+                  <h3 className="text-lg font-semibold text-white leading-[1.19] tracking-[0.012em]">{p.nombre}</h3>
+                  <span className="text-sm text-[#2997ff] mt-2 inline-flex items-center gap-1 hover:underline">
+                    Ver más <ArrowRight className="h-3 w-3" />
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ==================== LATAS — Light gray, product hero ==================== */}
+      <section className="bg-[#f5f5f7] py-24 sm:py-32">
+        <div className="max-w-[980px] mx-auto px-6 text-center">
+          <p className="text-sm text-[#0066cc] mb-3 tracking-[-0.016em]">Marca propia</p>
+          <h2 className="text-[40px] sm:text-[56px] font-semibold text-[#1d1d1f] leading-[1.07] tracking-[-0.003em]">
+            Frutas en Conserva.
+          </h2>
+          <p className="text-lg text-[rgba(0,0,0,0.48)] mt-4 font-light leading-[1.47] max-w-md mx-auto tracking-[-0.022em]">
+            Piña, duraznos y cóctel de frutas. Marca ALMASA desde 1904.
+          </p>
+          <div className="mt-12 max-w-3xl mx-auto rounded-2xl overflow-hidden">
+            <img src="/landing/latas-nosotros.jpeg" alt="Latas ALMASA" className="w-full" loading="lazy" />
+          </div>
+        </div>
+      </section>
+
+      {/* ==================== NOSOTROS — Black ==================== */}
+      <section id="nosotros" className="bg-black py-24 sm:py-32">
+        <div className="max-w-[980px] mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-red-700/80 mb-6">Sobre nosotros</p>
-              <h2 className="text-3xl sm:text-4xl font-light text-slate-900 leading-snug">
-                Empresa mexicana con
-                <br />
-                <span className="font-semibold">más de 120 años</span> de tradición
+              <p className="text-sm text-[#2997ff] mb-3 tracking-[-0.016em]">Sobre nosotros</p>
+              <h2 className="text-[40px] sm:text-[48px] font-semibold text-white leading-[1.07] tracking-[-0.003em]">
+                Empresa mexicana con más de 120 años.
               </h2>
-              <p className="mt-8 text-base text-slate-400 leading-[1.8] font-light">
+              <p className="mt-6 text-[17px] text-white/60 leading-[1.47] tracking-[-0.022em] font-light">
                 En ALMASA nos dedicamos a la distribución de abarrotes al mayoreo,
                 ofreciendo una extensa variedad de productos de la más alta calidad.
                 Nuestro compromiso es impulsar tu negocio con precios competitivos
                 y un servicio de entrega confiable.
               </p>
-
-              <div className="mt-12 grid grid-cols-3 gap-8">
+              <div className="mt-8 space-y-3">
                 {[
-                  { num: "500+", label: "Clientes" },
-                  { num: "200+", label: "Productos" },
-                  { num: "5", label: "Estados" },
-                ].map((s) => (
-                  <div key={s.label}>
-                    <p className="text-3xl font-semibold text-slate-900">{s.num}</p>
-                    <p className="text-xs text-slate-400 mt-1 tracking-wide">{s.label}</p>
-                  </div>
+                  "Productos directo de proveedores de confianza",
+                  "Control de calidad en cada etapa",
+                  "Precios transparentes sin costos ocultos",
+                  "Asesoría personalizada para tu negocio",
+                ].map(item => (
+                  <p key={item} className="text-sm text-white/40 leading-[1.43] tracking-[-0.016em]">
+                    — {item}
+                  </p>
                 ))}
               </div>
             </div>
-
-            <div className="aspect-[4/5] rounded-3xl overflow-hidden bg-slate-100">
-              <img
-                src="/landing/latas-nosotros.jpeg"
-                alt="Productos ALMASA — Piña, Duraznos y Cóctel de Frutas"
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
+            <div className="rounded-2xl overflow-hidden">
+              <img src="/landing/bodega.jpeg" alt="Bodega ALMASA" className="w-full" loading="lazy" />
             </div>
           </div>
         </div>
       </section>
 
-      {/* ==================== VENTAJAS — Minimal grid ==================== */}
-      <section className="py-24 bg-slate-50/50">
-        <div className="max-w-6xl mx-auto px-6 lg:px-8">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-12">
-            {[
-              { icono: Truck, titulo: "Entrega sin costo", desc: "Directo a tu negocio, sin cobro de envío." },
-              { icono: Shield, titulo: "Calidad garantizada", desc: "Productos seleccionados con altos estándares." },
-              { icono: Clock, titulo: "Entregas puntuales", desc: "Rutas optimizadas, en el día acordado." },
-              { icono: Phone, titulo: "Atención directa", desc: "Asesoría personalizada para tu negocio." },
-            ].map((v) => (
-              <div key={v.titulo} className="text-center">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-red-700/5 mb-5">
-                  <v.icono className="h-5 w-5 text-red-700" />
-                </div>
-                <h3 className="text-sm font-semibold text-slate-900 mb-2">{v.titulo}</h3>
-                <p className="text-sm text-slate-400 font-light leading-relaxed">{v.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ==================== PRODUCTOS — Minimal cards ==================== */}
-      <section id="productos" className="py-32 sm:py-40">
-        <div className="max-w-6xl mx-auto px-6 lg:px-8">
-          <div className="text-center mb-20">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-red-700/80 mb-6">Catálogo</p>
-            <h2 className="text-3xl sm:text-4xl font-light text-slate-900">
-              Más de <span className="font-semibold">200 productos</span> para tu negocio
-            </h2>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {CATEGORIAS.map((cat) => (
-              <div key={cat.nombre} className="group relative aspect-[16/10] rounded-2xl overflow-hidden cursor-pointer">
-                <img
-                  src={cat.imagen}
-                  alt={cat.nombre}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-6">
-                  <h3 className="text-lg font-medium text-white">{cat.nombre}</h3>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ==================== QUOTE — Full width image ==================== */}
-      <section className="relative py-40 overflow-hidden">
-        <img
-          src="/landing/campo.jpeg"
-          alt="Campo de trigo"
-          className="absolute inset-0 w-full h-full object-cover"
-          loading="lazy"
-        />
-        <div className="absolute inset-0 bg-black/55" />
-        <div className="relative text-center px-6">
-          <img src={logoAlmasa} alt="ALMASA" className="h-10 mx-auto mb-10 brightness-0 invert opacity-80" />
-          <p className="text-2xl sm:text-4xl font-light text-white max-w-2xl mx-auto leading-relaxed italic">
-            "Lo natural, siempre mejor"
-          </p>
-          <p className="mt-6 text-sm text-white/40 tracking-widest uppercase">Trabajando por un México mejor</p>
-        </div>
-      </section>
-
-      {/* ==================== COBERTURA — Minimal ==================== */}
-      <section id="cobertura" className="py-32 sm:py-40">
-        <div className="max-w-6xl mx-auto px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-20 items-center">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-red-700/80 mb-6">Cobertura</p>
-              <h2 className="text-3xl sm:text-4xl font-light text-slate-900 leading-snug">
-                Entrega <span className="font-semibold">a domicilio</span>
-                <br />sin costo de envío
+      {/* ==================== ENTREGA — Light gray ==================== */}
+      <section id="entrega" className="bg-[#f5f5f7] py-24 sm:py-32">
+        <div className="max-w-[980px] mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div className="order-2 lg:order-1 rounded-2xl overflow-hidden">
+              <img src="/landing/camion.jpeg" alt="Camión ALMASA en carretera" className="w-full" loading="lazy" />
+            </div>
+            <div className="order-1 lg:order-2">
+              <p className="text-sm text-[#0066cc] mb-3 tracking-[-0.016em]">Entrega a domicilio</p>
+              <h2 className="text-[40px] sm:text-[48px] font-semibold text-[#1d1d1f] leading-[1.07] tracking-[-0.003em]">
+                Sin costo de envío.
               </h2>
-              <p className="mt-8 text-base text-slate-400 leading-[1.8] font-light">
-                Nuestra flotilla cubre las principales zonas del centro de México
-                con entregas puntuales y seguras.
+              <p className="mt-6 text-[17px] text-[rgba(0,0,0,0.56)] leading-[1.47] tracking-[-0.022em] font-light">
+                Nuestra flotilla cubre las principales zonas del centro de México con entregas puntuales y seguras.
               </p>
-              <div className="mt-10 flex flex-wrap gap-3">
-                {COBERTURA.map((zona) => (
-                  <span
-                    key={zona}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-50 border border-slate-100 text-sm text-slate-600"
-                  >
-                    <MapPin className="h-3.5 w-3.5 text-red-700/60" />
+              <div className="flex flex-wrap gap-2 mt-8">
+                {COBERTURA.map(zona => (
+                  <span key={zona} className="text-xs text-[#1d1d1f] bg-white px-4 py-2 rounded-full tracking-[-0.01em]">
                     {zona}
                   </span>
                 ))}
               </div>
             </div>
-
-            <div className="aspect-square rounded-3xl overflow-hidden bg-slate-100">
-              <img
-                src="/landing/camion.jpeg"
-                alt="Camión de reparto ALMASA"
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
-            </div>
           </div>
         </div>
       </section>
 
-      {/* ==================== CTA — Minimal dark ==================== */}
-      <section className="py-32 bg-slate-900">
-        <div className="max-w-3xl mx-auto px-6 text-center">
-          <h2 className="text-3xl sm:text-4xl font-light text-white leading-snug">
-            Empieza a surtir tu
-            <br />
-            <span className="font-semibold">negocio hoy</span>
+      {/* ==================== CTA — Black, centered ==================== */}
+      <section className="bg-black py-24 sm:py-32">
+        <div className="max-w-[980px] mx-auto px-6 text-center">
+          <h2 className="text-[40px] sm:text-[56px] font-semibold text-white leading-[1.07] tracking-[-0.003em]">
+            Empieza hoy.
           </h2>
-          <p className="mt-6 text-base text-white/40 font-light max-w-md mx-auto">
-            Cotización personalizada. Sin compromisos, sin costos ocultos.
+          <p className="text-lg text-white/50 mt-4 font-light leading-[1.47] tracking-[-0.022em] max-w-md mx-auto">
+            Cotización personalizada. Sin compromisos.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10">
-            <a
-              href="tel:+525555520168"
-              className="group flex items-center gap-3 bg-white text-slate-900 font-medium text-sm px-8 py-4 rounded-full hover:bg-slate-100 transition-all duration-200 cursor-pointer"
-            >
-              <Phone className="h-4 w-4" />
-              55 5552-0168
-              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
+            <a href="tel:+525555520168"
+              className="inline-flex items-center gap-2 bg-[#0071e3] text-white text-sm font-normal px-6 py-3 rounded-lg hover:bg-[#0077ED] transition-colors cursor-pointer">
+              <Phone className="h-4 w-4" /> 55 5552-0168
             </a>
-            <a
-              href="mailto:1904@almasa.com.mx"
-              className="flex items-center gap-3 text-white/50 hover:text-white text-sm font-medium transition-colors duration-200 cursor-pointer"
-            >
-              <Mail className="h-4 w-4" />
-              1904@almasa.com.mx
+            <a href="mailto:1904@almasa.com.mx"
+              className="text-sm text-[#2997ff] hover:underline flex items-center gap-2 cursor-pointer">
+              <Mail className="h-4 w-4" /> 1904@almasa.com.mx
             </a>
           </div>
         </div>
       </section>
 
-      {/* ==================== CONTACTO ==================== */}
-      <section id="contacto" className="py-32 sm:py-40">
-        <div className="max-w-6xl mx-auto px-6 lg:px-8">
-          <div className="grid lg:grid-cols-3 gap-16">
+      {/* ==================== CONTACTO — Light gray ==================== */}
+      <section id="contacto" className="bg-[#f5f5f7] py-24 sm:py-32">
+        <div className="max-w-[980px] mx-auto px-6">
+          <div className="grid lg:grid-cols-3 gap-12">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-red-700/80 mb-6">Contacto</p>
-              <h2 className="text-3xl font-light text-slate-900 leading-snug">
-                Estamos para <span className="font-semibold">servirte</span>
-              </h2>
-
-              <div className="mt-10 space-y-8">
+              <h2 className="text-[28px] font-semibold text-[#1d1d1f] leading-[1.14] tracking-[0.007em]">Contacto.</h2>
+              <div className="mt-8 space-y-6">
                 {[
-                  { icon: MapPin, label: "Melchor Ocampo No. 59, Col. Magdalena Mixiuhca, C.P. 15850, CDMX" },
-                  { icon: Phone, label: "55 5552-0168 / 55 5552-7887" },
-                  { icon: Mail, label: "1904@almasa.com.mx" },
-                  { icon: Clock, label: "Lunes a Viernes, 9:00 AM - 6:00 PM" },
-                ].map((item) => (
-                  <div key={item.label} className="flex items-start gap-4">
-                    <item.icon className="h-4 w-4 text-red-700/60 mt-1 shrink-0" />
-                    <p className="text-sm text-slate-500 leading-relaxed">{item.label}</p>
+                  { icon: MapPin, text: "Melchor Ocampo No. 59, Col. Magdalena Mixiuhca, C.P. 15850, CDMX" },
+                  { icon: Phone, text: "55 5552-0168 / 55 5552-7887" },
+                  { icon: Mail, text: "1904@almasa.com.mx" },
+                  { icon: Clock, text: "Lunes a Viernes, 9:00 - 18:00" },
+                ].map(item => (
+                  <div key={item.text} className="flex items-start gap-3">
+                    <item.icon className="h-4 w-4 text-[rgba(0,0,0,0.48)] mt-0.5 shrink-0" />
+                    <p className="text-sm text-[rgba(0,0,0,0.56)] leading-[1.43] tracking-[-0.016em]">{item.text}</p>
                   </div>
                 ))}
               </div>
             </div>
-
-            <div className="lg:col-span-2 rounded-2xl overflow-hidden bg-slate-100 min-h-[400px]">
+            <div className="lg:col-span-2 rounded-xl overflow-hidden bg-[#e8e8ed] min-h-[350px]">
               <iframe
                 src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3763.0!2d-99.1!3d19.4!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMTnCsDI0JzAwLjAiTiA5OcKwMDYnMDAuMCJX!5e0!3m2!1ses!2smx!4v1"
-                width="100%"
-                height="100%"
-                style={{ border: 0, minHeight: 400 }}
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                title="Ubicación ALMASA"
-              />
+                width="100%" height="100%" style={{ border: 0, minHeight: 350 }}
+                allowFullScreen loading="lazy" referrerPolicy="no-referrer-when-downgrade" title="Ubicación ALMASA" />
             </div>
           </div>
         </div>
       </section>
 
-      {/* ==================== FOOTER — Minimal ==================== */}
-      <footer className="border-t border-slate-100 py-12">
-        <div className="max-w-6xl mx-auto px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-            <img src={logoAlmasa} alt="ALMASA" className="h-7" />
-            <div className="flex items-center gap-8">
-              {["nosotros", "productos", "cobertura", "contacto"].map((id) => (
-                <button key={id} onClick={() => scrollTo(id)}
-                  className="text-xs text-slate-400 hover:text-slate-600 capitalize cursor-pointer transition-colors">
-                  {id}
-                </button>
-              ))}
-              <Link to="/privacidad" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
-                Privacidad
-              </Link>
-            </div>
-          </div>
-          <div className="mt-8 pt-8 border-t border-slate-50 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-xs text-slate-300">
+      {/* ==================== FOOTER — Black, minimal ==================== */}
+      <footer className="bg-black border-t border-white/10 py-8">
+        <div className="max-w-[980px] mx-auto px-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-xs text-white/30 tracking-[-0.01em]">
               &copy; {new Date().getFullYear()} Abarrotes la Manita S.A. de C.V.
             </p>
-            <p className="text-[10px] text-slate-300">RFC: AMA700701GI8</p>
+            <div className="flex items-center gap-6">
+              {["productos", "nosotros", "entrega", "contacto"].map(id => (
+                <button key={id} onClick={() => scrollTo(id)}
+                  className="text-xs text-white/30 hover:text-white/60 capitalize cursor-pointer tracking-[-0.01em]">{id}</button>
+              ))}
+              <Link to="/privacidad" className="text-xs text-white/30 hover:text-white/60 tracking-[-0.01em]">Privacidad</Link>
+            </div>
           </div>
+          <p className="text-[10px] text-white/20 text-center mt-6 tracking-[-0.008em]">RFC: AMA700701GI8</p>
         </div>
       </footer>
     </div>
