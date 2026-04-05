@@ -42,7 +42,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
     };
 
     const resolveEmployeePhoto = async (empleadoId: string, existingPhotoUrl: string | null) => {
+      // Priority 1: Use foto_url from DB if it exists (public URL from empleados-fotos bucket)
       if (existingPhotoUrl) return existingPhotoUrl;
+      // Priority 2: Try empleados-fotos bucket (where admin uploads go)
+      const { data: publicData } = supabase.storage.from("empleados-fotos").getPublicUrl(`${empleadoId}.jpg`);
+      if (publicData?.publicUrl) {
+        // Verify the file actually exists by checking with a HEAD-like request
+        const { data: signedCheck } = await supabase.storage.from("empleados-fotos").createSignedUrl(`${empleadoId}.jpg`, 60);
+        if (signedCheck?.signedUrl) return publicData.publicUrl;
+      }
+      // Priority 3: Try empleados-documentos bucket
       const { data } = await supabase.storage
         .from("empleados-documentos")
         .createSignedUrl(`${empleadoId}/foto.jpg`, 600);

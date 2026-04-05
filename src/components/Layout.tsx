@@ -95,9 +95,14 @@ const Layout = ({ children }: LayoutProps) => {
           });
           const emps = await empRes.json();
           if (Array.isArray(emps) && emps[0]) {
-            const { data: blob } = await supabase.storage.from("empleados-documentos").download(`${emps[0].id}/foto.jpg`);
-            if (blob) setUserFoto(URL.createObjectURL(blob));
-            else if (emps[0].foto_url) setUserFoto(emps[0].foto_url);
+            // Priority 1: Use foto_url from DB (public URL from empleados-fotos bucket)
+            if (emps[0].foto_url) {
+              setUserFoto(emps[0].foto_url);
+            } else {
+              // Priority 2: Try empleados-documentos bucket
+              const { data: blob } = await supabase.storage.from("empleados-documentos").download(`${emps[0].id}/foto.jpg`);
+              if (blob) setUserFoto(URL.createObjectURL(blob));
+            }
           } else {
             const { data: blob } = await supabase.storage.from("empleados-documentos").download(`profiles/${session.user.id}/foto.jpg`);
             if (blob) setUserFoto(URL.createObjectURL(blob));
