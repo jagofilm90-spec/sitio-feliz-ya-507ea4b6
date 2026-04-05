@@ -358,8 +358,8 @@ const LandingAlmasa = () => {
 
             <div className="aspect-square rounded-3xl overflow-hidden bg-slate-100">
               <img
-                src="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=800&q=80"
-                alt="Flota ALMASA"
+                src="/camion-almasa.jpg"
+                alt="Camión de reparto ALMASA"
                 className="w-full h-full object-cover"
                 loading="lazy"
               />
