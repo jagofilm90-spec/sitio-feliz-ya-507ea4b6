@@ -7,27 +7,29 @@ import {
 import { cn } from "@/lib/utils";
 import logoAlmasa from "@/assets/logo-almasa.png";
 
-// ==================== HERO IMAGES (fallback — videos se agregan cuando tengamos URLs propias) ====================
+// ==================== HERO IMAGES — productos estrella ALMASA ====================
 const HERO_SLIDES = [
   {
-    imagen: "https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=1600&q=80",
-    label: "Semillas y granos al mayoreo",
+    imagen: "https://images.unsplash.com/photo-1587049016823-69ef9d68f9a6?w=1600&q=80",
+    label: "Cacahuate al mayoreo",
   },
   {
-    imagen: "https://images.unsplash.com/photo-1500651230702-0e2d8a49d4ad?w=1600&q=80",
-    label: "Campos de cultivo mexicanos",
+    imagen: "https://images.unsplash.com/photo-1599639957043-f3aa5c986398?w=1600&q=80",
+    label: "Azúcar — nuestro producto estrella",
   },
   {
-    imagen: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=1600&q=80",
-    label: "Abarrotes y distribución",
+    imagen: "https://images.unsplash.com/photo-1612257416648-ee7a6c533e4f?w=1600&q=80",
+    label: "Alimento para mascotas",
   },
 ];
 
 const CATEGORIAS = [
-  { nombre: "Botanas y Frutos Secos", imagen: "https://images.unsplash.com/photo-1599599810769-bcde5a160d32?w=600&q=80" },
-  { nombre: "Granos y Semillas", imagen: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&q=80" },
-  { nombre: "Azúcar y Endulzantes", imagen: "https://images.unsplash.com/photo-1581268157684-79c492917515?w=600&q=80" },
-  { nombre: "Frutas Deshidratadas", imagen: "https://images.unsplash.com/photo-1596591606975-97ee5cef3a1e?w=600&q=80" },
+  { nombre: "Cacahuate y Botanas", imagen: "https://images.unsplash.com/photo-1567892737950-30c4db37cd89?w=600&q=80" },
+  { nombre: "Azúcar", imagen: "https://images.unsplash.com/photo-1581268157684-79c492917515?w=600&q=80" },
+  { nombre: "Granos y Semillas", imagen: "https://images.unsplash.com/photo-1515543904413-63b3b7a4e013?w=600&q=80" },
+  { nombre: "Alimento para Mascotas", imagen: "https://images.unsplash.com/photo-1589924691995-400dc9ecc119?w=600&q=80" },
+  { nombre: "Ciruela y Uva Pasa", imagen: "https://images.unsplash.com/photo-1596591606975-97ee5cef3a1e?w=600&q=80" },
+  { nombre: "Avena y Cereales", imagen: "https://images.unsplash.com/photo-1517673400267-0251440c45dc?w=600&q=80" },
 ];
 
 const COBERTURA = ["Ciudad de México", "Estado de México", "Toluca", "Puebla", "Querétaro", "Morelos"];
@@ -257,8 +259,8 @@ const LandingAlmasa = () => {
 
             <div className="aspect-[4/5] rounded-3xl overflow-hidden bg-slate-100">
               <img
-                src="https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=800&q=80"
-                alt="Almacén ALMASA"
+                src="https://images.unsplash.com/photo-1553413077-190dd305871c?w=800&q=80"
+                alt="Bodega de distribución ALMASA"
                 className="w-full h-full object-cover"
                 loading="lazy"
               />
@@ -299,7 +301,7 @@ const LandingAlmasa = () => {
             </h2>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {CATEGORIAS.map((cat) => (
               <div key={cat.nombre} className="group relative aspect-[16/10] rounded-2xl overflow-hidden cursor-pointer">
                 <img
@@ -321,8 +323,8 @@ const LandingAlmasa = () => {
       {/* ==================== QUOTE — Full width image ==================== */}
       <section className="relative py-40 overflow-hidden">
         <img
-          src="https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1600&q=80"
-          alt="Campo de trigo"
+          src="https://images.unsplash.com/photo-1536304993881-460e32cce50a?w=1600&q=80"
+          alt="Granos y semillas a granel"
           className="absolute inset-0 w-full h-full object-cover"
           loading="lazy"
         />
