@@ -9,27 +9,18 @@ import logoAlmasa from "@/assets/logo-almasa.png";
 
 // ==================== HERO IMAGES — productos estrella ALMASA ====================
 const HERO_SLIDES = [
-  {
-    imagen: "https://images.unsplash.com/photo-1587049016823-69ef9d68f9a6?w=1600&q=80",
-    label: "Cacahuate al mayoreo",
-  },
-  {
-    imagen: "https://images.unsplash.com/photo-1599639957043-f3aa5c986398?w=1600&q=80",
-    label: "Azúcar — nuestro producto estrella",
-  },
-  {
-    imagen: "https://images.unsplash.com/photo-1612257416648-ee7a6c533e4f?w=1600&q=80",
-    label: "Alimento para mascotas",
-  },
+  { imagen: "/landing/cacahuate.jpg", label: "Cacahuate al mayoreo" },
+  { imagen: "/landing/azucar.jpg", label: "Azúcar — producto estrella" },
+  { imagen: "/landing/frijol.jpg", label: "Frijol y granos a granel" },
 ];
 
 const CATEGORIAS = [
-  { nombre: "Cacahuate y Botanas", imagen: "https://images.unsplash.com/photo-1567892737950-30c4db37cd89?w=600&q=80" },
-  { nombre: "Azúcar", imagen: "https://images.unsplash.com/photo-1581268157684-79c492917515?w=600&q=80" },
-  { nombre: "Granos y Semillas", imagen: "https://images.unsplash.com/photo-1515543904413-63b3b7a4e013?w=600&q=80" },
-  { nombre: "Alimento para Mascotas", imagen: "https://images.unsplash.com/photo-1589924691995-400dc9ecc119?w=600&q=80" },
-  { nombre: "Ciruela y Uva Pasa", imagen: "https://images.unsplash.com/photo-1596591606975-97ee5cef3a1e?w=600&q=80" },
-  { nombre: "Avena y Cereales", imagen: "https://images.unsplash.com/photo-1517673400267-0251440c45dc?w=600&q=80" },
+  { nombre: "Cacahuate y Botanas", imagen: "/landing/cacahuate.jpg" },
+  { nombre: "Azúcar", imagen: "/landing/azucar.jpg" },
+  { nombre: "Frijol y Granos", imagen: "/landing/frijol.jpg" },
+  { nombre: "Alimento para Mascotas", imagen: "/landing/mascotas.jpg" },
+  { nombre: "Ciruela y Uva Pasa", imagen: "/landing/pasas.jpg" },
+  { nombre: "Avena y Cereales", imagen: "/landing/avena.jpg" },
 ];
 
 const COBERTURA = ["Ciudad de México", "Estado de México", "Toluca", "Puebla", "Querétaro", "Morelos"];
@@ -259,7 +250,7 @@ const LandingAlmasa = () => {
 
             <div className="aspect-[4/5] rounded-3xl overflow-hidden bg-slate-100">
               <img
-                src="https://images.unsplash.com/photo-1553413077-190dd305871c?w=800&q=80"
+                src="/landing/bodega.jpg"
                 alt="Bodega de distribución ALMASA"
                 className="w-full h-full object-cover"
                 loading="lazy"
@@ -323,8 +314,8 @@ const LandingAlmasa = () => {
       {/* ==================== QUOTE — Full width image ==================== */}
       <section className="relative py-40 overflow-hidden">
         <img
-          src="https://images.unsplash.com/photo-1536304993881-460e32cce50a?w=1600&q=80"
-          alt="Granos y semillas a granel"
+          src="/landing/campo.jpg"
+          alt="Campo de trigo"
           className="absolute inset-0 w-full h-full object-cover"
           loading="lazy"
         />
@@ -367,8 +358,8 @@ const LandingAlmasa = () => {
 
             <div className="aspect-square rounded-3xl overflow-hidden bg-slate-100">
               <img
-                src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800&q=80"
-                alt="Camión de reparto"
+                src="/camion-almasa.jpg"
+                alt="Camión de reparto ALMASA"
                 className="w-full h-full object-cover"
                 loading="lazy"
               />
