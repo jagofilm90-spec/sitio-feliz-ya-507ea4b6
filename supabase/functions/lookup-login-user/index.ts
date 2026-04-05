@@ -78,11 +78,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
     };
 
     // 1. Try employee by email
-    const { data: empByEmail } = await supabase
+    const { data: empRows } = await supabase
       .from("empleados")
       .select("id, nombre_completo, puesto, foto_url, user_id")
       .eq("email", normalizedEmail)
-      .maybeSingle();
+      .eq("activo", true)
+      .order("fecha_ingreso", { ascending: false })
+      .limit(1);
+    const empByEmail = empRows?.[0] ?? null;
 
     if (empByEmail) {
       response.nombre = empByEmail.nombre_completo || response.nombre;
