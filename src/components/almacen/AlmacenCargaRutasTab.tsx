@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { format, differenceInMinutes, differenceInSeconds, parseISO, set } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { recalcularTotalesPedido } from "@/lib/recalcularTotalesPedido";
@@ -64,6 +65,7 @@ interface AlmacenCargaRutasTabProps {
 }
 
 export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCargaRutasTabProps) => {
+  const navigate = useNavigate();
   const [rutas, setRutas] = useState<Ruta[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRuta, setSelectedRuta] = useState<Ruta | null>(null);
@@ -582,7 +584,7 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
                     </p>
                   </div>
                   <Button 
-                    onClick={() => setShowInlineFlow(true)}
+                    onClick={() => navigate("/almacen-tablet/carga-scan")}
                     size="lg"
                     className="h-14 px-6 text-base font-bold gap-2 shrink-0"
                   >
@@ -683,7 +685,7 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
               </p>
             </div>
             <Button
-              onClick={() => setShowInlineFlow(true)}
+              onClick={() => navigate("/almacen-tablet/carga-scan")}
               size="lg"
               className="h-14 px-6 text-base font-bold gap-2 shrink-0"
             >
