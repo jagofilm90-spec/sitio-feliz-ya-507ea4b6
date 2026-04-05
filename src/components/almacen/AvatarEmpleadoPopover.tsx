@@ -51,7 +51,7 @@ interface EmpleadoDetalle {
   beneficiario: string | null;
   contacto_emergencia_nombre: string | null;
   contacto_emergencia_telefono: string | null;
-  emergencia_parentesco: string | null;
+  
   licencia_numero: string | null;
   licencia_tipo: string | null;
   licencia_vencimiento: string | null;
