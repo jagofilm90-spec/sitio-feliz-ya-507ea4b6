@@ -321,7 +321,7 @@ const AlmacenTablet = () => {
 
 
   return (
-    <SidebarProvider defaultOpen={false}>
+    <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen flex bg-background w-full">
         {/* Sidebar - solo visible en desktop con mouse */}
         {!showMobileNav && (
