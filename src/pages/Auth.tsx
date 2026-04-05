@@ -75,8 +75,34 @@ const Auth = () => {
       setUserName(info?.nombre || email.split("@")[0]);
       setUserPuesto(info?.puesto || "");
       setUserFoto(info?.foto_url || null);
+
+      // Fallback: if Edge Function didn't return a photo, try querying empleados directly
+      if (!info?.foto_url) {
+        const { data: emp } = await supabase
+          .from("empleados")
+          .select("foto_url")
+          .eq("email", email.trim().toLowerCase())
+          .maybeSingle();
+        if (emp?.foto_url) setUserFoto(emp.foto_url);
+      }
     } catch {
-      setUserName(email.split("@")[0]);
+      // Edge Function failed entirely — try direct DB lookup
+      try {
+        const { data: emp } = await supabase
+          .from("empleados")
+          .select("nombre_completo, puesto, foto_url")
+          .eq("email", email.trim().toLowerCase())
+          .maybeSingle();
+        if (emp) {
+          setUserName(emp.nombre_completo || email.split("@")[0]);
+          setUserPuesto(emp.puesto || "");
+          if (emp.foto_url) setUserFoto(emp.foto_url);
+        } else {
+          setUserName(email.split("@")[0]);
+        }
+      } catch {
+        setUserName(email.split("@")[0]);
+      }
     }
     setLoading(false);
     setStep(2);
