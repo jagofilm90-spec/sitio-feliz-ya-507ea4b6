@@ -1,47 +1,17 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarTrigger,
-  useSidebar,
-} from "@/components/ui/sidebar";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { 
-  Truck, 
-  ShoppingCart, 
-  Package, 
-  FileText, 
-  Boxes, 
-  Bug,
-  AlertTriangle,
-  CheckCircle2,
-  Car,
-  Users,
-  CalendarCheck,
-  LogOut,
-  Settings,
-  User,
-  Timer,
+  Truck, ShoppingCart, Package, FileText, Boxes, Bug,
+  AlertTriangle, CheckCircle2, Car, Users, CalendarCheck,
+  LogOut, Settings, Timer,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ConfiguracionFlotillaDialog } from "./ConfiguracionFlotillaDialog";
+import { AvatarEmpleadoPopover } from "./AvatarEmpleadoPopover";
 import logoAlmasa from "@/assets/logo-almasa.png";
 import { LiveIndicator } from "@/components/ui/live-indicator";
-import { AvatarEmpleadoPopover } from "./AvatarEmpleadoPopover";
 
 interface NavItem {
   id: string;
@@ -85,8 +55,6 @@ export const AlmacenSidebar = ({
   onFotoUpdated
 }: AlmacenSidebarProps) => {
   const navigate = useNavigate();
-  const { state } = useSidebar();
-  const isCollapsed = state === "collapsed";
   const [configOpen, setConfigOpen] = useState(false);
 
   const almacenItems: NavItem[] = [
@@ -114,69 +82,41 @@ export const AlmacenSidebar = ({
     const hasBadge = item.badge !== undefined && item.badge > 0;
 
     return (
-      <SidebarMenuItem key={item.id}>
-        <SidebarMenuButton
-          isActive={isActive}
-          tooltip={item.label}
-          onClick={() => onTabChange(item.id)}
-          className={cn(
-            "transition-all duration-200",
-            isActive && "bg-primary text-primary-foreground shadow-sm"
-          )}
-        >
-          <div className="relative">
-            <item.icon className="h-4 w-4" />
-            {hasBadge && isCollapsed && (
-              <span className="absolute -top-1 -right-1 h-3 w-3 flex items-center justify-center bg-destructive text-destructive-foreground text-[8px] font-bold rounded-full">
-                {item.badge! > 9 ? "+" : item.badge}
-              </span>
-            )}
-          </div>
-          <span className="font-medium">{item.label}</span>
-          {hasBadge && !isCollapsed && (
-            <Badge 
-              variant="secondary"
-              className="ml-auto text-xs"
-            >
-              {item.badge! > 99 ? "99+" : item.badge}
-            </Badge>
-          )}
-        </SidebarMenuButton>
-      </SidebarMenuItem>
+      <button
+        key={item.id}
+        onClick={() => onTabChange(item.id)}
+        className={cn(
+          "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer",
+          isActive
+            ? "bg-primary text-primary-foreground shadow-sm"
+            : "text-foreground/70 hover:bg-muted hover:text-foreground"
+        )}
+      >
+        <item.icon className="h-4 w-4 shrink-0" />
+        <span className="truncate flex-1 text-left">{item.label}</span>
+        {hasBadge && (
+          <Badge
+            variant={isActive ? "secondary" : "destructive"}
+            className="text-[10px] h-5 min-w-5 px-1.5 shrink-0"
+          >
+            {item.badge! > 99 ? "99+" : item.badge}
+          </Badge>
+        )}
+      </button>
     );
   };
 
   return (
     <>
-      <Sidebar collapsible="icon" className="border-r border-sidebar-border">
-        {/* Header con Logo y Toggle */}
-        <SidebarHeader className="border-b border-sidebar-border">
-          <div className="flex items-center justify-between py-2 px-2">
-            <img 
-              src={logoAlmasa} 
-              alt="ALMASA" 
-              className={cn(
-                "object-contain transition-all duration-200",
-                isCollapsed ? "h-6 w-auto" : "h-8 w-auto"
-              )} 
-            />
-            {!isCollapsed && (
-              <SidebarTrigger className="h-7 w-7 text-sidebar-foreground/70 hover:text-sidebar-foreground" />
-            )}
-          </div>
-          {isCollapsed && (
-            <div className="flex justify-center py-1">
-              <SidebarTrigger className="h-7 w-7 text-sidebar-foreground/70 hover:text-sidebar-foreground" />
-            </div>
-          )}
-        </SidebarHeader>
+      <aside className="w-56 lg:w-64 min-h-[calc(100vh)] border-r bg-card flex flex-col shrink-0">
+        {/* Logo */}
+        <div className="p-4 border-b">
+          <img src={logoAlmasa} alt="ALMASA" className="h-8" />
+        </div>
 
-        {/* User Info with real photo */}
-        <div className="border-b border-sidebar-border">
-          <div className={cn(
-            "flex items-center gap-3 p-3",
-            isCollapsed ? "flex-col justify-center py-2" : "flex-row"
-          )}>
+        {/* User */}
+        <div className="p-3 border-b">
+          <div className="flex items-center gap-3">
             <AvatarEmpleadoPopover
               empleadoId={empleadoId}
               empleadoNombre={empleadoNombre || "Usuario"}
@@ -185,84 +125,64 @@ export const AlmacenSidebar = ({
               fotoUrl={empleadoFotoUrl}
               onFotoUpdated={onFotoUpdated}
             />
-            {!isCollapsed && (
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-sidebar-foreground truncate">
-                  {empleadoNombre || "Usuario"}
-                </p>
-                <p className="text-xs text-muted-foreground font-medium truncate">
-                  {empleadoPuesto || (showFlotillaTabs ? "Gerente de Almacén" : "Almacenista")}
-                </p>
-              </div>
-            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold truncate">{empleadoNombre || "Usuario"}</p>
+              <p className="text-xs text-muted-foreground truncate">
+                {empleadoPuesto || (showFlotillaTabs ? "Gerente de Almacén" : "Almacenista")}
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* Navegación */}
-        <SidebarContent>
-          {/* Sección Operaciones */}
-          <SidebarGroup>
-            <SidebarGroupLabel>Operaciones</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {almacenItems.map(renderNavItem)}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto p-3 space-y-5">
+          {/* Operaciones */}
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 px-3">
+              Operaciones
+            </p>
+            <div className="space-y-0.5">
+              {almacenItems.map(renderNavItem)}
+            </div>
+          </div>
 
-          {/* Sección Flotilla - Solo para gerente/admin */}
+          {/* Flotilla */}
           {showFlotillaTabs && (
-            <SidebarGroup>
-              <SidebarGroupLabel>Gestión Flotilla</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {flotillaItems.map(renderNavItem)}
-                  
-                  {/* Configuración */}
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      tooltip="Configuración"
-                      onClick={() => setConfigOpen(true)}
-                    >
-                      <Settings className="h-4 w-4" />
-                      <span>Configuración</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          )}
-        </SidebarContent>
-
-        {/* Footer */}
-        <SidebarFooter className="border-t border-sidebar-border">
-          {/* Live indicator */}
-          {!isCollapsed && (
-            <div className="px-2 py-1">
-              <LiveIndicator 
-                label={isOnline ? "Sincronizado" : "Sin conexión"} 
-                className="text-sidebar-foreground/60 text-xs" 
-              />
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2 px-3">
+                Gestión Flotilla
+              </p>
+              <div className="space-y-0.5">
+                {flotillaItems.map(renderNavItem)}
+                <button
+                  onClick={() => setConfigOpen(true)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-foreground/70 hover:bg-muted hover:text-foreground transition-all duration-150 cursor-pointer"
+                >
+                  <Settings className="h-4 w-4 shrink-0" />
+                  <span className="truncate flex-1 text-left">Configuración</span>
+                </button>
+              </div>
             </div>
           )}
+        </nav>
 
-          {/* Logout button */}
-          <SidebarMenuButton
-            tooltip="Cerrar sesión"
+        {/* Footer */}
+        <div className="p-3 border-t space-y-2">
+          <LiveIndicator
+            label={isOnline ? "Sincronizado" : "Sin conexión"}
+            className="text-xs text-muted-foreground px-3"
+          />
+          <button
             onClick={onLogout}
-            className="hover:bg-destructive/10 hover:text-destructive"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive/70 hover:bg-destructive/10 hover:text-destructive transition-all duration-150 cursor-pointer"
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-4 w-4 shrink-0" />
             <span>Cerrar sesión</span>
-          </SidebarMenuButton>
-        </SidebarFooter>
-      </Sidebar>
+          </button>
+        </div>
+      </aside>
 
-      {/* Dialog de Configuración controlado */}
-      <ConfiguracionFlotillaDialog 
-        open={configOpen} 
-        onOpenChange={setConfigOpen} 
-      />
+      <ConfiguracionFlotillaDialog open={configOpen} onOpenChange={setConfigOpen} />
     </>
   );
 };

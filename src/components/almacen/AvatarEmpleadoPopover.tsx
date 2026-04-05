@@ -183,10 +183,6 @@ export const AvatarEmpleadoPopover = ({
             <div className="w-full border-t border-border" />
 
             <div className="w-full space-y-2">
-              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
-              <Button variant="outline" className="w-full justify-start gap-2 cursor-pointer" onClick={() => fileInputRef.current?.click()} disabled={isUploading || !empleadoId}>
-                <Camera className="h-4 w-4" /> {fotoUrl ? "Cambiar foto" : "Agregar foto"}
-              </Button>
               <Button variant="outline" className="w-full justify-start gap-2 cursor-pointer" onClick={() => { setOpen(false); setShowTarjeta(true); }}>
                 <User className="h-4 w-4" /> Ver mi tarjeta de trabajador
               </Button>

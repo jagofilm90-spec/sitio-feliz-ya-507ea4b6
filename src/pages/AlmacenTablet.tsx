@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { 
   Package, 
   Truck, 
@@ -346,10 +346,7 @@ const AlmacenTablet = () => {
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              {/* SidebarTrigger solo si hay sidebar visible */}
-              {!showMobileNav && (
-                <SidebarTrigger className="h-10 w-10" />
-              )}
+              {/* Removed SidebarTrigger - sidebar is always visible */}
               <div>
                 <div className="flex items-center gap-3">
                   <h1 className="text-2xl md:text-3xl font-bold text-foreground">
