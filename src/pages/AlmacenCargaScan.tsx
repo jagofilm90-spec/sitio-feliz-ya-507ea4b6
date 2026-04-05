@@ -104,8 +104,8 @@ export default function AlmacenCargaScan() {
   // Auto-detección de bodega para filtrar lotes
   const { bodega: bodegaDetectada } = useBodegaAutoDetect();
 
-  // Pre-scan step: chofer + vehículo selection
-  const [paso, setPaso] = useState<"seleccion" | "escaneo">("seleccion");
+  // Flow steps: seleccion → escaneo_masivo → ordenar → carga
+  const [paso, setPaso] = useState<"seleccion" | "escaneo_masivo" | "ordenar" | "carga">("seleccion");
   const [choferId, setChoferId] = useState<string>("");
   const [ayudantesIds, setAyudantesIds] = useState<string[]>([]);
   const [vehiculoId, setVehiculoId] = useState<string>("");
@@ -127,24 +127,36 @@ export default function AlmacenCargaScan() {
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load choferes and vehículos for selection step, excluding those already on a route today
+  // Load choferes and vehículos for selection step
+  // ONLY show employees with ZKTeco attendance today + exclude those already on a route
   useEffect(() => {
     const loadOptions = async () => {
       setLoadingOptions(true);
       const fechaHoy = format(new Date(), "yyyy-MM-dd");
 
-      // Get today's active routes that actually have entregas (orders loaded)
+      // 1. Get today's attendance from ZKTeco — who checked in today
+      const { data: asistenciaHoy } = await supabase
+        .from("asistencia")
+        .select("empleado_id")
+        .eq("fecha", fechaHoy)
+        .not("empleado_id", "is", null);
+
+      const empleadosConAsistencia = new Set(
+        (asistenciaHoy || []).map(a => a.empleado_id).filter(Boolean)
+      );
+
+      // 2. Get today's active routes that actually have entregas (orders loaded)
       const { data: rutasHoy } = await supabase
         .from("rutas")
         .select("chofer_id, vehiculo_id, entregas(id)")
         .eq("fecha_ruta", fechaHoy)
         .not("status", "eq", "cancelada");
 
-      // Only exclude choferes/vehiculos from routes that have at least 1 entrega
       const rutasConCarga = (rutasHoy || []).filter(r => r.entregas && r.entregas.length > 0);
       const choferesEnRuta = new Set(rutasConCarga.map(r => r.chofer_id).filter(Boolean));
       const vehiculosEnRuta = new Set(rutasConCarga.map(r => r.vehiculo_id).filter(Boolean));
 
+      // 3. Get all active employees (choferes + ayudantes) and vehicles
       const [empleadosRes, vehiculosRes] = await Promise.all([
         supabase
           .from("empleados")
@@ -160,10 +172,18 @@ export default function AlmacenCargaScan() {
       ]);
 
       const allEmpleados = empleadosRes.data || [];
-      
-      // Split into choferes and ayudantes - only exclude those on routes WITH loaded orders
-      const soloChoferes = allEmpleados.filter(e => e.puesto === "Chofer" && !choferesEnRuta.has(e.id));
-      const soloAyudantes = allEmpleados.filter(e => e.puesto === "Ayudante de Chofer" && !choferesEnRuta.has(e.id));
+
+      // 4. Filter: must have attendance today AND not already on a route with loaded orders
+      const soloChoferes = allEmpleados.filter(e =>
+        e.puesto === "Chofer" &&
+        empleadosConAsistencia.has(e.id) &&
+        !choferesEnRuta.has(e.id)
+      );
+      const soloAyudantes = allEmpleados.filter(e =>
+        e.puesto === "Ayudante de Chofer" &&
+        empleadosConAsistencia.has(e.id) &&
+        !choferesEnRuta.has(e.id)
+      );
       const vehiculosDisponibles = (vehiculosRes.data || []).filter(v => !vehiculosEnRuta.has(v.id));
 
       setChoferes(soloChoferes);
@@ -255,8 +275,8 @@ export default function AlmacenCargaScan() {
         .update({ status: "en_ruta" })
         .eq("id", vehiculoId);
 
-      setPaso("escaneo");
-      toast.success(`Ruta ${ruta.folio} creada. Empieza a escanear pedidos.`);
+      setPaso("escaneo_masivo");
+      toast.success(`Ruta ${ruta.folio} creada. Escanea todos los pedidos.`);
 
       // If we had a pending QR pedidoId, add it now
       if (pendingPedidoId.current) {
@@ -297,14 +317,6 @@ export default function AlmacenCargaScan() {
       };
 
       setCola((prev) => [...prev, nuevo]);
-
-      // Start timer on first add
-      if (!horaInicio) setHoraInicio(new Date());
-
-      // If this is the first or we're idle, load it
-      if (cola.length === 0) {
-        loadProductosPedido(data.id);
-      }
 
       // Link or create entrega for this pedido on the route
       if (rutaId) {
@@ -426,7 +438,7 @@ export default function AlmacenCargaScan() {
           .gt("cantidad_disponible", 0)
           .order("fecha_caducidad", { ascending: true, nullsFirst: false });
 
-        // Filtrar lotes por bodega detectada (si hay), sino mostrar todos
+        // Show lotes from ALL bodegas with bodega label (multi-bodega support)
         const allLotes = (lotes || []).map((l) => ({
           id: l.id,
           lote_referencia: l.lote_referencia,
@@ -435,15 +447,12 @@ export default function AlmacenCargaScan() {
           bodega_id: l.bodega_id,
           bodega_nombre: (l.bodega as any)?.nombre || null,
         }));
-        const lotesFiltrados = bodegaDetectada
-          ? allLotes.filter(l => l.bodega_id === bodegaDetectada.id)
-          : allLotes;
 
         enriched.push({
           ...cp,
           peso_real_kg: cp.peso_real_kg ?? null,
           producto: prod,
-          lotes_disponibles: lotesFiltrados.length > 0 ? lotesFiltrados : allLotes,
+          lotes_disponibles: allLotes,
         });
       }
 
@@ -598,8 +607,9 @@ export default function AlmacenCargaScan() {
         prev.map((c, i) => (i === indiceCola ? { ...c, completado: true } : c))
       );
 
-      const siguiente = indiceCola + 1;
-      if (siguiente < cola.length) {
+      // Navigate in reverse order (LIFO: last→first)
+      const siguiente = indiceCola - 1;
+      if (siguiente >= 0) {
         setIndiceCola(siguiente);
         await loadProductosPedido(cola[siguiente].pedidoId);
       } else {
@@ -829,11 +839,11 @@ export default function AlmacenCargaScan() {
                   </SelectTrigger>
                   <SelectContent>
                     {choferes.length === 0 && (
-                      <div className="px-3 py-2 text-sm text-muted-foreground">No hay choferes disponibles</div>
+                      <div className="px-3 py-2 text-sm text-muted-foreground">No hay choferes con asistencia hoy</div>
                     )}
                     {choferes.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
-                        {c.nombre_completo}
+                        {c.nombre_completo} <span className="text-emerald-600 text-xs ml-1">ZKT</span>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -878,7 +888,7 @@ export default function AlmacenCargaScan() {
                   </SelectTrigger>
                   <SelectContent>
                     {ayudantes.filter((a) => !ayudantesIds.includes(a.id)).length === 0 && (
-                      <div className="px-3 py-2 text-sm text-muted-foreground">No hay más ayudantes disponibles</div>
+                      <div className="px-3 py-2 text-sm text-muted-foreground">No hay ayudantes con asistencia hoy</div>
                     )}
                     {ayudantes
                       .filter((a) => !ayudantesIds.includes(a.id))
@@ -921,7 +931,7 @@ export default function AlmacenCargaScan() {
                 className="w-full h-14 text-lg font-bold mt-4"
               >
                 <QrCode className="h-5 w-5 mr-2" />
-                Empezar a Cargar
+                Escanear Códigos QR
               </Button>
             </div>
           )}
@@ -973,7 +983,186 @@ export default function AlmacenCargaScan() {
     );
   }
 
-  // ─── Step 2: Scanning + Loading ───
+  // ─── Step 2: Escaneo masivo — scan all orders first ───
+  if (paso === "escaneo_masivo") {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="sticky top-0 z-10 bg-background border-b p-3">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/almacen-tablet")}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex-1">
+              <h1 className="font-bold text-lg">Escanear Pedidos</h1>
+              <p className="text-sm text-muted-foreground">Escanea todos los pedidos de esta ruta</p>
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" disabled={cancelling}>
+                  {cancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1" />}
+                  Cancelar
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>¿Eliminar esta ruta?</AlertDialogTitle>
+                  <AlertDialogDescription>Se eliminará la ruta y todos los pedidos escaneados.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>No, mantener</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleCancelarRuta} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Sí, eliminar</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+
+          {/* Camera QR Scanner */}
+          <div className="mt-2">
+            <CameraQrScanner active={cameraActive} onScan={handleCameraScan} onClose={() => setCameraActive(false)} />
+          </div>
+
+          {/* Scan input */}
+          <div className="flex gap-2 mt-2">
+            <Button variant={cameraActive ? "destructive" : "secondary"} size="lg" className="h-12 px-3 shrink-0" onClick={() => setCameraActive(!cameraActive)}>
+              <Camera className="h-5 w-5" />
+            </Button>
+            <Input placeholder="Pega el código QR o folio..." value={scanInput} onChange={(e) => setScanInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleScanSubmit()} className="h-12 text-base" />
+            <Button onClick={handleScanSubmit} size="lg" className="h-12 px-4">
+              <QrCode className="h-5 w-5 mr-1" /> Agregar
+            </Button>
+          </div>
+        </div>
+
+        <div className="p-4 space-y-4 max-w-md mx-auto">
+          {cola.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <QrCode className="h-16 w-16 mx-auto mb-4 opacity-30" />
+              <p className="text-lg font-medium">Escanea el primer pedido</p>
+              <p className="text-sm mt-1">Usa la cámara o pega el código QR</p>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm font-medium text-muted-foreground">{cola.length} pedido{cola.length > 1 ? "s" : ""} escaneado{cola.length > 1 ? "s" : ""}</p>
+              <div className="space-y-2">
+                {cola.map((c, i) => (
+                  <Card key={i}>
+                    <CardContent className="py-3 px-4 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-sm">{c.folio}</p>
+                        <p className="text-xs text-muted-foreground">{c.clienteNombre}</p>
+                      </div>
+                      <Badge variant="secondary">{i + 1}</Badge>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              <Button size="lg" className="w-full h-14 text-lg font-bold" onClick={() => setPaso("ordenar")}>
+                Organizar Orden de Entrega
+                <ChevronRight className="h-5 w-5 ml-2" />
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Step 3: Ordenar pedidos (drag & drop) ───
+  if (paso === "ordenar") {
+    const moverPedido = (fromIndex: number, toIndex: number) => {
+      setCola(prev => {
+        const nuevo = [...prev];
+        const [item] = nuevo.splice(fromIndex, 1);
+        nuevo.splice(toIndex, 0, item);
+        return nuevo;
+      });
+    };
+
+    const iniciarCarga = async () => {
+      // Update orden_entrega in DB based on final order
+      for (let i = 0; i < cola.length; i++) {
+        await supabase.from("entregas").update({ orden_entrega: i + 1 }).eq("pedido_id", cola[i].pedidoId).eq("ruta_id", rutaId);
+      }
+      // Start timer and load first product (last in list = first to load for LIFO)
+      setHoraInicio(new Date());
+      setIndiceCola(cola.length - 1); // Start from the LAST (will be loaded first)
+      await loadProductosPedido(cola[cola.length - 1].pedidoId);
+      setPaso("carga");
+    };
+
+    // Reverse view for loading order
+    const ordenCarga = [...cola].reverse();
+
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="sticky top-0 z-10 bg-background border-b p-3">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => setPaso("escaneo_masivo")}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="font-bold text-lg">Organizar Orden</h1>
+          </div>
+        </div>
+
+        <div className="p-4 space-y-6 max-w-md mx-auto">
+          {/* Orden de ENTREGA */}
+          <div>
+            <p className="text-sm font-bold uppercase tracking-wide text-muted-foreground mb-3">Orden de Entrega (chofer)</p>
+            <p className="text-xs text-muted-foreground mb-3">Arrastra para reordenar. El #1 se entrega primero.</p>
+            <div className="space-y-2">
+              {cola.map((c, i) => (
+                <Card key={c.pedidoId} className="cursor-grab active:cursor-grabbing">
+                  <CardContent className="py-3 px-4 flex items-center gap-3">
+                    <div className="flex flex-col gap-1 shrink-0">
+                      <Button variant="ghost" size="icon" className="h-6 w-6" disabled={i === 0}
+                        onClick={() => moverPedido(i, i - 1)}>
+                        <span className="text-xs">▲</span>
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" disabled={i === cola.length - 1}
+                        onClick={() => moverPedido(i, i + 1)}>
+                        <span className="text-xs">▼</span>
+                      </Button>
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm shrink-0">
+                      {i + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-sm truncate">{c.folio}</p>
+                      <p className="text-xs text-muted-foreground truncate">{c.clienteNombre}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          {/* Orden de CARGA (inverso) */}
+          <div className="p-4 bg-muted/50 rounded-xl">
+            <p className="text-sm font-bold uppercase tracking-wide text-muted-foreground mb-3">Orden de Carga (almacén)</p>
+            <p className="text-xs text-muted-foreground mb-3">El último en entregar se carga primero (estiba LIFO).</p>
+            <div className="space-y-1">
+              {ordenCarga.map((c, i) => (
+                <div key={c.pedidoId} className="flex items-center gap-2 text-sm py-1">
+                  <span className="font-bold text-muted-foreground w-6">{i + 1}.</span>
+                  <span className="font-medium">{c.folio}</span>
+                  <span className="text-muted-foreground">— {c.clienteNombre}</span>
+                  {i === 0 && <Badge variant="default" className="text-[10px] ml-auto">Cargar primero</Badge>}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <Button size="lg" className="w-full h-14 text-lg font-bold" onClick={iniciarCarga}>
+            <Package className="h-5 w-5 mr-2" />
+            Empezar a Cargar
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Step 4: Carga (loading products) ───
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -983,7 +1172,7 @@ export default function AlmacenCargaScan() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
-            <h1 className="font-bold text-lg">Carga por Escaneo</h1>
+            <h1 className="font-bold text-lg">Cargando Pedidos</h1>
             {horaInicio && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Timer className="h-3.5 w-3.5" />
@@ -1003,56 +1192,20 @@ export default function AlmacenCargaScan() {
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>¿Eliminar esta ruta?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Se eliminará la ruta, todas las entregas y productos cargados. El inventario se revertirá. Esta acción no se puede deshacer.
-                </AlertDialogDescription>
+                <AlertDialogDescription>Se eliminará la ruta, todas las entregas y productos cargados. El inventario se revertirá.</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>No, mantener</AlertDialogCancel>
-                <AlertDialogAction onClick={handleCancelarRuta} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  Sí, eliminar ruta
-                </AlertDialogAction>
+                <AlertDialogAction onClick={handleCancelarRuta} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Sí, eliminar ruta</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
         </div>
 
-        {/* Camera QR Scanner */}
-        <div className="mt-2">
-          <CameraQrScanner
-            active={cameraActive}
-            onScan={handleCameraScan}
-            onClose={() => setCameraActive(false)}
-          />
-        </div>
-
-        {/* Scan input + camera toggle */}
-        <div className="flex gap-2 mt-2">
-          <Button
-            variant={cameraActive ? "destructive" : "secondary"}
-            size="lg"
-            className="h-12 px-3 shrink-0"
-            onClick={() => setCameraActive(!cameraActive)}
-          >
-            <Camera className="h-5 w-5" />
-          </Button>
-          <Input
-            placeholder="O pega el código QR aquí..."
-            value={scanInput}
-            onChange={(e) => setScanInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleScanSubmit()}
-            className="h-12 text-base"
-          />
-          <Button onClick={handleScanSubmit} size="lg" className="h-12 px-4">
-            <QrCode className="h-5 w-5 mr-1" />
-            Agregar
-          </Button>
-        </div>
-
-        {/* Queue pills */}
+        {/* Queue pills — show loading order (reversed) */}
         {cola.length > 1 && (
           <div className="flex gap-2 mt-2 overflow-x-auto pb-1">
-            {cola.map((c, i) => (
+            {[...cola].reverse().map((c, i) => (
               <Badge
                 key={i}
                 variant={i === indiceCola ? "default" : c.completado ? "secondary" : "outline"}
