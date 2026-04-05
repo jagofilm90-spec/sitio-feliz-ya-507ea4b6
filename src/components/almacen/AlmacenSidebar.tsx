@@ -41,6 +41,7 @@ import { Badge } from "@/components/ui/badge";
 import { ConfiguracionFlotillaDialog } from "./ConfiguracionFlotillaDialog";
 import logoAlmasa from "@/assets/logo-almasa.png";
 import { LiveIndicator } from "@/components/ui/live-indicator";
+import { AvatarEmpleadoPopover } from "./AvatarEmpleadoPopover";
 
 interface NavItem {
   id: string;
@@ -170,49 +171,30 @@ export const AlmacenSidebar = ({
           )}
         </SidebarHeader>
 
-        {/* User Info */}
+        {/* User Info with real photo */}
         <div className="border-b border-sidebar-border">
           <div className={cn(
-            "flex items-center gap-2 p-2",
-            isCollapsed ? "flex-col justify-center" : "flex-row"
+            "flex items-center gap-3 p-3",
+            isCollapsed ? "flex-col justify-center py-2" : "flex-row"
           )}>
+            <AvatarEmpleadoPopover
+              empleadoId={empleadoId}
+              empleadoNombre={empleadoNombre || "Usuario"}
+              empleadoPuesto={empleadoPuesto || (showFlotillaTabs ? "Gerente de Almacén" : "Almacenista")}
+              empleadoEmail={empleadoEmail}
+              fotoUrl={empleadoFotoUrl}
+              onFotoUpdated={onFotoUpdated}
+            />
             {!isCollapsed && (
-              <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-md ring-2 ring-primary/20 shrink-0">
-                <User className="h-4 w-4 text-primary-foreground" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-sidebar-foreground truncate">
+                  {empleadoNombre || "Usuario"}
+                </p>
+                <p className="text-xs text-muted-foreground font-medium truncate">
+                  {empleadoPuesto || (showFlotillaTabs ? "Gerente de Almacén" : "Almacenista")}
+                </p>
               </div>
             )}
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className={cn(
-                  "min-w-0",
-                  isCollapsed ? "w-full text-center" : "flex-1 text-left"
-                )}>
-                  <p className={cn(
-                    "text-sidebar-foreground font-semibold truncate",
-                    isCollapsed ? "text-[10px]" : "text-sm"
-                  )}>
-                    {isCollapsed 
-                      ? (empleadoNombre?.split(' ')[0] || "Usuario")
-                      : (empleadoNombre || "Usuario")
-                    }
-                  </p>
-                  {!isCollapsed && (
-                    <p className="text-xs text-muted-foreground font-medium">
-                      {empleadoPuesto || (showFlotillaTabs ? "Gerente de Almacén" : "Almacenista")}
-                    </p>
-                  )}
-                </div>
-              </TooltipTrigger>
-              {isCollapsed && (
-                <TooltipContent side="right">
-                  <p>{empleadoNombre || "Usuario"}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {empleadoPuesto || (showFlotillaTabs ? "Gerente de Almacén" : "Almacenista")}
-                  </p>
-                </TooltipContent>
-              )}
-            </Tooltip>
           </div>
         </div>
 
