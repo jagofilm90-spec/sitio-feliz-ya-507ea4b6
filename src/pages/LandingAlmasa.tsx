@@ -26,8 +26,8 @@ const HERO_SLIDES = [
 const CATEGORIAS = [
   { nombre: "Botanas y Frutos Secos", imagen: "https://images.unsplash.com/photo-1599599810769-bcde5a160d32?w=600&q=80" },
   { nombre: "Granos y Semillas", imagen: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&q=80" },
-  { nombre: "Azúcar y Endulzantes", imagen: "https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=600&q=80" },
-  { nombre: "Frutas Deshidratadas", imagen: "https://images.unsplash.com/photo-1604085572504-a392541cb8d9?w=600&q=80" },
+  { nombre: "Azúcar y Endulzantes", imagen: "https://images.unsplash.com/photo-1581268157684-79c492917515?w=600&q=80" },
+  { nombre: "Frutas Deshidratadas", imagen: "https://images.unsplash.com/photo-1596591606975-97ee5cef3a1e?w=600&q=80" },
 ];
 
 const COBERTURA = ["Ciudad de México", "Estado de México", "Toluca", "Puebla", "Querétaro", "Morelos"];
