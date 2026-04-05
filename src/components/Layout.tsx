@@ -12,6 +12,8 @@ import { CentroNotificaciones } from "@/components/CentroNotificaciones";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UserPreferencesPopover } from "@/components/UserPreferencesPopover";
 import logoAlmasa from "@/assets/logo-almasa.png";
+import { GlobalSearch } from "@/components/GlobalSearch";
+import { QuickActions } from "@/components/QuickActions";
 import {
   Collapsible,
   CollapsibleContent,
@@ -469,8 +471,10 @@ const Layout = ({ children }: LayoutProps) => {
                 Abarrotes la Manita SA de CV
               </span>
             </Link>
+            <QuickActions />
           </div>
           <div className="flex items-center gap-1 sm:gap-2">
+            <GlobalSearch />
             <ThemeToggle className="hidden sm:flex" />
             <UserPreferencesPopover />
             <CentroNotificaciones />

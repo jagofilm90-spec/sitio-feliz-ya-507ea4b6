@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
 import { NotificacionesSistema } from "@/components/NotificacionesSistema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 import { UsuariosConectadosPanel } from "@/components/admin/UsuariosConectadosPanel";
 import { useUserRoles } from "@/hooks/useUserRoles";
@@ -36,34 +38,48 @@ import { VacacionesHoyWidget } from "@/components/dashboard/VacacionesHoyWidget"
 import { AsistenciaHoyWidget } from "@/components/dashboard/AsistenciaHoyWidget";
 import { VentasBajoCostoWidget } from "@/components/dashboard/VentasBajoCostoWidget";
 
+// Collapsible section helper
+function DashSection({ title, defaultOpen = true, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger asChild>
+        <button className="flex items-center justify-between w-full py-2 group cursor-pointer">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">{title}</h2>
+          {open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="space-y-4">
+        {children}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { roles, isLoading: rolesLoading, isAdmin } = useUserRoles();
   const isMobile = useIsMobile();
   const [periodo, setPeriodo] = useState<Periodo>('mes');
+  const [dashTab, setDashTab] = useState("general");
   const { data: dashData, loading: dashLoading, refresh, lastRefresh } = useDashboardData(periodo);
 
-  // Track presence in dashboard
   useSystemPresence('dashboard');
 
-  // Redirección inmediata para almacenistas y choferes
+  // Redirect almacen/chofer
   useEffect(() => {
     if (!rolesLoading && roles.length > 0) {
-      const isOnlyAlmacen = roles.length === 1 && roles.includes('almacen');
-      const isOnlyChofer = roles.length === 1 && roles.includes('chofer');
-      
-      if (isOnlyAlmacen) {
+      if (roles.length === 1 && roles.includes('almacen')) {
         navigate('/almacen-tablet', { replace: true });
         return;
       }
-      if (isOnlyChofer) {
+      if (roles.length === 1 && roles.includes('chofer')) {
         navigate('/chofer', { replace: true });
         return;
       }
     }
   }, [roles, rolesLoading, navigate]);
 
-  // Mostrar loader mientras verifica roles
   if (rolesLoading) {
     return (
       <Layout>
@@ -87,7 +103,6 @@ const Dashboard = () => {
     );
   }
 
-  // Si es almacen o chofer, mostrar loader mientras redirige
   const isOnlyAlmacen = roles.length === 1 && roles.includes('almacen');
   const isOnlyChofer = roles.length === 1 && roles.includes('chofer');
   if (isOnlyAlmacen || isOnlyChofer) {
@@ -100,29 +115,28 @@ const Dashboard = () => {
 
   return (
     <Layout>
-      <div className={`space-y-4 ${isMobile ? 'space-y-3' : 'md:space-y-6'}`}>
+      <div className={`space-y-4 ${isMobile ? 'space-y-3' : 'md:space-y-5'}`}>
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <h1 className={`font-bold ${isMobile ? 'text-xl' : 'text-3xl'}`}>Dashboard Ejecutivo</h1>
-            <p className="text-muted-foreground text-sm">Control total del negocio</p>
-            <p className="text-xs italic text-muted-foreground/70">"{COMPANY_DATA.slogan}"</p>
+            <h1 className={`font-bold ${isMobile ? 'text-xl' : 'text-2xl'}`}>Dashboard</h1>
+            <p className="text-muted-foreground text-sm">{COMPANY_DATA.slogan}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9"
-              onClick={() => refresh()}
-              title="Actualizar datos"
-            >
+            <ToggleGroup type="single" value={periodo} onValueChange={(v) => v && setPeriodo(v as Periodo)} className="hidden sm:flex">
+              <ToggleGroupItem value="hoy" className="text-xs h-8 px-3">Hoy</ToggleGroupItem>
+              <ToggleGroupItem value="semana" className="text-xs h-8 px-3">Semana</ToggleGroupItem>
+              <ToggleGroupItem value="mes" className="text-xs h-8 px-3">Mes</ToggleGroupItem>
+              <ToggleGroupItem value="anio" className="text-xs h-8 px-3">Año</ToggleGroupItem>
+            </ToggleGroup>
+            <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => refresh()} title="Actualizar">
               <RefreshCw className={`h-4 w-4 ${dashLoading ? 'animate-spin' : ''}`} />
             </Button>
           </div>
         </div>
 
-        {/* Period Selector */}
-        <ToggleGroup type="single" value={periodo} onValueChange={(v) => v && setPeriodo(v as Periodo)} className="justify-start">
+        {/* Mobile period selector */}
+        <ToggleGroup type="single" value={periodo} onValueChange={(v) => v && setPeriodo(v as Periodo)} className="sm:hidden justify-start">
           <ToggleGroupItem value="hoy" className="text-xs h-8 px-3">Hoy</ToggleGroupItem>
           <ToggleGroupItem value="semana" className="text-xs h-8 px-3">Semana</ToggleGroupItem>
           <ToggleGroupItem value="mes" className="text-xs h-8 px-3">Mes</ToggleGroupItem>
@@ -131,20 +145,10 @@ const Dashboard = () => {
 
         <NotificacionesSistema />
 
-        {/* Alertas Urgentes - solo si hay */}
+        {/* ALERTAS URGENTES — Always on top */}
         {dashData && <AlertasUrgentes alertas={dashData.alertas} />}
 
-        {/* Empleados con periodo de prueba por vencer */}
-        {isAdmin && <EmpleadosPruebaAlert />}
-
-        {/* Cumpleaños y aniversarios */}
-        {isAdmin && <CumpleanosWidget />}
-
-        {/* Vacaciones + Licencias */}
-        {isAdmin && <VacacionesHoyWidget />}
-        {isAdmin && <LicenciasVencimientoAlert />}
-
-        {/* Descargas en curso + completadas hoy */}
+        {/* Entregas en descarga */}
         {(dashData?.kpis?.entregasEnDescarga > 0 || (dashData?.kpis?.entregasCompletadasHoyDetalle?.length || 0) > 0) && (
           <EntregasEnDescargaWidget
             entregas={dashData?.kpis?.entregasEnDescargaDetalle || []}
@@ -152,55 +156,85 @@ const Dashboard = () => {
           />
         )}
 
-        {/* Resumen del Día - solo admin */}
-        {isAdmin && <ResumenDiaWidget />}
+        {/* Admin tabs: General | RRHH | Finanzas */}
+        {isAdmin ? (
+          <Tabs value={dashTab} onValueChange={setDashTab}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="general" className="text-xs">General</TabsTrigger>
+              <TabsTrigger value="rrhh" className="text-xs">RRHH</TabsTrigger>
+              <TabsTrigger value="finanzas" className="text-xs">Finanzas</TabsTrigger>
+            </TabsList>
 
-        {/* Ventas abajo del costo este mes */}
-        {isAdmin && <VentasBajoCostoWidget />}
+            {/* ==================== TAB: GENERAL ==================== */}
+            <TabsContent value="general" className="space-y-4 mt-0">
+              {/* KPIs */}
+              <KPICards data={dashData?.kpis ?? null} loading={dashLoading} />
 
-        {/* KPIs Principales - 3 rows */}
-        <KPICards data={dashData?.kpis ?? null} loading={dashLoading} />
+              {/* Operations */}
+              <DashSection title="Operaciones">
+                {isMobile ? <EstadoOperacionesMobile /> : <EstadoOperacionesPanel />}
+                <MapaRutasWidget />
+                {!isMobile && <UsuariosConectadosPanel />}
+              </DashSection>
 
-        {/* Estado de Operaciones */}
-        {isMobile ? <EstadoOperacionesMobile /> : <EstadoOperacionesPanel />}
+              {/* Quick metrics */}
+              <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+                <AsistenciaHoyWidget />
+                <div className="cursor-pointer" onClick={() => navigate('/clientes')}><CreditoExcedidoAlert /></div>
+                <VendedoresResumen />
+                <div className="cursor-pointer" onClick={() => navigate('/rutas')}><EntregasHoyPanel /></div>
+                <div className="cursor-pointer" onClick={() => navigate('/inventario')}><InventarioResumen /></div>
+              </div>
 
-        {/* Mapa de Rutas - ahora también en mobile */}
-        <MapaRutasWidget />
+              {/* Ventas bajo costo */}
+              <VentasBajoCostoWidget />
+            </TabsContent>
 
-        {/* Panel de Usuarios Conectados - Solo en desktop y admin */}
-        {!isMobile && isAdmin && <UsuariosConectadosPanel />}
+            {/* ==================== TAB: RRHH ==================== */}
+            <TabsContent value="rrhh" className="space-y-4 mt-0">
+              <EmpleadosPruebaAlert />
+              <CumpleanosWidget />
+              <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+                <VacacionesHoyWidget />
+                <LicenciasVencimientoAlert />
+              </div>
+              <AsistenciaHoyWidget />
+            </TabsContent>
 
-        {/* Gráfico de Ventas y Cobranza Crítica */}
-        <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
-          <VentasMensualesChart />
-          <CobranzaCriticaPanel />
-        </div>
-
-        {/* Top Productos y Clientes */}
-        {dashData && (
-          <TopProductosClientesPanel
-            topProductos={dashData.topProductos}
-            topClientes={dashData.topClientes}
-          />
+            {/* ==================== TAB: FINANZAS ==================== */}
+            <TabsContent value="finanzas" className="space-y-4 mt-0">
+              <ResumenDiaWidget />
+              <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+                <VentasMensualesChart />
+                <CobranzaCriticaPanel />
+              </div>
+              {dashData && (
+                <TopProductosClientesPanel
+                  topProductos={dashData.topProductos}
+                  topClientes={dashData.topClientes}
+                />
+              )}
+              {dashData && <ResumenFinancieroPanel data={dashData.resumenFinanciero} />}
+            </TabsContent>
+          </Tabs>
+        ) : (
+          /* Non-admin: simple layout without tabs */
+          <div className="space-y-4">
+            <KPICards data={dashData?.kpis ?? null} loading={dashLoading} />
+            {isMobile ? <EstadoOperacionesMobile /> : <EstadoOperacionesPanel />}
+            <MapaRutasWidget />
+            <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+              <VentasMensualesChart />
+              <CobranzaCriticaPanel />
+            </div>
+            <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+              <div className="cursor-pointer" onClick={() => navigate('/clientes')}><CreditoExcedidoAlert /></div>
+              <VendedoresResumen />
+              <div className="cursor-pointer" onClick={() => navigate('/rutas')}><EntregasHoyPanel /></div>
+              <div className="cursor-pointer" onClick={() => navigate('/inventario')}><InventarioResumen /></div>
+            </div>
+          </div>
         )}
-
-        {/* Resumen Financiero */}
-        {dashData && <ResumenFinancieroPanel data={dashData.resumenFinanciero} />}
-
-        {/* Crédito Excedido, Vendedores, Entregas e Inventario */}
-        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
-          {isAdmin && <AsistenciaHoyWidget />}
-          <div className="cursor-pointer" onClick={() => navigate('/clientes')}>
-            <CreditoExcedidoAlert />
-          </div>
-          <VendedoresResumen />
-          <div className="cursor-pointer" onClick={() => navigate('/rutas')}>
-            <EntregasHoyPanel />
-          </div>
-          <div className="cursor-pointer" onClick={() => navigate('/inventario')}>
-            <InventarioResumen />
-          </div>
-        </div>
       </div>
     </Layout>
   );

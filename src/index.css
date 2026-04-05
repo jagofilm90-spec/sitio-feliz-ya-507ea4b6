@@ -67,59 +67,59 @@
   }
 
   .dark {
-    /* Backgrounds - Clean dark */
-    --background: 220 15% 8%;
-    --foreground: 220 10% 95%;
+    /* Backgrounds - Deeper dark for less eye strain */
+    --background: 220 20% 6%;
+    --foreground: 220 10% 93%;
 
-    /* Cards */
-    --card: 220 15% 10%;
-    --card-foreground: 220 10% 95%;
+    /* Cards - Clearly separated from background */
+    --card: 220 18% 11%;
+    --card-foreground: 220 10% 93%;
 
     /* Popovers */
-    --popover: 220 15% 10%;
-    --popover-foreground: 220 10% 95%;
+    --popover: 220 18% 11%;
+    --popover-foreground: 220 10% 93%;
 
-    /* Primary - ALMASA Red (slightly brighter for dark mode) */
-    --primary: 352 69% 50%;
+    /* Primary - ALMASA Red (brighter for dark mode visibility) */
+    --primary: 352 69% 52%;
     --primary-foreground: 0 0% 100%;
 
     /* Secondary */
-    --secondary: 220 15% 15%;
-    --secondary-foreground: 220 10% 90%;
+    --secondary: 220 15% 16%;
+    --secondary-foreground: 220 10% 88%;
 
-    /* Muted */
-    --muted: 220 15% 15%;
-    --muted-foreground: 220 10% 60%;
+    /* Muted - Better contrast for alternating rows */
+    --muted: 220 15% 14%;
+    --muted-foreground: 220 10% 58%;
 
     /* Accent - Dark red tint */
-    --accent: 352 40% 15%;
-    --accent-foreground: 352 69% 70%;
+    --accent: 352 40% 14%;
+    --accent-foreground: 352 69% 72%;
 
     /* Destructive */
-    --destructive: 0 62% 50%;
+    --destructive: 0 62% 52%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Borders */
-    --border: 220 15% 18%;
-    --input: 220 15% 18%;
-    --ring: 352 69% 50%;
+    /* Borders - More visible for structure */
+    --border: 220 15% 20%;
+    --input: 220 15% 20%;
+    --ring: 352 69% 52%;
 
-    /* Sidebar - Dark */
-    --sidebar-background: 220 15% 6%;
-    --sidebar-foreground: 220 10% 90%;
-    --sidebar-primary: 352 69% 50%;
+    /* Sidebar - Deepest layer for visual hierarchy */
+    --sidebar-background: 220 20% 4%;
+    --sidebar-foreground: 220 10% 88%;
+    --sidebar-primary: 352 69% 52%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 352 40% 15%;
-    --sidebar-accent-foreground: 352 69% 70%;
-    --sidebar-border: 220 15% 15%;
-    --sidebar-ring: 352 69% 50%;
+    --sidebar-accent: 352 40% 13%;
+    --sidebar-accent-foreground: 352 69% 72%;
+    --sidebar-border: 220 15% 14%;
+    --sidebar-ring: 352 69% 52%;
 
-    /* Chart colors - dark mode */
-    --chart-1: 352 69% 55%;
-    --chart-2: 352 50% 65%;
-    --chart-3: 220 15% 60%;
-    --chart-4: 220 10% 50%;
-    --chart-5: 220 8% 40%;
+    /* Chart colors - dark mode (more saturated) */
+    --chart-1: 352 72% 58%;
+    --chart-2: 352 55% 68%;
+    --chart-3: 220 20% 62%;
+    --chart-4: 220 12% 52%;
+    --chart-5: 220 10% 42%;
   }
 }
 
@@ -276,6 +276,44 @@
   /* Primary - Brighter */
   --primary: 352 100% 60%;
   --primary-foreground: 0 0% 0%;
+}
+
+/* ============================================
+   ERP TABLE DEFAULTS - Consistent readability
+   ============================================ */
+
+/* Minimum readable sizes for all ERP tables */
+.table-erp th {
+  @apply text-xs font-semibold py-2.5 px-2 border-b-2 border-border;
+}
+
+.table-erp td {
+  @apply text-xs py-2 px-2;
+}
+
+.table-erp tr:hover {
+  @apply bg-muted/40;
+}
+
+/* Alternating rows in dark mode for readability */
+.dark .table-erp tbody tr:nth-child(even) {
+  @apply bg-muted/20;
+}
+
+/* ============================================
+   DARK MODE - Badge saturation boost
+   ============================================ */
+.dark .badge-status-ok {
+  @apply bg-emerald-600/90 text-emerald-50;
+}
+.dark .badge-status-warning {
+  @apply bg-amber-600/90 text-amber-50;
+}
+.dark .badge-status-critical {
+  @apply bg-orange-600/90 text-orange-50;
+}
+.dark .badge-status-error {
+  @apply bg-red-600/90 text-red-50;
 }
 
 /* Hide scrollbar for horizontal tabs */
