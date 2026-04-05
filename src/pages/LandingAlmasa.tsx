@@ -21,6 +21,7 @@ const CATEGORIAS = [
   { nombre: "Alimento para Mascotas", imagen: "/landing/mascotas.jpeg" },
   { nombre: "Ciruela y Uva Pasa", imagen: "/landing/pasas.jpeg" },
   { nombre: "Avena y Cereales", imagen: "/landing/avena.jpeg" },
+  { nombre: "Frutas en Conserva", imagen: "/landing/latas-frutas.jpeg" },
 ];
 
 const COBERTURA = ["Ciudad de México", "Estado de México", "Toluca", "Puebla", "Querétaro", "Morelos"];
@@ -250,8 +251,8 @@ const LandingAlmasa = () => {
 
             <div className="aspect-[4/5] rounded-3xl overflow-hidden bg-slate-100">
               <img
-                src="/landing/bodega.jpeg"
-                alt="Bodega de distribución ALMASA"
+                src="/landing/latas-frutas.jpeg"
+                alt="Piña, duraznos y cóctel de frutas ALMASA"
                 className="w-full h-full object-cover"
                 loading="lazy"
               />
@@ -358,7 +359,7 @@ const LandingAlmasa = () => {
 
             <div className="aspect-square rounded-3xl overflow-hidden bg-slate-100">
               <img
-                src="/camion-almasa.jpg"
+                src="/landing/camion.jpeg"
                 alt="Camión de reparto ALMASA"
                 className="w-full h-full object-cover"
                 loading="lazy"
