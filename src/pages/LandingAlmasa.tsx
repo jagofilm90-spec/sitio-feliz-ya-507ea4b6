@@ -9,18 +9,18 @@ import logoAlmasa from "@/assets/logo-almasa.png";
 
 // ==================== HERO IMAGES — productos estrella ALMASA ====================
 const HERO_SLIDES = [
-  { imagen: "/landing/cacahuate.jpg", label: "Cacahuate al mayoreo" },
-  { imagen: "/landing/azucar.jpg", label: "Azúcar — producto estrella" },
-  { imagen: "/landing/frijol.jpg", label: "Frijol y granos a granel" },
+  { imagen: "/landing/cacahuate.jpeg", label: "Cacahuate al mayoreo" },
+  { imagen: "/landing/azucar.jpeg", label: "Azúcar — producto estrella" },
+  { imagen: "/landing/frijol.jpeg", label: "Frijol y granos a granel" },
 ];
 
 const CATEGORIAS = [
-  { nombre: "Cacahuate y Botanas", imagen: "/landing/cacahuate.jpg" },
-  { nombre: "Azúcar", imagen: "/landing/azucar.jpg" },
-  { nombre: "Frijol y Granos", imagen: "/landing/frijol.jpg" },
-  { nombre: "Alimento para Mascotas", imagen: "/landing/mascotas.jpg" },
-  { nombre: "Ciruela y Uva Pasa", imagen: "/landing/pasas.jpg" },
-  { nombre: "Avena y Cereales", imagen: "/landing/avena.jpg" },
+  { nombre: "Cacahuate y Botanas", imagen: "/landing/cacahuate.jpeg" },
+  { nombre: "Azúcar", imagen: "/landing/azucar.jpeg" },
+  { nombre: "Frijol y Granos", imagen: "/landing/frijol.jpeg" },
+  { nombre: "Alimento para Mascotas", imagen: "/landing/mascotas.jpeg" },
+  { nombre: "Ciruela y Uva Pasa", imagen: "/landing/pasas.jpeg" },
+  { nombre: "Avena y Cereales", imagen: "/landing/avena.jpeg" },
 ];
 
 const COBERTURA = ["Ciudad de México", "Estado de México", "Toluca", "Puebla", "Querétaro", "Morelos"];
@@ -250,7 +250,7 @@ const LandingAlmasa = () => {
 
             <div className="aspect-[4/5] rounded-3xl overflow-hidden bg-slate-100">
               <img
-                src="/landing/bodega.jpg"
+                src="/landing/bodega.jpeg"
                 alt="Bodega de distribución ALMASA"
                 className="w-full h-full object-cover"
                 loading="lazy"
@@ -314,7 +314,7 @@ const LandingAlmasa = () => {
       {/* ==================== QUOTE — Full width image ==================== */}
       <section className="relative py-40 overflow-hidden">
         <img
-          src="/landing/campo.jpg"
+          src="/landing/campo.jpeg"
           alt="Campo de trigo"
           className="absolute inset-0 w-full h-full object-cover"
           loading="lazy"
