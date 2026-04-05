@@ -81,7 +81,7 @@ export function VendedorListaPreciosTab() {
         .from("pedidos_detalles")
         .select("producto_id, precio_unitario, pedidos!inner(cliente_id, status, created_at)")
         .eq("pedidos.cliente_id", selectedCliente.id)
-        .in("pedidos.status", ["entregado", "por_cobrar", "cobrado"])
+        .in("pedidos.status", ["entregado", "por_cobrar"])
         .order("created_at", { ascending: false, referencedTable: "pedidos" });
 
       if (error) throw error;
