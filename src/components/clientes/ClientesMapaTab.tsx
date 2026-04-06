@@ -306,6 +306,7 @@ export function ClientesMapaTab({ onSugerirRutas }: ClientesMapaTabProps) {
               mapContainerStyle={{ width: "100%", height: "100%" }}
               center={filtered.length > 0 ? { lat: filtered[0].latitud!, lng: filtered[0].longitud! } : defaultCenter}
               zoom={11}
+              onClick={() => setSelectedPunto(null)}
               options={{
                 disableDefaultUI: false,
                 zoomControl: true,
@@ -328,8 +329,9 @@ export function ClientesMapaTab({ onSugerirRutas }: ClientesMapaTabProps) {
                   position={{ lat: selectedPunto.latitud!, lng: selectedPunto.longitud! }}
                   onCloseClick={() => setSelectedPunto(null)}
                 >
-                  <div className="p-1 min-w-[200px]">
-                    <p className="font-bold text-sm text-slate-900">{selectedPunto.clienteNombre}</p>
+                  <div className="p-1 min-w-[200px] relative">
+                    <button onClick={() => setSelectedPunto(null)} className="absolute top-0 right-0 text-slate-400 hover:text-slate-700 cursor-pointer text-lg leading-none">&times;</button>
+                    <p className="font-bold text-sm text-slate-900 pr-5">{selectedPunto.clienteNombre}</p>
                     <p className="text-xs text-slate-500">{selectedPunto.clienteCodigo}</p>
                     {selectedPunto.tipo === "sucursal" && (
                       <p className="text-xs text-blue-600 mt-1">Sucursal: {selectedPunto.nombre}</p>
