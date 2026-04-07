@@ -572,6 +572,9 @@ const ClienteSucursalesDialog = ({
       email_facturacion: sucursal.email_facturacion || "",
       latitud: sucursal.latitud,
       longitud: sucursal.longitud,
+      metadata_entrega: sucursal.metadata_entrega || {},
+      sucursal_hermana_id: sucursal.sucursal_hermana_id || "",
+      sucursal_entrega_id: sucursal.sucursal_entrega_id || "",
     });
     setFormOpen(true);
   };
