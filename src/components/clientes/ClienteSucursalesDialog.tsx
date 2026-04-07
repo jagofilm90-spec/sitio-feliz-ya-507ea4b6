@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SucursalFormSheet } from "./SucursalFormSheet";
+import { SucursalFormModal } from "./SucursalFormModal";
 import {
   Table,
   TableBody,
