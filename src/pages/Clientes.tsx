@@ -777,6 +777,10 @@ const Clientes = () => {
 
   // Filter by search term + filters
   const searchFiltered = clientes.filter((c) => {
+    // Active filter
+    if (filterActivo === "activos" && !c.activo) return false;
+    if (filterActivo === "inactivos" && c.activo) return false;
+
     const matchSearch = !searchTerm ||
       c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.codigo.toLowerCase().includes(searchTerm.toLowerCase());
