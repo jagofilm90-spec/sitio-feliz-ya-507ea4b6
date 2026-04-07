@@ -723,7 +723,7 @@ const ClienteSucursalesDialog = ({
             )}
           </div>
 
-          <SucursalFormSheet
+          <SucursalFormModal
             open={formOpen}
             onOpenChange={setFormOpen}
             formData={formData}
@@ -732,6 +732,9 @@ const ClienteSucursalesDialog = ({
             isEditing={!!editingSucursal}
             onSave={handleSave}
             onCancel={() => setFormOpen(false)}
+            onDelete={editingSucursal ? () => handleDelete(editingSucursal.id) : undefined}
+            clienteNombre={cliente?.nombre}
+            grupoClienteId={cliente?.grupo_cliente_id}
           />
 
           {/* Barra de acciones masivas */}
