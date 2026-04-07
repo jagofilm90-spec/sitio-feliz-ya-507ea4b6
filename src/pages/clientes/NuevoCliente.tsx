@@ -109,6 +109,31 @@ export default function NuevoCliente() {
     load();
   }, [isAdmin]);
 
+  // CSF handlers
+  const handleCSFData = useCallback((data: CSFData) => {
+    setRazonSocial(data.razonSocial);
+    setRfc(data.rfc);
+    setDireccionFiscal(data.direccionFiscal.completa);
+
+    // Map régimen fiscal code to select value
+    if (data.regimenFiscal.codigo) {
+      const match = REGIMENES_FISCALES.find(r => r.clave === data.regimenFiscal.codigo);
+      if (match) setRegimenFiscal(match.clave);
+    }
+
+    toast({
+      title: "✓ Datos extraídos del CSF",
+      description: "Verifica que todo esté correcto antes de guardar",
+    });
+  }, [toast]);
+
+  const handleCSFClear = useCallback(() => {
+    setRazonSocial("");
+    setRfc("");
+    setDireccionFiscal("");
+    setRegimenFiscal("");
+  }, []);
+
   const rfcError = rfc.length > 0 && !validateRFC(rfc);
 
   const puntosValid = puntos.every(
