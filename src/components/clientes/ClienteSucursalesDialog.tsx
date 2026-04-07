@@ -511,14 +511,15 @@ const ClienteSucursalesDialog = ({
         dias_sin_entrega: formData.dias_sin_entrega || null,
         no_combinar_pedidos: formData.no_combinar_pedidos,
         es_rosticeria: formData.es_rosticeria,
-        // Datos fiscales opcionales
         rfc: formData.rfc || null,
         razon_social: formData.razon_social || null,
         direccion_fiscal: formData.direccion_fiscal || null,
         email_facturacion: formData.email_facturacion || null,
-        // Coordenadas exactas
         latitud: formData.latitud,
         longitud: formData.longitud,
+        metadata_entrega: formData.metadata_entrega || {},
+        sucursal_hermana_id: formData.sucursal_hermana_id || null,
+        sucursal_entrega_id: formData.sucursal_entrega_id || null,
       };
 
       if (editingSucursal) {
