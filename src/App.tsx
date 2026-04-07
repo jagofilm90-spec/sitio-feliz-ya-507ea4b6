@@ -280,6 +280,23 @@ const App = () => (
                 </ProtectedRoute>
               } />
               
+              {/* Lecaroz routes */}
+              <Route path="/lecaroz/cotizaciones" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'vendedor', 'contadora']} redirectTo="/auth">
+                  <LecarozCotizaciones />
+                </ProtectedRoute>
+              } />
+              <Route path="/lecaroz/cotizaciones/:id" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'vendedor', 'contadora']} redirectTo="/auth">
+                  <LecarozCotizacionEditor />
+                </ProtectedRoute>
+              } />
+              <Route path="/lecaroz/bandeja" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'vendedor']} redirectTo="/auth">
+                  <LecarozBandeja />
+                </ProtectedRoute>
+              } />
+              
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
