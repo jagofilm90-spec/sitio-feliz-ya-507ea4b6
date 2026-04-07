@@ -423,11 +423,11 @@ export default function NuevoCliente() {
                       </button>
                     </div>
                     {!sinLimite && (
-                      <div className="max-w-[200px]">
+                      <div className="flex items-center gap-2 max-w-[260px]">
                         <Input
                           type="text"
                           inputMode="decimal"
-                          value={limiteCredito ? `$${Number(limiteCredito).toLocaleString('en-US')}` : ''}
+                          value={limiteCredito ? formatCurrencyWhileTyping(parseCurrency(limiteCredito)) : ''}
                           onChange={(e) => {
                             const raw = e.target.value.replace(/[^0-9.]/g, '');
                             const parts = raw.split('.');
@@ -443,6 +443,7 @@ export default function NuevoCliente() {
                           placeholder="$0.00"
                           className="mt-1"
                         />
+                        <span className="text-xs text-muted-foreground mt-1">MXN</span>
                       </div>
                     )}
                   </div>
