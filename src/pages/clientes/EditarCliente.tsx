@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
+import { PageContainer } from "@/components/ui/PageContainer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -282,7 +283,7 @@ export default function EditarCliente() {
     <Layout>
       <div className="flex flex-col min-h-[calc(100vh-64px)]">
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-[1000px] mx-auto px-4 md:px-6 py-8">
+          <PageContainer maxWidth="wide" className="py-8">
             {/* Breadcrumb + Header */}
             <div className="mb-8">
               <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
@@ -546,12 +547,12 @@ export default function EditarCliente() {
 
               <div className="h-20" />
             </main>
-          </div>
+          </PageContainer>
         </div>
 
         {/* Sticky footer */}
         <div className="sticky bottom-0 border-t border-border bg-background px-4 md:px-6 py-3 shrink-0">
-          <div className="max-w-[1000px] mx-auto flex items-center justify-between">
+          <PageContainer maxWidth="wide" className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">
               {puntos.length} punto(s) de entrega
             </span>
@@ -568,7 +569,7 @@ export default function EditarCliente() {
                 Guardar cambios
               </Button>
             </div>
-          </div>
+          </PageContainer>
         </div>
       </div>
     </Layout>

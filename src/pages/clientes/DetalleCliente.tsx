@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
+import { PageContainer } from "@/components/ui/PageContainer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -183,7 +184,7 @@ export default function DetalleCliente() {
 
   return (
     <Layout>
-      <div className="max-w-[760px] mx-auto px-4 py-8 space-y-8">
+      <PageContainer maxWidth="medium" className="py-4 space-y-8">
         {/* Breadcrumb */}
         <div>
           <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
@@ -348,7 +349,7 @@ export default function DetalleCliente() {
             Agregar punto de entrega
           </Button>
         </section>
-      </div>
+      </PageContainer>
 
       {/* Delete client dialog */}
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
