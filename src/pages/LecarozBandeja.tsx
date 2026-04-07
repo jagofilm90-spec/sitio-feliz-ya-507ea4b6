@@ -221,10 +221,10 @@ const LecarozBandeja = () => {
 
     if (error) toast.error("Error cerrando tanda");
     else {
-      // Mark all pedidos of this tanda as confirmado
+      // Mark all pedidos of this tanda as pendiente
       await supabase
         .from("pedidos")
-        .update({ status: "confirmado" })
+        .update({ status: "pendiente" })
         .eq("tanda_id", closingTanda.id)
         .eq("status", "borrador");
       toast.success("Tanda cerrada");

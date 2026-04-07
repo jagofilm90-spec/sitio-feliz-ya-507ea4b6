@@ -213,18 +213,22 @@ const LecarozPreviewModal = ({ open, onClose, parseResult, emailLogId, tandas, m
           pedidoId = existingPedidos[0].id;
           pedidosActualizados++;
         } else {
+          // Generate folio for new pedido
+          const now = new Date();
+          const folio = `LEC-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,"0")}-${suc.numero}`;
+
           // Create new pedido
           const { data: newPedido, error: pedErr } = await supabase
             .from("pedidos")
             .insert({
+              folio,
               cliente_id: sucData.cliente_id,
+              vendedor_id: user?.id || "",
               sucursal_id: suc.sucursal_id,
-              status: "borrador",
+              status: "borrador" as const,
               tanda_id: targetTanda,
               email_origen_id: emailLogId,
               cotizacion_aplicada_id: cotizacionId || null,
-              tipo_entrega: "domicilio",
-              creado_por: user?.id,
               fecha_pedido: new Date().toISOString(),
             })
             .select("id")
