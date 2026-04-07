@@ -182,6 +182,25 @@ export default function NuevoCliente() {
       const lastNum = lastCliente?.codigo ? parseInt(lastCliente.codigo.replace(/\D/g, "")) || 0 : 0;
       const newCodigo = `C${String(lastNum + 1).padStart(4, "0")}`;
 
+      // Validate duplicate RFC
+      if (rfc.trim()) {
+        const { data: existente } = await supabase
+          .from("clientes")
+          .select("id, razon_social")
+          .eq("rfc", rfc.toUpperCase().trim())
+          .maybeSingle();
+
+        if (existente) {
+          toast({
+            title: "RFC duplicado",
+            description: `Ya existe un cliente con RFC ${rfc.toUpperCase().trim()}: ${existente.razon_social}`,
+            variant: "destructive",
+          });
+          setSaving(false);
+          return;
+        }
+      }
+
       const vendId = vendedorAsignado && vendedorAsignado !== "casa" ? vendedorAsignado : null;
 
       const clientData = {
@@ -212,7 +231,7 @@ export default function NuevoCliente() {
       const sucursalesData = puntos.map((p, i) => ({
         cliente_id: newCliente.id,
         codigo_sucursal: p.codigoSucursal.trim() || null,
-        nombre: p.nombre.trim() || (p.codigoSucursal.trim() ? `Sucursal ${p.codigoSucursal.trim()}` : "Principal"),
+        nombre: p.nombre.trim() || (p.entregarEnFiscal && i === 0 ? "Matriz" : (p.codigoSucursal.trim() ? `Sucursal ${p.codigoSucursal.trim()}` : "Principal")),
         direccion: p.entregarEnFiscal ? direccionFiscal.trim() : p.direccion.trim(),
         contacto: p.contacto.trim() || null,
         telefono: p.telefono.trim() || null,
