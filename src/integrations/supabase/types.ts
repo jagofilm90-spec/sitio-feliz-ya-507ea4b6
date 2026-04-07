@@ -1354,6 +1354,71 @@ export type Database = {
           },
         ]
       }
+      cotizacion_lecaroz_lineas: {
+        Row: {
+          codigo_lecaroz: number | null
+          cotizacion_id: string
+          creado_en: string | null
+          es_peso_variable: boolean | null
+          es_reempaque: boolean | null
+          id: string
+          nombre_almasa: string | null
+          nombre_lecaroz: string
+          notas: string | null
+          orden: number | null
+          precio: number | null
+          precio_pendiente: boolean | null
+          presentacion_lecaroz: string | null
+          sku_almasa: string | null
+          sku_padre_inventario: string | null
+          unidad_cobro: string | null
+        }
+        Insert: {
+          codigo_lecaroz?: number | null
+          cotizacion_id: string
+          creado_en?: string | null
+          es_peso_variable?: boolean | null
+          es_reempaque?: boolean | null
+          id?: string
+          nombre_almasa?: string | null
+          nombre_lecaroz: string
+          notas?: string | null
+          orden?: number | null
+          precio?: number | null
+          precio_pendiente?: boolean | null
+          presentacion_lecaroz?: string | null
+          sku_almasa?: string | null
+          sku_padre_inventario?: string | null
+          unidad_cobro?: string | null
+        }
+        Update: {
+          codigo_lecaroz?: number | null
+          cotizacion_id?: string
+          creado_en?: string | null
+          es_peso_variable?: boolean | null
+          es_reempaque?: boolean | null
+          id?: string
+          nombre_almasa?: string | null
+          nombre_lecaroz?: string
+          notas?: string | null
+          orden?: number | null
+          precio?: number | null
+          precio_pendiente?: boolean | null
+          presentacion_lecaroz?: string | null
+          sku_almasa?: string | null
+          sku_padre_inventario?: string | null
+          unidad_cobro?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cotizacion_lecaroz_lineas_cotizacion_id_fkey"
+            columns: ["cotizacion_id"]
+            isOneToOne: false
+            referencedRelation: "cotizaciones_lecaroz"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cotizaciones: {
         Row: {
           autorizado_por: string | null
@@ -1625,6 +1690,62 @@ export type Database = {
             columns: ["gmail_cuenta_id"]
             isOneToOne: false
             referencedRelation: "gmail_cuentas_segura"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cotizaciones_lecaroz: {
+        Row: {
+          actualizado_en: string | null
+          anio: number
+          cliente_grupo_id: string
+          creado_en: string | null
+          creado_por: string | null
+          estado: string
+          fecha_aprobacion: string | null
+          fecha_envio: string | null
+          id: string
+          mes: number
+          notas: string | null
+          tipo: string
+          version: number
+        }
+        Insert: {
+          actualizado_en?: string | null
+          anio: number
+          cliente_grupo_id: string
+          creado_en?: string | null
+          creado_por?: string | null
+          estado?: string
+          fecha_aprobacion?: string | null
+          fecha_envio?: string | null
+          id?: string
+          mes: number
+          notas?: string | null
+          tipo: string
+          version?: number
+        }
+        Update: {
+          actualizado_en?: string | null
+          anio?: number
+          cliente_grupo_id?: string
+          creado_en?: string | null
+          creado_por?: string | null
+          estado?: string
+          fecha_aprobacion?: string | null
+          fecha_envio?: string | null
+          id?: string
+          mes?: number
+          notas?: string | null
+          tipo?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cotizaciones_lecaroz_cliente_grupo_id_fkey"
+            columns: ["cliente_grupo_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
             referencedColumns: ["id"]
           },
         ]
@@ -1906,6 +2027,71 @@ export type Database = {
             columns: ["empleado_id"]
             isOneToOne: false
             referencedRelation: "empleados_vista_segura"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_log_lecaroz: {
+        Row: {
+          asunto: string | null
+          detectado_en: string | null
+          error: string | null
+          estado: string
+          formato_detectado: string | null
+          gmail_id: string | null
+          id: string
+          num_productos_detectados: number | null
+          num_sucursales_detectadas: number | null
+          origen: string | null
+          parser_output: Json | null
+          procesado_en: string | null
+          procesado_por: string | null
+          recibido_en: string | null
+          remitente: string | null
+          tanda_id: string | null
+        }
+        Insert: {
+          asunto?: string | null
+          detectado_en?: string | null
+          error?: string | null
+          estado?: string
+          formato_detectado?: string | null
+          gmail_id?: string | null
+          id?: string
+          num_productos_detectados?: number | null
+          num_sucursales_detectadas?: number | null
+          origen?: string | null
+          parser_output?: Json | null
+          procesado_en?: string | null
+          procesado_por?: string | null
+          recibido_en?: string | null
+          remitente?: string | null
+          tanda_id?: string | null
+        }
+        Update: {
+          asunto?: string | null
+          detectado_en?: string | null
+          error?: string | null
+          estado?: string
+          formato_detectado?: string | null
+          gmail_id?: string | null
+          id?: string
+          num_productos_detectados?: number | null
+          num_sucursales_detectadas?: number | null
+          origen?: string | null
+          parser_output?: Json | null
+          procesado_en?: string | null
+          procesado_por?: string | null
+          recibido_en?: string | null
+          remitente?: string | null
+          tanda_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_log_lecaroz_tanda_id_fkey"
+            columns: ["tanda_id"]
+            isOneToOne: false
+            referencedRelation: "tandas_lecaroz"
             referencedColumns: ["id"]
           },
         ]
@@ -3768,10 +3954,12 @@ export type Database = {
       pedidos: {
         Row: {
           cliente_id: string
+          cotizacion_aplicada_id: string | null
           created_at: string
           datos_fiscales_factura: Json | null
           deadline_dias_habiles: number | null
           dia_fijo_semanal: string | null
+          email_origen_id: string | null
           factura_enviada_al_cliente: boolean
           factura_solicitada_por_cliente: boolean
           facturado: boolean
@@ -3795,6 +3983,7 @@ export type Database = {
           status: Database["public"]["Enums"]["order_status"]
           subtotal: number | null
           sucursal_id: string | null
+          tanda_id: string | null
           termino_credito: Database["public"]["Enums"]["credit_term"] | null
           total: number | null
           updated_at: string
@@ -3802,10 +3991,12 @@ export type Database = {
         }
         Insert: {
           cliente_id: string
+          cotizacion_aplicada_id?: string | null
           created_at?: string
           datos_fiscales_factura?: Json | null
           deadline_dias_habiles?: number | null
           dia_fijo_semanal?: string | null
+          email_origen_id?: string | null
           factura_enviada_al_cliente?: boolean
           factura_solicitada_por_cliente?: boolean
           facturado?: boolean
@@ -3829,6 +4020,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["order_status"]
           subtotal?: number | null
           sucursal_id?: string | null
+          tanda_id?: string | null
           termino_credito?: Database["public"]["Enums"]["credit_term"] | null
           total?: number | null
           updated_at?: string
@@ -3836,10 +4028,12 @@ export type Database = {
         }
         Update: {
           cliente_id?: string
+          cotizacion_aplicada_id?: string | null
           created_at?: string
           datos_fiscales_factura?: Json | null
           deadline_dias_habiles?: number | null
           dia_fijo_semanal?: string | null
+          email_origen_id?: string | null
           factura_enviada_al_cliente?: boolean
           factura_solicitada_por_cliente?: boolean
           facturado?: boolean
@@ -3863,6 +4057,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["order_status"]
           subtotal?: number | null
           sucursal_id?: string | null
+          tanda_id?: string | null
           termino_credito?: Database["public"]["Enums"]["credit_term"] | null
           total?: number | null
           updated_at?: string
@@ -3877,10 +4072,31 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "pedidos_cotizacion_aplicada_id_fkey"
+            columns: ["cotizacion_aplicada_id"]
+            isOneToOne: false
+            referencedRelation: "cotizaciones_lecaroz"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_email_origen_id_fkey"
+            columns: ["email_origen_id"]
+            isOneToOne: false
+            referencedRelation: "email_log_lecaroz"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "pedidos_sucursal_id_fkey"
             columns: ["sucursal_id"]
             isOneToOne: false
             referencedRelation: "cliente_sucursales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_tanda_id_fkey"
+            columns: ["tanda_id"]
+            isOneToOne: false
+            referencedRelation: "tandas_lecaroz"
             referencedColumns: ["id"]
           },
           {
@@ -5745,6 +5961,65 @@ export type Database = {
             columns: ["solicitante_id"]
             isOneToOne: false
             referencedRelation: "empleados_vista_segura"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tandas_lecaroz: {
+        Row: {
+          abierta_en: string | null
+          anio: number
+          cerrada_en: string | null
+          cerrada_por: string | null
+          cliente_grupo_id: string
+          creado_en: string | null
+          estado: string
+          id: string
+          mes: number
+          nombre: string | null
+          notas_cierre: string | null
+          numero: number
+          total_monto: number | null
+          total_pedidos: number | null
+        }
+        Insert: {
+          abierta_en?: string | null
+          anio: number
+          cerrada_en?: string | null
+          cerrada_por?: string | null
+          cliente_grupo_id: string
+          creado_en?: string | null
+          estado?: string
+          id?: string
+          mes: number
+          nombre?: string | null
+          notas_cierre?: string | null
+          numero: number
+          total_monto?: number | null
+          total_pedidos?: number | null
+        }
+        Update: {
+          abierta_en?: string | null
+          anio?: number
+          cerrada_en?: string | null
+          cerrada_por?: string | null
+          cliente_grupo_id?: string
+          creado_en?: string | null
+          estado?: string
+          id?: string
+          mes?: number
+          nombre?: string | null
+          notas_cierre?: string | null
+          numero?: number
+          total_monto?: number | null
+          total_pedidos?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tandas_lecaroz_cliente_grupo_id_fkey"
+            columns: ["cliente_grupo_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
             referencedColumns: ["id"]
           },
         ]
