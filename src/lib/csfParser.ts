@@ -4,9 +4,11 @@
  */
 import * as pdfjs from "pdfjs-dist";
 
-// Configure worker — use Vite's ?url import to bundle locally
-import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+// Configure worker using import.meta.url for reliable Vite resolution
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url
+).toString();
 
 export interface CSFDireccion {
   calle: string;
