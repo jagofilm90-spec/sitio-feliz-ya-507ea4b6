@@ -56,14 +56,15 @@ interface Sucursal {
   dias_sin_entrega: string | null;
   no_combinar_pedidos: boolean;
   es_rosticeria: boolean;
-  // Datos fiscales opcionales para facturación por sucursal
   rfc: string | null;
   razon_social: string | null;
   direccion_fiscal: string | null;
   email_facturacion: string | null;
-  // Coordenadas exactas para rutas
   latitud: number | null;
   longitud: number | null;
+  metadata_entrega: Record<string, any> | null;
+  sucursal_hermana_id: string | null;
+  sucursal_entrega_id: string | null;
 }
 
 interface Zona {
