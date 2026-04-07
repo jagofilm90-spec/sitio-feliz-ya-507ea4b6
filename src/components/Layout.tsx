@@ -228,6 +228,13 @@ const Layout = ({ children }: LayoutProps) => {
       ]
     },
     {
+      label: "Lecaroz",
+      items: [
+        { icon: FileText, label: "Cotizaciones", path: "/lecaroz/cotizaciones" },
+        { icon: Store, label: "Bandeja", path: "/lecaroz/bandeja" },
+      ]
+    },
+    {
       label: "Logística",
       items: [
         { icon: Truck, label: "Rutas y Entregas", path: "/rutas" },
