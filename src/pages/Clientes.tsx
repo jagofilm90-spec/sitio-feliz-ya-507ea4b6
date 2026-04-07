@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import Layout from "@/components/Layout";
 import { ClientesMapaTab } from "@/components/clientes/ClientesMapaTab";
 import { ClientesStatsBar } from "@/components/clientes/ClientesStatsBar";
@@ -130,6 +131,7 @@ const Clientes = () => {
   const [filterZona, setFilterZona] = useState("todos");
   const [filterCredito, setFilterCredito] = useState("todos");
   const [filterEstadoCredito, setFilterEstadoCredito] = useState("todos");
+  const [filterActivo, setFilterActivo] = useState<"activos" | "inactivos" | "todos">("activos");
   const { toast } = useToast();
   const { isAdmin } = useUserRoles();
 
@@ -776,6 +778,10 @@ const Clientes = () => {
 
   // Filter by search term + filters
   const searchFiltered = clientes.filter((c) => {
+    // Active filter
+    if (filterActivo === "activos" && !c.activo) return false;
+    if (filterActivo === "inactivos" && c.activo) return false;
+
     const matchSearch = !searchTerm ||
       c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.codigo.toLowerCase().includes(searchTerm.toLowerCase());
@@ -1331,7 +1337,7 @@ const Clientes = () => {
         )}
 
         {/* Vista selector: Lista | Mapa */}
-        <div className="flex gap-2 border-b pb-3">
+        <div className="flex gap-2 border-b pb-3 flex-wrap">
           <Button variant={vistaActiva === "lista" ? "default" : "outline"} size="sm" onClick={() => setVistaActiva("lista")} className="cursor-pointer">
             Lista
           </Button>
@@ -1339,6 +1345,21 @@ const Clientes = () => {
             <MapPin className="h-4 w-4 mr-1.5" />
             Mapa
           </Button>
+          <div className="ml-auto flex gap-1 bg-muted rounded-md p-0.5">
+            {(["activos", "inactivos", "todos"] as const).map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => setFilterActivo(opt)}
+                className={cn(
+                  "px-2.5 py-1 rounded text-xs font-medium transition-colors capitalize",
+                  filterActivo === opt ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
+                )}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
         </div>
 
         {vistaActiva === "mapa" ? (

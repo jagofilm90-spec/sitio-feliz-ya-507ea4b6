@@ -52,6 +52,7 @@ import LecarozCotizacionEditor from "./pages/LecarozCotizacionEditor";
 import LecarozBandeja from "./pages/LecarozBandeja";
 import NuevoCliente from "./pages/clientes/NuevoCliente";
 import DetalleCliente from "./pages/clientes/DetalleCliente";
+import EditarCliente from "./pages/clientes/EditarCliente";
 
 import PushNotificationsGate from "./components/PushNotificationsGate";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -157,6 +158,11 @@ const App = () => (
               <Route path="/clientes/:id" element={
                 <ProtectedRoute allowedRoles={['admin', 'secretaria', 'vendedor']} redirectTo="/auth">
                   <DetalleCliente />
+                </ProtectedRoute>
+              } />
+              <Route path="/clientes/:id/editar" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'vendedor']} redirectTo="/auth">
+                  <EditarCliente />
                 </ProtectedRoute>
               } />
               <Route path="/pedidos" element={
