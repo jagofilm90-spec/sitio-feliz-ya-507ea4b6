@@ -183,7 +183,7 @@ export default function DetalleCliente() {
 
   return (
     <Layout>
-      <div className="max-w-[760px] mx-auto px-4 py-8 space-y-8">
+      <PageContainer maxWidth="medium" className="py-4 space-y-8">
         {/* Breadcrumb */}
         <div>
           <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
