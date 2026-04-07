@@ -756,16 +756,26 @@ const ClienteSucursalesDialog = ({
               </div>
               <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center gap-2 ml-auto flex-wrap'}`}>
                 <div className={`flex ${isMobile ? 'flex-wrap gap-2' : 'gap-2'}`}>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleAutoDetectarZonas}
-                    disabled={autoDetectando}
-                    className={isMobile ? 'flex-1 min-w-[45%]' : ''}
-                  >
-                    <Wand2 className="h-4 w-4 mr-1" />
-                    {isMobile ? 'Auto-zona' : 'Auto-detectar Zona'}
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className={isMobile ? 'flex-1 min-w-[45%]' : ''}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled
+                            className={`${isMobile ? 'w-full' : ''} opacity-50`}
+                          >
+                            <Wand2 className="h-4 w-4 mr-1" />
+                            {isMobile ? 'Auto-zona' : 'Auto-detectar Zona'}
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>⚠️ Auto-detect en mantenimiento — asignar manualmente por ahora</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <Button
                     size="sm"
                     variant="outline"
