@@ -308,7 +308,7 @@ export function ClientesListaJerarquica({
                             <div
                               key={child.id}
                               className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-muted/50 cursor-pointer group transition-colors"
-                              onClick={() => onEdit(child)}
+                              onClick={() => onViewSucursales({ id: child.id, nombre: child.nombre, grupo_cliente_id: child.grupo_cliente_id })}
                             >
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
@@ -356,30 +356,6 @@ export function ClientesListaJerarquica({
                                     )}
                                   </div>
                                 )}
-                              </div>
-                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onViewSucursales({ id: child.id, nombre: child.nombre, grupo_cliente_id: child.grupo_cliente_id });
-                                  }}
-                                >
-                                  <MapPin className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onViewHistorial({ id: child.id, nombre: child.nombre });
-                                  }}
-                                >
-                                  <BarChart3 className="h-3.5 w-3.5" />
-                                </Button>
                               </div>
                             </div>
                           );
