@@ -849,16 +849,26 @@ const ClienteSucursalesDialog = ({
                     {sucursales.filter(s => !s.zona_id).length} {isMobile ? 'sin zona' : 'sucursales sin zona asignada'}
                   </span>
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleAutoDetectarZonas}
-                  disabled={autoDetectando}
-                  className={isMobile ? 'w-full' : 'ml-auto'}
-                >
-                  <Wand2 className="h-4 w-4 mr-1" />
-                  {autoDetectando ? "Detectando..." : (isMobile ? "Auto-detectar" : "Auto-detectar Zonas")}
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className={isMobile ? 'w-full' : 'ml-auto'}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled
+                          className={`${isMobile ? 'w-full' : ''} opacity-50`}
+                        >
+                          <Wand2 className="h-4 w-4 mr-1" />
+                          {isMobile ? "Auto-detectar" : "Auto-detectar Zonas"}
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>⚠️ Auto-detect en mantenimiento — asignar manualmente por ahora</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             )
           )}
