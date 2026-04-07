@@ -103,6 +103,7 @@ interface Vendedor {
 }
 
 const Clientes = () => {
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [clientes, setClientes] = useState<any[]>([]);
   const [zonas, setZonas] = useState<Zona[]>([]);
