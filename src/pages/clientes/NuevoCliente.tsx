@@ -164,16 +164,18 @@ export default function NuevoCliente() {
       const lastNum = lastCliente?.codigo ? parseInt(lastCliente.codigo.replace(/\D/g, "")) || 0 : 0;
       const newCodigo = `C${String(lastNum + 1).padStart(4, "0")}`;
 
-      const clientData: Record<string, any> = {
+      const vendId = vendedorAsignado && vendedorAsignado !== "casa" ? vendedorAsignado : null;
+
+      const clientData = {
         codigo: newCodigo,
         nombre: razonSocial.trim(),
         razon_social: razonSocial.trim(),
         rfc: rfc.toUpperCase().trim(),
         direccion: direccionFiscal.trim(),
         regimen_capital: regimenFiscal || null,
-        termino_credito: terminoCredito as any,
+        termino_credito: terminoCredito as "contado" | "8_dias" | "15_dias" | "30_dias" | "60_dias",
         limite_credito: sinLimite ? null : (Number(limiteCredito) || null),
-        vendedor_asignado: vendedorAsignado || null,
+        vendedor_asignado: vendId,
         es_grupo: false,
         grupo_cliente_id: perteneceGrupo && grupoId ? grupoId : null,
         activo: true,
