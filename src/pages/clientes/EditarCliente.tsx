@@ -547,7 +547,7 @@ export default function EditarCliente() {
 
               <div className="h-20" />
             </main>
-          </div>
+          </PageContainer>
         </div>
 
         {/* Sticky footer */}
@@ -569,7 +569,7 @@ export default function EditarCliente() {
                 Guardar cambios
               </Button>
             </div>
-          </div>
+          </PageContainer>
         </div>
       </div>
     </Layout>

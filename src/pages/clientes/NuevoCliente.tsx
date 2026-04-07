@@ -596,7 +596,7 @@ export default function NuevoCliente() {
                 />
               </aside>
             </div>
-          </div>
+          </PageContainer>
         </div>
 
         {/* Sticky footer */}
@@ -618,7 +618,7 @@ export default function NuevoCliente() {
                 Crear cliente
               </Button>
             </div>
-          </div>
+          </PageContainer>
         </div>
       </div>
     </Layout>

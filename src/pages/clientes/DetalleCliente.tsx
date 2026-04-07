@@ -349,7 +349,7 @@ export default function DetalleCliente() {
             Agregar punto de entrega
           </Button>
         </section>
-      </div>
+      </PageContainer>
 
       {/* Delete client dialog */}
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
