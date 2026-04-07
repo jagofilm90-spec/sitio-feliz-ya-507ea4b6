@@ -295,7 +295,7 @@ export function ClientesMapaTab({ onSugerirRutas }: ClientesMapaTabProps) {
       </div>
 
       {/* Map */}
-      <ErrorBoundaryModule fallback={<div className="h-[600px] bg-muted rounded-xl flex items-center justify-center text-muted-foreground">Error al cargar el mapa</div>}>
+      <ErrorBoundaryModule moduleName="Mapa de Clientes" fallback={<div className="h-[600px] bg-muted rounded-xl flex items-center justify-center text-muted-foreground">Error al cargar el mapa</div>}>
         <div className="h-[600px] rounded-xl overflow-hidden border">
           {!isLoaded || loading ? (
             <div className="h-full flex items-center justify-center bg-muted">
