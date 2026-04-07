@@ -16,6 +16,7 @@ import { CSFUploader } from "@/components/clientes/CSFUploader";
 import { REGIMENES_FISCALES } from "@/constants/catalogoSAT";
 import { ChevronRight, Plus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatCurrency, formatCurrencyWhileTyping, parseCurrency } from "@/lib/currency";
 import type { CSFData } from "@/lib/csfParser";
 
 const USOS_CFDI = [
