@@ -4,8 +4,9 @@
  */
 import * as pdfjs from "pdfjs-dist";
 
-// Configure worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
+// Configure worker — use Vite's ?url import to bundle locally
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 export interface CSFDireccion {
   calle: string;
