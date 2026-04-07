@@ -45,6 +45,7 @@ import {
   UserCog,
   Clock,
   LucideIcon,
+  Store,
 } from "lucide-react";
 
 interface LayoutProps {
@@ -224,6 +225,13 @@ const Layout = ({ children }: LayoutProps) => {
         { icon: ShoppingCart, label: "Pedidos", path: "/pedidos" },
         { icon: ShoppingBag, label: "Compras", path: "/compras" },
         { icon: Warehouse, label: "Inventario", path: "/inventario" },
+      ]
+    },
+    {
+      label: "Lecaroz",
+      items: [
+        { icon: FileText, label: "Cotizaciones", path: "/lecaroz/cotizaciones" },
+        { icon: Store, label: "Bandeja", path: "/lecaroz/bandeja" },
       ]
     },
     {

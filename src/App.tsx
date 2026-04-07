@@ -47,6 +47,9 @@ import Configuracion from "./pages/Configuracion";
 import Asistencia from "./pages/Asistencia";
 import VehiculosPage from "./pages/VehiculosPage";
 import PushDiagnosticsPage from "./pages/PushDiagnosticsPage";
+import LecarozCotizaciones from "./pages/LecarozCotizaciones";
+import LecarozCotizacionEditor from "./pages/LecarozCotizacionEditor";
+import LecarozBandeja from "./pages/LecarozBandeja";
 
 import PushNotificationsGate from "./components/PushNotificationsGate";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -274,6 +277,23 @@ const App = () => (
               <Route path="/push-diagnostics" element={
                 <ProtectedRoute allowedRoles={['admin']} redirectTo="/auth">
                   <PushDiagnosticsPage />
+                </ProtectedRoute>
+              } />
+              
+              {/* Lecaroz routes */}
+              <Route path="/lecaroz/cotizaciones" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'vendedor', 'contadora']} redirectTo="/auth">
+                  <LecarozCotizaciones />
+                </ProtectedRoute>
+              } />
+              <Route path="/lecaroz/cotizaciones/:id" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'vendedor', 'contadora']} redirectTo="/auth">
+                  <LecarozCotizacionEditor />
+                </ProtectedRoute>
+              } />
+              <Route path="/lecaroz/bandeja" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'vendedor']} redirectTo="/auth">
+                  <LecarozBandeja />
                 </ProtectedRoute>
               } />
               
