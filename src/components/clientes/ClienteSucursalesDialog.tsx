@@ -31,6 +31,7 @@ import { Plus, Edit, Trash2, MapPin, Search, ChevronLeft, ChevronRight, CheckSqu
 import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 
 interface ClienteSucursalesDialogProps {
