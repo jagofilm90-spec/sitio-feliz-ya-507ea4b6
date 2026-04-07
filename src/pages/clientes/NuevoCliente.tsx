@@ -275,6 +275,9 @@ export default function NuevoCliente() {
               </p>
             </div>
 
+            {/* CSF Uploader */}
+            <CSFUploader onDataExtracted={handleCSFData} onClear={handleCSFClear} />
+
             {/* SECTION 1 — Datos del cliente */}
             <section className="space-y-4">
               <div className="border-b border-border pb-2">
