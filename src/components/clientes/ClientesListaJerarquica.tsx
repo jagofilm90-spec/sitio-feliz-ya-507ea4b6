@@ -59,7 +59,7 @@ interface Props {
   onEdit: (cliente: any) => void;
   onDelete: (cliente: any) => void;
   onReactivar: (cliente: any) => void;
-  onViewSucursales: (cliente: { id: string; nombre: string }) => void;
+  onViewSucursales: (cliente: { id: string; nombre: string; grupo_cliente_id?: string | null }) => void;
   onViewHistorial: (cliente: { id: string; nombre: string }) => void;
   onViewProductos: (cliente: { id: string; nombre: string }) => void;
   getVendedorName: (id: string | null) => string | null;
