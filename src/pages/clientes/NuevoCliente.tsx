@@ -255,13 +255,24 @@ export default function NuevoCliente() {
     }
   };
 
+  // Tip message
+  const tipMessage = (() => {
+    if (!razonSocial.trim()) return "Empieza llenando los datos del cliente";
+    if (!rfc.trim()) return "El RFC valida el formato del SAT automáticamente";
+    if (puntos.length === 1) return "Puedes agregar más puntos de entrega después de guardar";
+    if (puntos.length >= 2) return "Cada punto puede tener su propio contacto y horario";
+    return "Listo para guardar. Verifica el resumen arriba antes de continuar.";
+  })();
+
+  const tipFinal = canSave ? "Listo para guardar. Verifica el resumen arriba antes de continuar." : tipMessage;
+
   return (
     <Layout>
       <div className="flex flex-col min-h-[calc(100vh-64px)]">
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-[760px] mx-auto px-4 py-8 space-y-10">
-            {/* Breadcrumb */}
-            <div>
+          <div className="max-w-[1400px] mx-auto px-4 md:px-6 xl:px-8 py-8">
+            {/* Breadcrumb + Header */}
+            <div className="mb-8">
               <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
                 <button onClick={() => navigate("/clientes")} className="hover:text-foreground transition-colors">
                   Clientes
@@ -269,284 +280,304 @@ export default function NuevoCliente() {
                 <ChevronRight className="h-3.5 w-3.5" />
                 <span className="text-foreground">Nuevo cliente</span>
               </div>
-              <h1 className="text-3xl font-bold text-foreground">Nuevo cliente</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground">Nuevo cliente</h1>
               <p className="text-sm text-muted-foreground mt-1">
                 Captura los datos básicos. Lo demás se puede llenar después desde el detalle del cliente.
               </p>
             </div>
 
-            {/* CSF Uploader */}
-            <CSFUploader onDataExtracted={handleCSFData} onClear={handleCSFClear} />
+            {/* 2-column grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_360px] gap-7 xl:gap-10">
+              {/* MAIN FORM COLUMN */}
+              <main className="space-y-10">
+                {/* CSF Uploader */}
+                <CSFUploader onDataExtracted={handleCSFData} onClear={handleCSFClear} />
 
-            {/* SECTION 1 — Datos del cliente */}
-            <section className="space-y-4">
-              <div className="border-b border-border pb-2">
-                <h2 className="text-lg font-semibold text-foreground">Datos del cliente</h2>
-                <p className="text-xs text-muted-foreground">La razón social a la que se le va a facturar</p>
-              </div>
+                {/* SECTION 1 — Datos del cliente */}
+                <section className="space-y-4">
+                  <div className="border-b border-border pb-2">
+                    <h2 className="text-lg font-semibold text-foreground">Datos del cliente</h2>
+                    <p className="text-xs text-muted-foreground">La razón social a la que se le va a facturar</p>
+                  </div>
 
-              <div className="grid grid-cols-[2fr_1fr] gap-3">
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Razón social <span className="text-primary">*</span>
-                  </label>
-                  <Input
-                    value={razonSocial}
-                    onChange={(e) => setRazonSocial(e.target.value)}
-                    placeholder="PAN ROLL S.A. DE C.V."
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    RFC <span className="text-primary">*</span>
-                  </label>
-                  <Input
-                    value={rfc}
-                    onChange={(e) => setRfc(e.target.value.toUpperCase())}
-                    placeholder="PRO921020PY4"
-                    className={cn("mt-1", rfcError && "border-destructive")}
-                    maxLength={13}
-                  />
-                  {rfcError && (
-                    <p className="text-xs text-destructive mt-1">RFC no tiene formato válido</p>
-                  )}
-                </div>
-              </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr] gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Razón social <span className="text-primary">*</span>
+                      </label>
+                      <Input
+                        value={razonSocial}
+                        onChange={(e) => setRazonSocial(e.target.value)}
+                        placeholder="PAN ROLL S.A. DE C.V."
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        RFC <span className="text-primary">*</span>
+                      </label>
+                      <Input
+                        value={rfc}
+                        onChange={(e) => setRfc(e.target.value.toUpperCase())}
+                        placeholder="PRO921020PY4"
+                        className={cn("mt-1", rfcError && "border-destructive")}
+                        maxLength={13}
+                      />
+                      {rfcError && (
+                        <p className="text-xs text-destructive mt-1">RFC no tiene formato válido</p>
+                      )}
+                    </div>
+                  </div>
 
-              <div>
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Dirección fiscal <span className="text-primary">*</span>
-                </label>
-                <Textarea
-                  value={direccionFiscal}
-                  onChange={(e) => setDireccionFiscal(e.target.value)}
-                  placeholder="Calle, número, colonia, delegación, CP, ciudad..."
-                  className="mt-1 min-h-[60px] resize-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Régimen fiscal
-                  </label>
-                  <Select value={regimenFiscal} onValueChange={setRegimenFiscal}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Seleccionar régimen" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {REGIMENES_FISCALES.map((r) => (
-                        <SelectItem key={r.clave} value={r.clave}>
-                          {r.clave} — {r.descripcion}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Uso de CFDI por defecto
-                  </label>
-                  <Select value={usoCfdi} onValueChange={setUsoCfdi}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {USOS_CFDI.map((u) => (
-                        <SelectItem key={u.clave} value={u.clave}>
-                          {u.clave} — {u.descripcion}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </section>
-
-            {/* SECTION 2 — Vendedor y crédito */}
-            <section className="space-y-4">
-              <div className="border-b border-border pb-2">
-                <h2 className="text-lg font-semibold text-foreground">Vendedor y crédito</h2>
-                <p className="text-xs text-muted-foreground">Quién atiende este cliente y bajo qué condiciones</p>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Vendedor asignado
-                </label>
-                <Select value={vendedorAsignado} onValueChange={setVendedorAsignado}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="— Cliente de la casa —" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="casa">— Cliente de la casa —</SelectItem>
-                    {vendedores.map((v) => (
-                      <SelectItem key={v.id} value={v.id}>
-                        {v.nombre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Límite de crédito */}
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Límite de crédito
-                </label>
-                <div className="flex gap-1 bg-muted rounded-md p-0.5 w-fit">
-                  <button
-                    type="button"
-                    onClick={() => setSinLimite(false)}
-                    className={cn(
-                      "px-3 py-1.5 rounded text-sm font-medium transition-colors",
-                      !sinLimite ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
-                    )}
-                  >
-                    Con límite
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSinLimite(true)}
-                    className={cn(
-                      "px-3 py-1.5 rounded text-sm font-medium transition-colors",
-                      sinLimite ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
-                    )}
-                  >
-                    Sin límite
-                  </button>
-                </div>
-                {!sinLimite && (
-                  <div className="max-w-[200px]">
-                    <Input
-                      type="number"
-                      value={limiteCredito}
-                      onChange={(e) => setLimiteCredito(e.target.value)}
-                      placeholder="50,000"
-                      className="mt-1"
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Dirección fiscal <span className="text-primary">*</span>
+                    </label>
+                    <Textarea
+                      value={direccionFiscal}
+                      onChange={(e) => setDireccionFiscal(e.target.value)}
+                      placeholder="Calle, número, colonia, delegación, CP, ciudad..."
+                      className="mt-1 min-h-[60px] resize-none"
                     />
                   </div>
-                )}
-              </div>
 
-              {/* Plazo de crédito */}
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Plazo de crédito por defecto
-                </label>
-                <div className="flex gap-2 flex-wrap">
-                  {CREDITO_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setTerminoCredito(opt.value)}
-                      className={cn(
-                        "flex flex-col items-center px-4 py-2 rounded-md border text-sm transition-all",
-                        terminoCredito === opt.value
-                          ? "border-primary bg-primary/10 text-foreground"
-                          : "border-border text-muted-foreground hover:border-foreground/30"
-                      )}
-                    >
-                      <span className="font-medium">{opt.label}</span>
-                      <span className="text-xs text-muted-foreground">{opt.sub}</span>
-                    </button>
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Cada pedido individual puede sobreescribir este plazo si es necesario.
-                </p>
-              </div>
-            </section>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Régimen fiscal
+                      </label>
+                      <Select value={regimenFiscal} onValueChange={setRegimenFiscal}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="Seleccionar régimen" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {REGIMENES_FISCALES.map((r) => (
+                            <SelectItem key={r.clave} value={r.clave}>
+                              {r.clave} — {r.descripcion}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Uso de CFDI por defecto
+                      </label>
+                      <Select value={usoCfdi} onValueChange={setUsoCfdi}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {USOS_CFDI.map((u) => (
+                            <SelectItem key={u.clave} value={u.clave}>
+                              {u.clave} — {u.descripcion}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </section>
 
-            {/* SECTION 3 — Puntos de entrega */}
-            <section className="space-y-4">
-              <div className="border-b border-border pb-2">
-                <h2 className="text-lg font-semibold text-foreground">Puntos de entrega</h2>
-                <p className="text-xs text-muted-foreground">
-                  Uno o más lugares donde llega el camión — todos facturan con el mismo RFC
-                </p>
-              </div>
+                {/* SECTION 2 — Vendedor y crédito */}
+                <section className="space-y-4">
+                  <div className="border-b border-border pb-2">
+                    <h2 className="text-lg font-semibold text-foreground">Vendedor y crédito</h2>
+                    <p className="text-xs text-muted-foreground">Quién atiende este cliente y bajo qué condiciones</p>
+                  </div>
 
-              <div className="space-y-3">
-                {puntos.map((punto, i) => (
-                  <PuntoEntregaCard
-                    key={i}
-                    punto={punto}
-                    index={i}
-                    total={puntos.length}
-                    direccionFiscal={direccionFiscal}
-                    onChange={handlePuntoChange}
-                    onRemove={handlePuntoRemove}
-                  />
-                ))}
-              </div>
-
-              <Button type="button" variant="outline" size="sm" onClick={addPunto} className="mt-2">
-                <Plus className="h-4 w-4 mr-1" />
-                Agregar otro punto de entrega
-              </Button>
-            </section>
-
-            {/* SECTION 4 — Opciones avanzadas (admin only) */}
-            {isAdmin && (
-              <section className="space-y-4">
-                <div className="border-b border-border pb-2">
-                  <h2 className="text-lg font-semibold text-foreground">Opciones avanzadas</h2>
-                  <p className="text-xs text-muted-foreground">
-                    Solo para casos especiales — la mayoría de los clientes no necesitan esto
-                  </p>
-                </div>
-
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <Switch checked={perteneceGrupo} onCheckedChange={setPerteneceGrupo} />
-                  <span className="text-sm">Este cliente pertenece a un grupo empresarial</span>
-                </label>
-
-                {perteneceGrupo && (
                   <div>
-                    <Select value={grupoId} onValueChange={setGrupoId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar grupo" />
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Vendedor asignado
+                    </label>
+                    <Select value={vendedorAsignado} onValueChange={setVendedorAsignado}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="— Cliente de la casa —" />
                       </SelectTrigger>
                       <SelectContent>
-                        {grupos.map((g) => (
-                          <SelectItem key={g.id} value={g.id}>
-                            {g.nombre}
+                        <SelectItem value="casa">— Cliente de la casa —</SelectItem>
+                        {vendedores.map((v) => (
+                          <SelectItem key={v.id} value={v.id}>
+                            {v.nombre}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Solo el administrador puede crear y asignar grupos.
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Límite de crédito
+                    </label>
+                    <div className="flex gap-1 bg-muted rounded-md p-0.5 w-fit">
+                      <button
+                        type="button"
+                        onClick={() => setSinLimite(false)}
+                        className={cn(
+                          "px-3 py-1.5 rounded text-sm font-medium transition-colors",
+                          !sinLimite ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
+                        )}
+                      >
+                        Con límite
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSinLimite(true)}
+                        className={cn(
+                          "px-3 py-1.5 rounded text-sm font-medium transition-colors",
+                          sinLimite ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
+                        )}
+                      >
+                        Sin límite
+                      </button>
+                    </div>
+                    {!sinLimite && (
+                      <div className="max-w-[200px]">
+                        <Input
+                          type="number"
+                          value={limiteCredito}
+                          onChange={(e) => setLimiteCredito(e.target.value)}
+                          placeholder="50,000"
+                          className="mt-1"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Plazo de crédito por defecto
+                    </label>
+                    <div className="flex gap-2 flex-wrap">
+                      {CREDITO_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setTerminoCredito(opt.value)}
+                          className={cn(
+                            "flex flex-col items-center px-4 py-2 rounded-md border text-sm transition-all",
+                            terminoCredito === opt.value
+                              ? "border-primary bg-primary/10 text-foreground"
+                              : "border-border text-muted-foreground hover:border-foreground/30"
+                          )}
+                        >
+                          <span className="font-medium">{opt.label}</span>
+                          <span className="text-xs text-muted-foreground">{opt.sub}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Cada pedido individual puede sobreescribir este plazo si es necesario.
                     </p>
                   </div>
+                </section>
+
+                {/* SECTION 3 — Puntos de entrega */}
+                <section className="space-y-4">
+                  <div className="border-b border-border pb-2">
+                    <h2 className="text-lg font-semibold text-foreground">Puntos de entrega</h2>
+                    <p className="text-xs text-muted-foreground">
+                      Uno o más lugares donde llega el camión — todos facturan con el mismo RFC
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    {puntos.map((punto, i) => (
+                      <PuntoEntregaCard
+                        key={i}
+                        punto={punto}
+                        index={i}
+                        total={puntos.length}
+                        direccionFiscal={direccionFiscal}
+                        onChange={handlePuntoChange}
+                        onRemove={handlePuntoRemove}
+                      />
+                    ))}
+                  </div>
+
+                  <Button type="button" variant="outline" size="sm" onClick={addPunto} className="mt-2">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Agregar otro punto de entrega
+                  </Button>
+                </section>
+
+                {/* SECTION 4 — Opciones avanzadas (admin only) */}
+                {isAdmin && (
+                  <section className="space-y-4">
+                    <div className="border-b border-border pb-2">
+                      <h2 className="text-lg font-semibold text-foreground">Opciones avanzadas</h2>
+                      <p className="text-xs text-muted-foreground">
+                        Solo para casos especiales — la mayoría de los clientes no necesitan esto
+                      </p>
+                    </div>
+
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <Switch checked={perteneceGrupo} onCheckedChange={setPerteneceGrupo} />
+                      <span className="text-sm">Este cliente pertenece a un grupo empresarial</span>
+                    </label>
+
+                    {perteneceGrupo && (
+                      <div>
+                        <Select value={grupoId} onValueChange={setGrupoId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar grupo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {grupos.map((g) => (
+                              <SelectItem key={g.id} value={g.id}>
+                                {g.nombre}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Solo el administrador puede crear y asignar grupos.
+                        </p>
+                      </div>
+                    )}
+                  </section>
                 )}
-              </section>
-            )}
 
-            {/* Vista previa */}
-            {razonSocial.trim() && (
-              <div className="rounded-md border border-border bg-muted/30 p-4">
-                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Vista previa</h3>
-                <p className="text-sm text-foreground">
-                  Se creará el cliente <strong>{razonSocial.trim()}</strong> con RFC{" "}
-                  <strong>{rfc.trim() || "—"}</strong>, vendedor{" "}
-                  <strong>{vendedorNombre}</strong>, crédito{" "}
-                  <strong>{creditoLabel} · {limiteLabel}</strong>, con{" "}
-                  <strong>{puntos.length}</strong> punto(s) de entrega: {puntosNombres}.
-                </p>
-              </div>
-            )}
+                {/* Mobile-only preview (below form on small screens) */}
+                <div className="lg:hidden">
+                  <PreviewPanel
+                    razonSocial={razonSocial}
+                    rfc={rfc}
+                    vendedorNombre={vendedorNombre}
+                    creditoLabel={creditoLabel}
+                    limiteLabel={limiteLabel}
+                    puntos={puntos}
+                    perteneceGrupo={perteneceGrupo}
+                    grupoNombre={grupos.find(g => g.id === grupoId)?.nombre}
+                    tipMessage={tipFinal}
+                  />
+                </div>
 
-            {/* Spacer for sticky footer */}
-            <div className="h-20" />
+                {/* Spacer for sticky footer */}
+                <div className="h-20" />
+              </main>
+
+              {/* SIDEBAR PREVIEW — desktop only */}
+              <aside className="hidden lg:block lg:sticky lg:top-20 lg:self-start">
+                <PreviewPanel
+                  razonSocial={razonSocial}
+                  rfc={rfc}
+                  vendedorNombre={vendedorNombre}
+                  creditoLabel={creditoLabel}
+                  limiteLabel={limiteLabel}
+                  puntos={puntos}
+                  perteneceGrupo={perteneceGrupo}
+                  grupoNombre={grupos.find(g => g.id === grupoId)?.nombre}
+                  tipMessage={tipFinal}
+                />
+              </aside>
+            </div>
           </div>
         </div>
 
         {/* Sticky footer */}
-        <div className="sticky bottom-0 border-t border-border bg-background px-4 py-3 shrink-0">
-          <div className="max-w-[760px] mx-auto flex items-center justify-between">
+        <div className="sticky bottom-0 border-t border-border bg-background px-4 md:px-6 xl:px-8 py-3 shrink-0">
+          <div className="max-w-[1400px] mx-auto flex items-center justify-between">
             <span className="text-xs text-muted-foreground">
               {puntos.length} punto(s) capturados
             </span>
@@ -567,5 +598,94 @@ export default function NuevoCliente() {
         </div>
       </div>
     </Layout>
+  );
+}
+
+/* ─── Preview Panel Component ─── */
+
+interface PreviewPanelProps {
+  razonSocial: string;
+  rfc: string;
+  vendedorNombre: string;
+  creditoLabel: string;
+  limiteLabel: string;
+  puntos: PuntoEntrega[];
+  perteneceGrupo: boolean;
+  grupoNombre?: string;
+  tipMessage: string;
+}
+
+function PreviewPanel({
+  razonSocial, rfc, vendedorNombre, creditoLabel, limiteLabel,
+  puntos, perteneceGrupo, grupoNombre, tipMessage,
+}: PreviewPanelProps) {
+  const puntosDisplay = puntos.map((p) => {
+    const code = p.codigoSucursal?.trim();
+    const name = p.nombre?.trim();
+    if (code && name) return `#${code} ${name}`;
+    if (code) return `#${code}`;
+    if (name) return name;
+    return "(sin identificador)";
+  });
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-6 space-y-5">
+      <div>
+        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest mb-2">Vista previa</p>
+        <p className="text-lg font-semibold text-foreground leading-tight">
+          {razonSocial.trim() || <span className="text-muted-foreground/50 italic">Sin razón social</span>}
+        </p>
+        <p className="text-xs font-mono text-muted-foreground mt-1">
+          {rfc.trim() || "—"}
+        </p>
+      </div>
+
+      <div className="border-t border-border" />
+
+      <div className="space-y-4">
+        <PreviewItem label="Vendedor" value={vendedorNombre} />
+        <PreviewItem label="Crédito" value={`${creditoLabel} · ${limiteLabel}`} />
+
+        <div>
+          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest mb-1">
+            Puntos de entrega ({puntos.length})
+          </p>
+          {puntosDisplay.length > 0 ? (
+            <ul className="space-y-0.5">
+              {puntosDisplay.map((name, i) => (
+                <li key={i} className="text-sm text-foreground flex items-start gap-1.5">
+                  <span className="text-muted-foreground mt-0.5">•</span>
+                  {name}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">—</p>
+          )}
+        </div>
+
+        {perteneceGrupo && (
+          <PreviewItem label="Grupo" value={grupoNombre || "—"} />
+        )}
+      </div>
+
+      <div className="border-t border-border" />
+
+      {/* Tip */}
+      <div className="rounded-md bg-blue-500/[0.08] border-l-2 border-blue-500 p-3">
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          💡 {tipMessage}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function PreviewItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest mb-0.5">{label}</p>
+      <p className="text-sm text-foreground">{value || "—"}</p>
+    </div>
   );
 }
