@@ -287,6 +287,9 @@ const ClienteSucursalesDialog = ({
     email_facturacion: "",
     latitud: null as number | null,
     longitud: null as number | null,
+    metadata_entrega: {} as any,
+    sucursal_hermana_id: "",
+    sucursal_entrega_id: "",
   });
 
   // Filtrar sucursales según el tipo y búsqueda
