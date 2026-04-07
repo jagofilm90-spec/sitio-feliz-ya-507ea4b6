@@ -424,10 +424,22 @@ export default function NuevoCliente() {
                     {!sinLimite && (
                       <div className="max-w-[200px]">
                         <Input
-                          type="number"
-                          value={limiteCredito}
-                          onChange={(e) => setLimiteCredito(e.target.value)}
-                          placeholder="50,000"
+                          type="text"
+                          inputMode="decimal"
+                          value={limiteCredito ? `$${Number(limiteCredito).toLocaleString('en-US')}` : ''}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/[^0-9.]/g, '');
+                            const parts = raw.split('.');
+                            const cleaned = parts[0] + (parts.length > 1 ? '.' + parts[1].slice(0, 2) : '');
+                            setLimiteCredito(cleaned);
+                          }}
+                          onBlur={() => {
+                            if (limiteCredito) {
+                              const num = parseFloat(limiteCredito);
+                              if (!isNaN(num)) setLimiteCredito(num.toFixed(2));
+                            }
+                          }}
+                          placeholder="$0.00"
                           className="mt-1"
                         />
                       </div>
