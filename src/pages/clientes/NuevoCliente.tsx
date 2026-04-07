@@ -163,16 +163,6 @@ export default function NuevoCliente() {
   const vendedorNombre = vendedores.find((v) => v.id === vendedorAsignado)?.nombre || "Cliente de la casa";
   const creditoLabel = CREDITO_OPTIONS.find((c) => c.value === terminoCredito)?.label || "Contado";
   const limiteLabel = sinLimite ? "sin límite" : `$${Number(limiteCredito || 0).toLocaleString("es-MX")}`;
-  const puntosNombres = puntos
-    .map((p) => {
-      const code = p.codigoSucursal?.trim();
-      const name = p.nombre?.trim();
-      if (code && name) return `#${code} ${name}`;
-      if (code) return `#${code}`;
-      if (name) return name;
-      return "(sin nombre)";
-    })
-    .join(", ");
 
   const handleSave = async () => {
     if (!canSave) return;
