@@ -47,6 +47,9 @@ import Configuracion from "./pages/Configuracion";
 import Asistencia from "./pages/Asistencia";
 import VehiculosPage from "./pages/VehiculosPage";
 import PushDiagnosticsPage from "./pages/PushDiagnosticsPage";
+import LecarozCotizaciones from "./pages/LecarozCotizaciones";
+import LecarozCotizacionEditor from "./pages/LecarozCotizacionEditor";
+import LecarozBandeja from "./pages/LecarozBandeja";
 
 import PushNotificationsGate from "./components/PushNotificationsGate";
 import ProtectedRoute from "./components/ProtectedRoute";
