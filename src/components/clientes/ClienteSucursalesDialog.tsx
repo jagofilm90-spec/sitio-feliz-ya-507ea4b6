@@ -62,7 +62,7 @@ interface Sucursal {
   email_facturacion: string | null;
   latitud: number | null;
   longitud: number | null;
-  metadata_entrega: Record<string, any> | null;
+  metadata_entrega: any;
   sucursal_hermana_id: string | null;
   sucursal_entrega_id: string | null;
 }
