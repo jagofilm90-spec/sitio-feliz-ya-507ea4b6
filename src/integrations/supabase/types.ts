@@ -652,6 +652,8 @@ export type Database = {
           razon_social: string | null
           restricciones_vehiculo: string | null
           rfc: string | null
+          sucursal_entrega_id: string | null
+          sucursal_hermana_id: string | null
           telefono: string | null
           updated_at: string
           zona_id: string | null
@@ -678,6 +680,8 @@ export type Database = {
           razon_social?: string | null
           restricciones_vehiculo?: string | null
           rfc?: string | null
+          sucursal_entrega_id?: string | null
+          sucursal_hermana_id?: string | null
           telefono?: string | null
           updated_at?: string
           zona_id?: string | null
@@ -704,6 +708,8 @@ export type Database = {
           razon_social?: string | null
           restricciones_vehiculo?: string | null
           rfc?: string | null
+          sucursal_entrega_id?: string | null
+          sucursal_hermana_id?: string | null
           telefono?: string | null
           updated_at?: string
           zona_id?: string | null
@@ -714,6 +720,20 @@ export type Database = {
             columns: ["cliente_id"]
             isOneToOne: false
             referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliente_sucursales_sucursal_entrega_id_fkey"
+            columns: ["sucursal_entrega_id"]
+            isOneToOne: false
+            referencedRelation: "cliente_sucursales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliente_sucursales_sucursal_hermana_id_fkey"
+            columns: ["sucursal_hermana_id"]
+            isOneToOne: false
+            referencedRelation: "cliente_sucursales"
             referencedColumns: ["id"]
           },
           {
