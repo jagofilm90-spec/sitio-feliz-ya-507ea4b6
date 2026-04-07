@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SucursalFormSheet } from "./SucursalFormSheet";
+import { SucursalFormModal } from "./SucursalFormModal";
 import {
   Table,
   TableBody,
@@ -36,7 +36,7 @@ import { Card, CardContent } from "@/components/ui/card";
 interface ClienteSucursalesDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  cliente: { id: string; nombre: string } | null;
+  cliente: { id: string; nombre: string; grupo_cliente_id?: string | null } | null;
 }
 
 interface Sucursal {
@@ -56,14 +56,15 @@ interface Sucursal {
   dias_sin_entrega: string | null;
   no_combinar_pedidos: boolean;
   es_rosticeria: boolean;
-  // Datos fiscales opcionales para facturación por sucursal
   rfc: string | null;
   razon_social: string | null;
   direccion_fiscal: string | null;
   email_facturacion: string | null;
-  // Coordenadas exactas para rutas
   latitud: number | null;
   longitud: number | null;
+  metadata_entrega: any;
+  sucursal_hermana_id: string | null;
+  sucursal_entrega_id: string | null;
 }
 
 interface Zona {
@@ -286,6 +287,9 @@ const ClienteSucursalesDialog = ({
     email_facturacion: "",
     latitud: null as number | null,
     longitud: null as number | null,
+    metadata_entrega: {} as any,
+    sucursal_hermana_id: "",
+    sucursal_entrega_id: "",
   });
 
   // Filtrar sucursales según el tipo y búsqueda
@@ -507,14 +511,15 @@ const ClienteSucursalesDialog = ({
         dias_sin_entrega: formData.dias_sin_entrega || null,
         no_combinar_pedidos: formData.no_combinar_pedidos,
         es_rosticeria: formData.es_rosticeria,
-        // Datos fiscales opcionales
         rfc: formData.rfc || null,
         razon_social: formData.razon_social || null,
         direccion_fiscal: formData.direccion_fiscal || null,
         email_facturacion: formData.email_facturacion || null,
-        // Coordenadas exactas
         latitud: formData.latitud,
         longitud: formData.longitud,
+        metadata_entrega: formData.metadata_entrega || {},
+        sucursal_hermana_id: formData.sucursal_hermana_id || null,
+        sucursal_entrega_id: formData.sucursal_entrega_id || null,
       };
 
       if (editingSucursal) {
@@ -568,6 +573,9 @@ const ClienteSucursalesDialog = ({
       email_facturacion: sucursal.email_facturacion || "",
       latitud: sucursal.latitud,
       longitud: sucursal.longitud,
+      metadata_entrega: sucursal.metadata_entrega || {},
+      sucursal_hermana_id: sucursal.sucursal_hermana_id || "",
+      sucursal_entrega_id: sucursal.sucursal_entrega_id || "",
     });
     setFormOpen(true);
   };
@@ -615,6 +623,9 @@ const ClienteSucursalesDialog = ({
       email_facturacion: "",
       latitud: null,
       longitud: null,
+      metadata_entrega: {},
+      sucursal_hermana_id: "",
+      sucursal_entrega_id: "",
     });
   };
 
@@ -712,7 +723,7 @@ const ClienteSucursalesDialog = ({
             )}
           </div>
 
-          <SucursalFormSheet
+          <SucursalFormModal
             open={formOpen}
             onOpenChange={setFormOpen}
             formData={formData}
@@ -721,6 +732,9 @@ const ClienteSucursalesDialog = ({
             isEditing={!!editingSucursal}
             onSave={handleSave}
             onCancel={() => setFormOpen(false)}
+            onDelete={editingSucursal ? () => handleDelete(editingSucursal.id) : undefined}
+            clienteNombre={cliente?.nombre}
+            grupoClienteId={cliente?.grupo_cliente_id}
           />
 
           {/* Barra de acciones masivas */}

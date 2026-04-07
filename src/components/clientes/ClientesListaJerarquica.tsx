@@ -59,7 +59,7 @@ interface Props {
   onEdit: (cliente: any) => void;
   onDelete: (cliente: any) => void;
   onReactivar: (cliente: any) => void;
-  onViewSucursales: (cliente: { id: string; nombre: string }) => void;
+  onViewSucursales: (cliente: { id: string; nombre: string; grupo_cliente_id?: string | null }) => void;
   onViewHistorial: (cliente: { id: string; nombre: string }) => void;
   onViewProductos: (cliente: { id: string; nombre: string }) => void;
   getVendedorName: (id: string | null) => string | null;
@@ -364,7 +364,7 @@ export function ClientesListaJerarquica({
                                   className="h-7 w-7"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    onViewSucursales({ id: child.id, nombre: child.nombre });
+                                    onViewSucursales({ id: child.id, nombre: child.nombre, grupo_cliente_id: child.grupo_cliente_id });
                                   }}
                                 >
                                   <MapPin className="h-3.5 w-3.5" />
@@ -470,7 +470,7 @@ export function ClientesListaJerarquica({
                         className="h-8 w-8"
                         onClick={(e) => {
                           e.stopPropagation();
-                          onViewSucursales({ id: cliente.id, nombre: cliente.nombre });
+                          onViewSucursales({ id: cliente.id, nombre: cliente.nombre, grupo_cliente_id: cliente.grupo_cliente_id });
                         }}
                       >
                         <MapPin className="h-4 w-4" />

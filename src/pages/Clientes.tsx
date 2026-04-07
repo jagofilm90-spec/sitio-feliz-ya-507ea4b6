@@ -111,7 +111,7 @@ const Clientes = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<any>(null);
   const [sucursalesDialogOpen, setSucursalesDialogOpen] = useState(false);
-  const [selectedClienteForSucursales, setSelectedClienteForSucursales] = useState<{ id: string; nombre: string } | null>(null);
+  const [selectedClienteForSucursales, setSelectedClienteForSucursales] = useState<{ id: string; nombre: string; grupo_cliente_id?: string | null } | null>(null);
   const [historialDialogOpen, setHistorialDialogOpen] = useState(false);
   const [selectedClienteForHistorial, setSelectedClienteForHistorial] = useState<{ id: string; nombre: string } | null>(null);
   const [productosDialogOpen, setProductosDialogOpen] = useState(false);
@@ -953,7 +953,7 @@ const Clientes = () => {
                       variant="ghost"
                       size="icon"
                       onClick={() => {
-                        setSelectedClienteForSucursales({ id: cliente.id, nombre: cliente.nombre });
+                        setSelectedClienteForSucursales({ id: cliente.id, nombre: cliente.nombre, grupo_cliente_id: cliente.grupo_cliente_id });
                         setSucursalesDialogOpen(true);
                       }}
                       title={`Ver sucursales (${cliente.cliente_sucursales?.[0]?.count || 0})`}

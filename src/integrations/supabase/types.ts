@@ -646,6 +646,7 @@ export type Database = {
           id: string
           latitud: number | null
           longitud: number | null
+          metadata_entrega: Json | null
           no_combinar_pedidos: boolean | null
           nombre: string
           notas: string | null
@@ -674,6 +675,7 @@ export type Database = {
           id?: string
           latitud?: number | null
           longitud?: number | null
+          metadata_entrega?: Json | null
           no_combinar_pedidos?: boolean | null
           nombre: string
           notas?: string | null
@@ -702,6 +704,7 @@ export type Database = {
           id?: string
           latitud?: number | null
           longitud?: number | null
+          metadata_entrega?: Json | null
           no_combinar_pedidos?: boolean | null
           nombre?: string
           notas?: string | null
