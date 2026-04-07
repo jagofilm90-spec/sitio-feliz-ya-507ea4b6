@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -12,9 +12,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { PuntoEntregaCard, type PuntoEntrega } from "@/components/clientes/PuntoEntregaCard";
+import { CSFUploader } from "@/components/clientes/CSFUploader";
 import { REGIMENES_FISCALES } from "@/constants/catalogoSAT";
 import { ChevronRight, Plus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { CSFData } from "@/lib/csfParser";
 
 const USOS_CFDI = [
   { clave: "G03", descripcion: "Gastos en general" },
