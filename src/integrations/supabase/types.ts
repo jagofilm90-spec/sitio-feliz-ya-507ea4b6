@@ -6242,6 +6242,8 @@ export type Database = {
           descripcion: string | null
           es_foranea: boolean | null
           id: string
+          latitud: number | null
+          longitud: number | null
           nombre: string
           region: Database["public"]["Enums"]["zona_region"] | null
           zonas_cercanas: string[] | null
@@ -6252,6 +6254,8 @@ export type Database = {
           descripcion?: string | null
           es_foranea?: boolean | null
           id?: string
+          latitud?: number | null
+          longitud?: number | null
           nombre: string
           region?: Database["public"]["Enums"]["zona_region"] | null
           zonas_cercanas?: string[] | null
@@ -6262,6 +6266,8 @@ export type Database = {
           descripcion?: string | null
           es_foranea?: boolean | null
           id?: string
+          latitud?: number | null
+          longitud?: number | null
           nombre?: string
           region?: Database["public"]["Enums"]["zona_region"] | null
           zonas_cercanas?: string[] | null
@@ -6541,6 +6547,7 @@ export type Database = {
         }
         Returns: string
       }
+      unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
       app_role:
