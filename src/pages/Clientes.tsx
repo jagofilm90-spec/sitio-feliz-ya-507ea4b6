@@ -130,6 +130,7 @@ const Clientes = () => {
   const [filterZona, setFilterZona] = useState("todos");
   const [filterCredito, setFilterCredito] = useState("todos");
   const [filterEstadoCredito, setFilterEstadoCredito] = useState("todos");
+  const [filterActivo, setFilterActivo] = useState<"activos" | "inactivos" | "todos">("activos");
   const { toast } = useToast();
   const { isAdmin } = useUserRoles();
 
