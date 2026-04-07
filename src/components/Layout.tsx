@@ -45,6 +45,7 @@ import {
   UserCog,
   Clock,
   LucideIcon,
+  Store,
 } from "lucide-react";
 
 interface LayoutProps {
