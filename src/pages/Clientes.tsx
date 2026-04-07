@@ -1336,7 +1336,7 @@ const Clientes = () => {
         )}
 
         {/* Vista selector: Lista | Mapa */}
-        <div className="flex gap-2 border-b pb-3">
+        <div className="flex gap-2 border-b pb-3 flex-wrap">
           <Button variant={vistaActiva === "lista" ? "default" : "outline"} size="sm" onClick={() => setVistaActiva("lista")} className="cursor-pointer">
             Lista
           </Button>
@@ -1344,6 +1344,21 @@ const Clientes = () => {
             <MapPin className="h-4 w-4 mr-1.5" />
             Mapa
           </Button>
+          <div className="ml-auto flex gap-1 bg-muted rounded-md p-0.5">
+            {(["activos", "inactivos", "todos"] as const).map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => setFilterActivo(opt)}
+                className={cn(
+                  "px-2.5 py-1 rounded text-xs font-medium transition-colors capitalize",
+                  filterActivo === opt ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
+                )}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
         </div>
 
         {vistaActiva === "mapa" ? (
