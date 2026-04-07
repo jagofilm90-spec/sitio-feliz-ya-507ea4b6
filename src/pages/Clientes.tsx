@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { ClientesMapaTab } from "@/components/clientes/ClientesMapaTab";
+import { ClientesStatsBar } from "@/components/clientes/ClientesStatsBar";
+import { ClientesListaJerarquica } from "@/components/clientes/ClientesListaJerarquica";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
