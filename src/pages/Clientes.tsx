@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { ClientesMapaTab } from "@/components/clientes/ClientesMapaTab";
+import { ClientesStatsBar } from "@/components/clientes/ClientesStatsBar";
+import { ClientesListaJerarquica } from "@/components/clientes/ClientesListaJerarquica";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1357,94 +1359,30 @@ const Clientes = () => {
           <ClientesMapaTab />
         ) : (
         <>
-        <div className="space-y-3">
-          <div className="flex gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar clientes..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Select value={filterZona} onValueChange={setFilterZona}>
-              <SelectTrigger className="w-[160px] h-8 text-xs"><SelectValue placeholder="Zona" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todas las zonas</SelectItem>
-                {zonasUnicas.map(z => <SelectItem key={z} value={z}>{z}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={filterCredito} onValueChange={setFilterCredito}>
-              <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue placeholder="Crédito" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="contado">Contado</SelectItem>
-                <SelectItem value="8_dias">8 días</SelectItem>
-                <SelectItem value="15_dias">15 días</SelectItem>
-                <SelectItem value="30_dias">30 días</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterEstadoCredito} onValueChange={setFilterEstadoCredito}>
-              <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue placeholder="Estado" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="al_corriente">Al corriente</SelectItem>
-                <SelectItem value="con_saldo">Con saldo</SelectItem>
-                <SelectItem value="excedido">Crédito excedido</SelectItem>
-              </SelectContent>
-            </Select>
-            <span className="text-xs text-muted-foreground ml-auto">
-              Mostrando {searchFiltered.length} de {clientes.length} clientes
-            </span>
-          </div>
-        </div>
-
-        {/* Vendedor Tabs */}
-        <Tabs value={activeVendedorTab} onValueChange={setActiveVendedorTab} className="w-full">
-          {isMobile ? (
-            <div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
-              <TabsList className="inline-flex w-max gap-1">
-                <TabsTrigger value="casa" className="flex items-center gap-1.5 px-3">
-                  <Home className="h-3.5 w-3.5" />
-                  Casa
-                  <Badge variant="secondary" className="text-xs px-1.5">{getClientCount("casa")}</Badge>
-                </TabsTrigger>
-                {vendedores.map((v) => (
-                  <TabsTrigger key={v.user_id} value={v.nombre_corto.toLowerCase()} className="flex items-center gap-1.5 px-3">
-                    {v.nombre_corto}
-                    <Badge variant="secondary" className="text-xs px-1.5">{getClientCount(v.nombre_corto.toLowerCase())}</Badge>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </div>
-          ) : (
-            <TabsList className={`grid w-full`} style={{ gridTemplateColumns: `repeat(${vendedores.length + 1}, minmax(0, 1fr))` }}>
-              <TabsTrigger value="casa" className="flex items-center gap-2">
-                <Home className="h-4 w-4" />
-                Casa
-                <Badge variant="secondary" className="ml-1">{getClientCount("casa")}</Badge>
-              </TabsTrigger>
-              {vendedores.map((v) => (
-                <TabsTrigger key={v.user_id} value={v.nombre_corto.toLowerCase()} className="flex items-center gap-2">
-                  {v.nombre_corto}
-                  <Badge variant="secondary" className="ml-1">{getClientCount(v.nombre_corto.toLowerCase())}</Badge>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          )}
-
-          <TabsContent value="casa" className="mt-4">
-            {renderClienteTable()}
-          </TabsContent>
-          {vendedores.map((v) => (
-            <TabsContent key={v.user_id} value={v.nombre_corto.toLowerCase()} className="mt-4">
-              {renderClienteTable()}
-            </TabsContent>
-          ))}
-        </Tabs>
+          <ClientesStatsBar />
+          <ClientesListaJerarquica
+            clientes={clientes}
+            loading={loading}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            onEdit={handleEdit}
+            onDelete={(c) => setDeleteTarget(c)}
+            onReactivar={handleReactivar}
+            onViewSucursales={(c) => {
+              setSelectedClienteForSucursales(c);
+              setSucursalesDialogOpen(true);
+            }}
+            onViewHistorial={(c) => {
+              setSelectedClienteForHistorial(c);
+              setHistorialDialogOpen(true);
+            }}
+            onViewProductos={(c) => {
+              setSelectedClienteForProductos(c);
+              setProductosDialogOpen(true);
+            }}
+            getVendedorName={getVendedorName}
+            getCreditLabel={getCreditLabel}
+          />
         </>
         )}
       </div>
