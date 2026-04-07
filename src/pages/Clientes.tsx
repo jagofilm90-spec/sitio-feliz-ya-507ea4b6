@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { ClientesMapaTab } from "@/components/clientes/ClientesMapaTab";
 import { ClientesStatsBar } from "@/components/clientes/ClientesStatsBar";
@@ -1250,15 +1251,10 @@ const Clientes = () => {
                 <h1 className="text-xl font-bold">Clientes</h1>
                 <p className="text-xs text-muted-foreground">Gestión de clientes</p>
               </div>
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm" onClick={resetForm}>
-                    <Plus className="h-4 w-4 mr-1" />
-                    Nuevo
-                  </Button>
-                </DialogTrigger>
-                {renderDialogContent()}
-              </Dialog>
+              <Button size="sm" onClick={() => navigate("/clientes/nuevo")}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Nuevo
+                </Button>
             </div>
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
               <Button
@@ -1331,15 +1327,10 @@ const Clientes = () => {
                   </Badge>
                 )}
               </Button>
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button onClick={resetForm}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Nuevo Cliente
-                  </Button>
-                </DialogTrigger>
-                {renderDialogContent()}
-              </Dialog>
+              <Button onClick={() => navigate("/clientes/nuevo")}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nuevo Cliente
+              </Button>
             </div>
           </div>
         )}
