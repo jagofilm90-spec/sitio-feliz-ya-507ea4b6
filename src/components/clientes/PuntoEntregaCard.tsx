@@ -115,7 +115,7 @@ export function PuntoEntregaCard({ punto, index, total, direccionFiscal, onChang
             <Input
               value={punto.nombre}
               onChange={(e) => onChange(index, "nombre", e.target.value)}
-              placeholder="BOSQUES"
+              placeholder={punto.entregarEnFiscal && index === 0 ? "Matriz" : "BOSQUES"}
               className="mt-1"
             />
           </div>

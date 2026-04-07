@@ -851,10 +851,7 @@ const Clientes = () => {
                 key={cliente.id}
                 cliente={cliente}
                 onEdit={handleEdit}
-                onViewSucursales={(c) => {
-                  setSelectedClienteForSucursales(c);
-                  setSucursalesDialogOpen(true);
-                }}
+                onViewSucursales={(c) => navigate(`/clientes/${c.id}`)}
                 onViewHistorial={(c) => {
                   setSelectedClienteForHistorial(c);
                   setHistorialDialogOpen(true);
@@ -954,10 +951,7 @@ const Clientes = () => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => {
-                        setSelectedClienteForSucursales({ id: cliente.id, nombre: cliente.nombre, grupo_cliente_id: cliente.grupo_cliente_id });
-                        setSucursalesDialogOpen(true);
-                      }}
+                      onClick={() => navigate(`/clientes/${cliente.id}`)}
                       title={`Ver sucursales (${cliente.cliente_sucursales?.[0]?.count || 0})`}
                       className="relative"
                     >
@@ -1360,10 +1354,7 @@ const Clientes = () => {
             onEdit={handleEdit}
             onDelete={(c) => setDeleteTarget(c)}
             onReactivar={handleReactivar}
-            onViewSucursales={(c) => {
-              setSelectedClienteForSucursales(c);
-              setSucursalesDialogOpen(true);
-            }}
+            onViewSucursales={(c) => navigate(`/clientes/${c.id}`)}
             onViewHistorial={(c) => {
               setSelectedClienteForHistorial(c);
               setHistorialDialogOpen(true);
