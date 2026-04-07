@@ -571,7 +571,7 @@ const Layout = ({ children }: LayoutProps) => {
         {/* Birthday Banner */}
         <CumpleanosBannerLazy />
         {/* Main Content */}
-        <main className="flex-1 p-6 overflow-auto min-h-0">{children}</main>
+        <main className="flex-1 px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-6 lg:py-8 overflow-auto min-h-0">{children}</main>
       </div>
     </div>
   );
