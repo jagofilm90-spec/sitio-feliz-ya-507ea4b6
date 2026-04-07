@@ -31,6 +31,7 @@ import { Plus, Edit, Trash2, MapPin, Search, ChevronLeft, ChevronRight, CheckSqu
 import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 
 interface ClienteSucursalesDialogProps {
@@ -756,16 +757,26 @@ const ClienteSucursalesDialog = ({
               </div>
               <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center gap-2 ml-auto flex-wrap'}`}>
                 <div className={`flex ${isMobile ? 'flex-wrap gap-2' : 'gap-2'}`}>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleAutoDetectarZonas}
-                    disabled={autoDetectando}
-                    className={isMobile ? 'flex-1 min-w-[45%]' : ''}
-                  >
-                    <Wand2 className="h-4 w-4 mr-1" />
-                    {isMobile ? 'Auto-zona' : 'Auto-detectar Zona'}
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className={isMobile ? 'flex-1 min-w-[45%]' : ''}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled
+                            className={`${isMobile ? 'w-full' : ''} opacity-50`}
+                          >
+                            <Wand2 className="h-4 w-4 mr-1" />
+                            {isMobile ? 'Auto-zona' : 'Auto-detectar Zona'}
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>⚠️ Auto-detect en mantenimiento — asignar manualmente por ahora</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <Button
                     size="sm"
                     variant="outline"
@@ -839,16 +850,26 @@ const ClienteSucursalesDialog = ({
                     {sucursales.filter(s => !s.zona_id).length} {isMobile ? 'sin zona' : 'sucursales sin zona asignada'}
                   </span>
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleAutoDetectarZonas}
-                  disabled={autoDetectando}
-                  className={isMobile ? 'w-full' : 'ml-auto'}
-                >
-                  <Wand2 className="h-4 w-4 mr-1" />
-                  {autoDetectando ? "Detectando..." : (isMobile ? "Auto-detectar" : "Auto-detectar Zonas")}
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className={isMobile ? 'w-full' : 'ml-auto'}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled
+                          className={`${isMobile ? 'w-full' : ''} opacity-50`}
+                        >
+                          <Wand2 className="h-4 w-4 mr-1" />
+                          {isMobile ? "Auto-detectar" : "Auto-detectar Zonas"}
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>⚠️ Auto-detect en mantenimiento — asignar manualmente por ahora</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             )
           )}
