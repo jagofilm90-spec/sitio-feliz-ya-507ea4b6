@@ -470,7 +470,7 @@ export function ClientesListaJerarquica({
                         className="h-8 w-8"
                         onClick={(e) => {
                           e.stopPropagation();
-                          onViewSucursales({ id: cliente.id, nombre: cliente.nombre });
+                          onViewSucursales({ id: cliente.id, nombre: cliente.nombre, grupo_cliente_id: cliente.grupo_cliente_id });
                         }}
                       >
                         <MapPin className="h-4 w-4" />
