@@ -36,7 +36,7 @@ import { Card, CardContent } from "@/components/ui/card";
 interface ClienteSucursalesDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  cliente: { id: string; nombre: string } | null;
+  cliente: { id: string; nombre: string; grupo_cliente_id?: string | null } | null;
 }
 
 interface Sucursal {
