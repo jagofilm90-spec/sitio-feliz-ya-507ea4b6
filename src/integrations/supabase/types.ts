@@ -6526,6 +6526,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      haversine_km: {
+        Args: { lat1: number; lat2: number; lng1: number; lng2: number }
+        Returns: number
+      }
       incrementar_lote: {
         Args: { p_cantidad: number; p_lote_id: string }
         Returns: undefined
