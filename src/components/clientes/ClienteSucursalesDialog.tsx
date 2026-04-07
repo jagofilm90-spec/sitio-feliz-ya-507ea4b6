@@ -622,6 +622,9 @@ const ClienteSucursalesDialog = ({
       email_facturacion: "",
       latitud: null,
       longitud: null,
+      metadata_entrega: {},
+      sucursal_hermana_id: "",
+      sucursal_entrega_id: "",
     });
   };
 
