@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import Layout from "@/components/Layout";
 import { ClientesMapaTab } from "@/components/clientes/ClientesMapaTab";
 import { ClientesStatsBar } from "@/components/clientes/ClientesStatsBar";
