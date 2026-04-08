@@ -141,8 +141,8 @@ const Dashboard = () => {
         {/* Header */}
         <PageHeader
           eyebrow="Hoy"
-          title={`Buenos días,`}
-          titleAccent={`${userName || 'equipo'}.`}
+          title="Buenos días,"
+          titleAccent={`${userName || 'Jose'}.`}
           lead="Aquí está cómo va ALMASA hoy."
           actions={
             <div className="flex items-center gap-2">
