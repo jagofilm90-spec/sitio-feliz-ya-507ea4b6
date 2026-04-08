@@ -820,6 +820,7 @@ export type Database = {
             | null
           razon_social: string | null
           regimen_capital: string | null
+          regimen_fiscal: string | null
           rfc: string | null
           saldo_pendiente: number | null
           telefono: string | null
@@ -827,6 +828,7 @@ export type Database = {
           tipo_vialidad: string | null
           updated_at: string
           user_id: string | null
+          uso_cfdi_default: string | null
           vendedor_asignado: string | null
           y_calle: string | null
           zona_id: string | null
@@ -861,6 +863,7 @@ export type Database = {
             | null
           razon_social?: string | null
           regimen_capital?: string | null
+          regimen_fiscal?: string | null
           rfc?: string | null
           saldo_pendiente?: number | null
           telefono?: string | null
@@ -868,6 +871,7 @@ export type Database = {
           tipo_vialidad?: string | null
           updated_at?: string
           user_id?: string | null
+          uso_cfdi_default?: string | null
           vendedor_asignado?: string | null
           y_calle?: string | null
           zona_id?: string | null
@@ -902,6 +906,7 @@ export type Database = {
             | null
           razon_social?: string | null
           regimen_capital?: string | null
+          regimen_fiscal?: string | null
           rfc?: string | null
           saldo_pendiente?: number | null
           telefono?: string | null
@@ -909,6 +914,7 @@ export type Database = {
           tipo_vialidad?: string | null
           updated_at?: string
           user_id?: string | null
+          uso_cfdi_default?: string | null
           vendedor_asignado?: string | null
           y_calle?: string | null
           zona_id?: string | null
@@ -6781,6 +6787,7 @@ export type Database = {
         Args: { _cliente_id: string }
         Returns: boolean
       }
+      generar_codigo_cliente: { Args: never; Returns: string }
       generar_folio_cotizacion: { Args: never; Returns: string }
       generar_folio_orden_compra: { Args: never; Returns: string }
       generar_folio_venta_mostrador: { Args: never; Returns: string }
