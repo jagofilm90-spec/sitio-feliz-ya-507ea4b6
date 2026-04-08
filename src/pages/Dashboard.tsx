@@ -139,23 +139,25 @@ const Dashboard = () => {
     <Layout>
       <div className={`space-y-4 ${isMobile ? 'space-y-3' : 'md:space-y-5'}`}>
         {/* Header */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <h1 className={`font-bold ${isMobile ? 'text-xl' : 'text-2xl'}`}>Dashboard</h1>
-            <p className="text-muted-foreground text-sm">{COMPANY_DATA.slogan}</p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <ToggleGroup type="single" value={periodo} onValueChange={(v) => v && setPeriodo(v as Periodo)} className="hidden sm:flex">
-              <ToggleGroupItem value="hoy" className="text-xs h-8 px-3">Hoy</ToggleGroupItem>
-              <ToggleGroupItem value="semana" className="text-xs h-8 px-3">Semana</ToggleGroupItem>
-              <ToggleGroupItem value="mes" className="text-xs h-8 px-3">Mes</ToggleGroupItem>
-              <ToggleGroupItem value="anio" className="text-xs h-8 px-3">Año</ToggleGroupItem>
-            </ToggleGroup>
-            <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => refresh()} title="Actualizar">
-              <RefreshCw className={`h-4 w-4 ${dashLoading ? 'animate-spin' : ''}`} />
-            </Button>
-          </div>
-        </div>
+        <PageHeader
+          eyebrow="Hoy"
+          title={`Buenos días,`}
+          titleAccent={`${userName || 'equipo'}.`}
+          lead="Aquí está cómo va ALMASA hoy."
+          actions={
+            <div className="flex items-center gap-2">
+              <ToggleGroup type="single" value={periodo} onValueChange={(v) => v && setPeriodo(v as Periodo)} className="hidden sm:flex">
+                <ToggleGroupItem value="hoy" className="text-xs h-8 px-3">Hoy</ToggleGroupItem>
+                <ToggleGroupItem value="semana" className="text-xs h-8 px-3">Semana</ToggleGroupItem>
+                <ToggleGroupItem value="mes" className="text-xs h-8 px-3">Mes</ToggleGroupItem>
+                <ToggleGroupItem value="anio" className="text-xs h-8 px-3">Año</ToggleGroupItem>
+              </ToggleGroup>
+              <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => refresh()} title="Actualizar">
+                <RefreshCw className={`h-4 w-4 ${dashLoading ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
+          }
+        />
 
         {/* Mobile period selector */}
         <ToggleGroup type="single" value={periodo} onValueChange={(v) => v && setPeriodo(v as Periodo)} className="sm:hidden justify-start">
