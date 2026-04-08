@@ -1002,87 +1002,73 @@ const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
     );
   }
 
-  // Layout desktop con dos paneles estilo Gmail
+  // Layout desktop con dos paneles estilo editorial
   return (
     <>
-      <div className="flex flex-col h-[calc(100vh-180px)] overflow-hidden">
-        {/* Header with account dropdown and actions */}
-        <div className="flex flex-col gap-4 shrink-0 pb-4">
-          {/* Row 1: Account selector */}
-          <div className="flex items-center gap-3 min-w-0">
-            <Mail className="h-5 w-5 text-primary shrink-0" />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="min-w-0 max-w-[300px] flex-1 sm:flex-none sm:w-[300px] justify-between">
-                  <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-                    <span className="truncate">{selectedCuenta?.nombre || "Seleccionar cuenta"}</span>
-                    {unreadCounts?.[selectedAccount] ? (
-                      <Badge variant="destructive" className="text-xs shrink-0">
-                        {unreadCounts[selectedAccount]}
-                      </Badge>
-                    ) : null}
+      <div className="flex flex-col h-[calc(100vh-220px)] overflow-hidden">
+        {/* Header row: Account selector + actions */}
+        <div className="flex items-center justify-between gap-4 shrink-0 pb-4">
+          {/* Account selector - editorial dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-ink-100 bg-white hover:bg-bg-soft transition-colors min-w-0 max-w-[340px]">
+                <div className="flex flex-col items-start min-w-0">
+                  <span className="text-[10px] uppercase tracking-[0.16em] text-ink-400 font-medium">Cuenta activa</span>
+                  <span className="text-sm font-medium text-ink-900 truncate">{selectedCuenta?.nombre || "Seleccionar"}</span>
+                </div>
+                {unreadCounts?.[selectedAccount] ? (
+                  <span className="text-xs font-mono font-semibold text-crimson-500 bg-crimson-500/10 px-2 py-0.5 rounded-full shrink-0">
+                    {unreadCounts[selectedAccount].toLocaleString()}
+                  </span>
+                ) : null}
+                <ChevronDown className="h-4 w-4 text-ink-400 shrink-0" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-[320px] bg-popover" align="start">
+              <div className="px-3 py-2 border-b border-ink-100">
+                <span className="text-[10px] uppercase tracking-[0.16em] text-ink-400 font-medium">— Todas las cuentas</span>
+              </div>
+              {cuentas.map((cuenta) => (
+                <DropdownMenuItem
+                  key={cuenta.id}
+                  onClick={() => handleAccountChange(cuenta.email)}
+                  className="flex items-center justify-between py-3"
+                >
+                  <div className="flex flex-col min-w-0">
+                    <span className={cn("text-sm truncate", cuenta.email === selectedAccount ? "font-semibold text-crimson-500" : "font-medium text-ink-900")}>
+                      {cuenta.nombre}
+                    </span>
+                    <span className="text-xs text-ink-400 font-mono truncate">{cuenta.email}</span>
                   </div>
-                  <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-[300px] bg-popover" align="start">
-                {cuentas.map((cuenta) => (
-                  <DropdownMenuItem
-                    key={cuenta.id}
-                    onClick={() => handleAccountChange(cuenta.email)}
-                    className="flex items-center justify-between"
-                  >
-                    <div className="flex flex-col">
-                      <span className="font-medium">{cuenta.nombre}</span>
-                      <span className="text-xs text-muted-foreground">{cuenta.email}</span>
-                    </div>
-                    {unreadCounts?.[cuenta.email] ? (
-                      <Badge variant="destructive" className="text-xs">
-                        {unreadCounts[cuenta.email]}
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-xs">
-                        {cuenta.proposito}
-                      </Badge>
-                    )}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+                  {unreadCounts?.[cuenta.email] ? (
+                    <span className="text-xs font-mono font-semibold text-crimson-500 bg-crimson-500/10 px-2 py-0.5 rounded-full shrink-0">
+                      {unreadCounts[cuenta.email]}
+                    </span>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px] shrink-0">
+                      {cuenta.proposito}
+                    </Badge>
+                  )}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-          {/* Row 2: Action buttons - responsive con flex-wrap */}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Actions: simplified */}
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={handleMarkAllAsRead}
               disabled={markingAllAsRead || isLoading}
               title="Marcar todos como leídos"
-              className="whitespace-nowrap"
             >
               {markingAllAsRead ? (
-                <Loader2 className="h-4 w-4 lg:mr-2 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <CheckCheck className="h-4 w-4 lg:mr-2" />
+                <CheckCheck className="h-4 w-4" />
               )}
-              <span className="hidden lg:inline">Marcar leídos</span>
-            </Button>
-
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleMarkAllAccountsAsRead}
-              disabled={markingAllInboxAsRead}
-              title="Marcar TODOS los correos de TODAS las cuentas como leídos"
-              className="bg-amber-500 hover:bg-amber-600 text-white whitespace-nowrap"
-            >
-              {markingAllInboxAsRead ? (
-                <Loader2 className="h-4 w-4 lg:mr-2 animate-spin" />
-              ) : (
-                <CheckCheck className="h-4 w-4 lg:mr-2" />
-              )}
-              <span className="hidden lg:inline">Resetear TODO</span>
+              <span className="hidden lg:inline ml-2">Marcar leídos</span>
             </Button>
 
             <Button
@@ -1093,17 +1079,9 @@ const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
                 queryClient.invalidateQueries({ queryKey: ["gmail-unread-counts"] });
               }}
               disabled={isRefetching}
-              className="whitespace-nowrap"
             >
-              <RefreshCw
-                className={`h-4 w-4 lg:mr-2 ${isRefetching ? "animate-spin" : ""}`}
-              />
-              <span className="hidden lg:inline">Actualizar</span>
-            </Button>
-
-            <Button size="sm" onClick={() => setComposeOpen(true)} className="whitespace-nowrap">
-              <PenSquare className="h-4 w-4 lg:mr-2" />
-              <span className="hidden lg:inline">Nuevo correo</span>
+              <RefreshCw className={`h-4 w-4 ${isRefetching ? "animate-spin" : ""}`} />
+              <span className="hidden lg:inline ml-2">Actualizar</span>
             </Button>
 
             {/* View mode toggle */}
@@ -1115,23 +1093,49 @@ const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
                 setViewMode(newMode);
                 localStorage.setItem('email-view-mode', newMode);
               }}
-              title={viewMode === 'split' ? 'Cambiar a solo lista' : 'Cambiar a vista dividida'}
-              className="whitespace-nowrap"
+              title={viewMode === 'split' ? 'Solo lista' : 'Vista dividida'}
             >
               {viewMode === 'split' ? (
-                <List className="h-4 w-4 lg:mr-2" />
+                <List className="h-4 w-4" />
               ) : (
-                <Columns className="h-4 w-4 lg:mr-2" />
+                <Columns className="h-4 w-4" />
               )}
-              <span className="hidden lg:inline">{viewMode === 'split' ? 'Solo lista' : 'Dividir'}</span>
+            </Button>
+
+            {/* More actions dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="px-2">
+                  <span className="text-lg leading-none">···</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-popover">
+                <DropdownMenuItem
+                  onClick={handleMarkAllAccountsAsRead}
+                  disabled={markingAllInboxAsRead}
+                  className="text-destructive focus:text-destructive"
+                >
+                  {markingAllInboxAsRead ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <CheckCheck className="h-4 w-4 mr-2" />
+                  )}
+                  Resetear TODO (todas las cuentas)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Button size="sm" onClick={() => setComposeOpen(true)}>
+              <PenSquare className="h-4 w-4" />
+              <span className="hidden lg:inline ml-2">Nuevo correo</span>
             </Button>
           </div>
         </div>
 
-        {/* Search bar - responsive */}
-        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2 shrink-0 pb-4">
+        {/* Search bar */}
+        <form onSubmit={handleSearch} className="flex gap-2 shrink-0 pb-4">
           <div className="relative flex-1 min-w-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400" />
             <Input
               placeholder="Buscar correos..."
               value={searchQuery}
@@ -1139,78 +1143,87 @@ const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
               className="pl-10 w-full"
             />
           </div>
-          <div className="flex gap-2 shrink-0">
-            <Button type="submit" variant="secondary" className="flex-1 sm:flex-none">
-              Buscar
+          {activeSearch && (
+            <Button type="button" variant="ghost" size="sm" onClick={clearSearch}>
+              Limpiar
             </Button>
-            {activeSearch && (
-              <Button type="button" variant="ghost" onClick={clearSearch}>
-                Limpiar
-              </Button>
-            )}
-          </div>
+          )}
         </form>
 
         {activeSearch && (
-          <div className="text-sm text-muted-foreground shrink-0 pb-2">
-            Resultados para: <span className="font-medium">"{activeSearch}"</span>
+          <div className="text-sm text-ink-500 shrink-0 pb-2">
+            Resultados para: <span className="font-medium text-ink-700">"{activeSearch}"</span>
           </div>
         )}
 
-        {/* Main content area - Two panels or full width */}
+        {/* Main content area - Two panels */}
         <div className="flex-1 flex gap-4 overflow-hidden min-h-0">
           {/* Left Panel: Email List */}
           <div className={cn(
             "flex flex-col overflow-hidden h-full",
-            // En modo split con correo seleccionado: ancho fijo
-            // En modo solo lista: todo el ancho
             viewMode === 'split' && selectedEmailId ? "w-[400px] shrink-0" : "flex-1"
           )}>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
               <div className="flex flex-wrap items-center justify-between gap-2 shrink-0">
-                <TabsList>
-                  <TabsTrigger value="inbox" className="gap-2">
-                    <Inbox className="h-4 w-4" />
-                    Bandeja de entrada
-                    {unreadCounts?.[selectedAccount] ? (
-                      <Badge variant="destructive" className="text-xs ml-1">
-                        {unreadCounts[selectedAccount]}
-                      </Badge>
-                    ) : null}
-                  </TabsTrigger>
-                  <TabsTrigger value="trash" className="gap-2">
-                    <Trash2 className="h-4 w-4" />
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setActiveTab("inbox")}
+                    className={cn(
+                      "text-sm font-medium pb-2 border-b-2 transition-colors",
+                      activeTab === "inbox"
+                        ? "text-crimson-500 border-crimson-500"
+                        : "text-ink-400 border-transparent hover:text-ink-600"
+                    )}
+                  >
+                    Bandeja · {unreadCounts?.[selectedAccount] || 0}
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("trash")}
+                    className={cn(
+                      "text-sm font-medium pb-2 border-b-2 transition-colors",
+                      activeTab === "trash"
+                        ? "text-crimson-500 border-crimson-500"
+                        : "text-ink-400 border-transparent hover:text-ink-600"
+                    )}
+                  >
                     Papelera
-                  </TabsTrigger>
-                </TabsList>
+                  </button>
+                </div>
 
-                {/* Filter and Selection controls - responsive */}
+                {/* Filter and Selection controls */}
                 {activeTab === "inbox" && (
                   <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      variant={showOnlyUnread ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setShowOnlyUnread(!showOnlyUnread)}
-                      title="Mostrar solo no leídos"
-                      className="whitespace-nowrap"
-                    >
-                      <Filter className="h-4 w-4 lg:mr-2" />
-                      <span className="hidden lg:inline">No leídos</span>
-                    </Button>
-                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant={showOnlyUnread ? "default" : "outline"}
+                          size="sm"
+                          className="h-7 text-xs"
+                        >
+                          <Filter className="h-3.5 w-3.5 mr-1" />
+                          {showOnlyUnread ? "No leídos" : "Todos"}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-popover">
+                        <DropdownMenuItem onClick={() => setShowOnlyUnread(false)}>
+                          Todos
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setShowOnlyUnread(true)}>
+                          No leídos
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant={filterProcessed !== 'all' ? "default" : "outline"}
                           size="sm"
-                          className="whitespace-nowrap"
+                          className="h-7 text-xs"
                         >
-                          <CheckCheck className="h-4 w-4 lg:mr-2" />
-                          <span className="hidden lg:inline">
-                            {filterProcessed === 'all' ? 'Todos' : 
-                             filterProcessed === 'processed' ? 'Procesados' : 'No procesados'}
-                          </span>
-                          <ChevronDown className="h-4 w-4 ml-1" />
+                          <CheckCheck className="h-3.5 w-3.5 mr-1" />
+                          {filterProcessed === 'all' ? 'Estado' : 
+                           filterProcessed === 'processed' ? 'Procesados' : 'No procesados'}
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-popover">
@@ -1225,67 +1238,40 @@ const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
+
                     {!selectionMode ? (
                       <Button
                         variant="outline"
                         size="sm"
+                        className="h-7 text-xs"
                         onClick={() => setSelectionMode(true)}
-                        className="whitespace-nowrap"
                       >
-                        <Square className="h-4 w-4 lg:mr-2" />
-                        <span className="hidden lg:inline">Seleccionar</span>
+                        <Square className="h-3.5 w-3.5 mr-1" />
+                        Seleccionar
                       </Button>
                     ) : (
-                      <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleSelectAll}
-                        >
-                          <CheckSquare className="h-4 w-4 mr-2" />
-                          Seleccionar todos
+                      <div className="flex items-center gap-1.5">
+                        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={handleSelectAll}>
+                          <CheckSquare className="h-3.5 w-3.5 mr-1" />
+                          Todos
                         </Button>
                         {selectedEmailIds.size > 0 && (
                           <>
-                            <Badge variant="secondary">
-                              {selectedEmailIds.size} seleccionado(s)
+                            <Badge variant="secondary" className="text-xs h-7 px-2">
+                              {selectedEmailIds.size}
                             </Badge>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={handleMarkSelectedAsRead}
-                              disabled={markingAllAsRead}
-                            >
-                              {markingAllAsRead ? (
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              ) : (
-                                <CheckCheck className="h-4 w-4 mr-2" />
-                              )}
-                              Marcar leídos
+                            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={handleMarkSelectedAsRead} disabled={markingAllAsRead}>
+                              <CheckCheck className="h-3.5 w-3.5" />
                             </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={handleDeleteSelected}
-                              disabled={deletingSelected}
-                            >
-                              {deletingSelected ? (
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              ) : (
-                                <Trash2 className="h-4 w-4 mr-2" />
-                              )}
-                              Eliminar
+                            <Button variant="outline" size="sm" className="h-7 text-xs text-destructive hover:text-destructive" onClick={handleDeleteSelected} disabled={deletingSelected}>
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </>
                         )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleClearSelection}
-                        >
-                          Cancelar
+                        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={handleClearSelection}>
+                          ✕
                         </Button>
-                      </>
+                      </div>
                     )}
                   </div>
                 )}
@@ -1328,13 +1314,13 @@ const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
             </Tabs>
           </div>
 
-          {/* Right Panel: Email Detail or Empty State - Only in split mode */}
+          {/* Right Panel: Email Detail or Empty State */}
           {viewMode === 'split' && (
             <>
               {selectedEmailId && emailDetail ? (
-                <div className="flex-1 overflow-hidden border rounded-lg">
+                <div className="flex-1 overflow-hidden border border-ink-100 rounded-xl bg-white shadow-xs-soft">
                   <ScrollArea className="h-full">
-                    <div className="p-4">
+                    <div className="p-6">
                       <EmailDetailView
                         email={emailDetail}
                         cuentaEmail={selectedAccount}
@@ -1352,10 +1338,18 @@ const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
                   </ScrollArea>
                 </div>
               ) : (
-                <div className="flex-1 flex items-center justify-center text-muted-foreground border rounded-lg">
+                <div className="flex-1 flex items-center justify-center border border-ink-100 rounded-xl bg-white/50">
                   <div className="text-center">
-                    <Mail className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                    <p>Selecciona un correo para ver su contenido</p>
+                    <svg width="48" height="48" viewBox="0 0 100 100" className="mx-auto mb-6 text-ink-200">
+                      <path d="M50 10 C25 10, 10 30, 10 50 C10 75, 30 90, 50 90" stroke="currentColor" fill="none" strokeWidth="2.5" strokeLinecap="round" />
+                      <path d="M50 20 C30 20, 20 35, 20 50 C20 70, 35 80, 50 80" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
+                      <path d="M50 30 C35 30, 30 40, 30 50 C30 65, 40 70, 50 70" stroke="currentColor" fill="none" strokeWidth="1.5" strokeLinecap="round" opacity="0.3" />
+                      <circle cx="50" cy="50" r="3" fill="currentColor" opacity="0.4" />
+                    </svg>
+                    <p className="font-serif text-lg text-ink-500 italic">Selecciona un correo</p>
+                    <p className="text-sm text-ink-400 mt-1">
+                      Elige cualquier mensaje de la bandeja para ver su contenido.
+                    </p>
                   </div>
                 </div>
               )}
@@ -1371,7 +1365,7 @@ const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
         )}
       </div>
 
-      {/* Compose email dialog with account selector */}
+      {/* Compose email dialog */}
       <ComposeEmailDialog
         open={composeOpen}
         onOpenChange={setComposeOpen}
