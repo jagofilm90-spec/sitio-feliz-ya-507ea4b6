@@ -13,10 +13,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { PuntoEntregaCard, type PuntoEntrega } from "@/components/clientes/PuntoEntregaCard";
+import { CSFUploader } from "@/components/clientes/CSFUploader";
 import { REGIMENES_FISCALES } from "@/constants/catalogoSAT";
 import { ChevronRight, Plus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrencyWhileTyping, parseCurrency } from "@/lib/currency";
+import type { CSFData } from "@/lib/csfParser";
 
 const USOS_CFDI = [
   { clave: "G03", descripcion: "Gastos en general" },
@@ -137,7 +139,23 @@ export default function EditarCliente() {
     };
     load();
   }, [id, navigate]);
+  // CSF handlers
+  const handleCSFData = useCallback((data: CSFData) => {
+    setRazonSocial(data.razonSocial);
+    setRfc(data.rfc);
+    setDireccionFiscal(data.direccionFiscal.completa);
+    if (data.regimenFiscal.codigo) {
+      const match = REGIMENES_FISCALES.find(r => r.clave === data.regimenFiscal.codigo);
+      if (match) setRegimenFiscal(match.clave);
+    }
+    toast({ title: "✓ Datos extraídos del CSF", description: "Verifica que todo esté correcto antes de guardar" });
+  }, [toast]);
 
+  const handleCSFClear = useCallback(() => {
+    // Don't clear fields on edit — user might want to keep existing data
+  }, []);
+
+  
   // Load vendedores
   useEffect(() => {
     const load = async () => {
@@ -304,6 +322,9 @@ export default function EditarCliente() {
             </div>
 
             <main className="space-y-10">
+              {/* CSF Uploader — re-upload fiscal data */}
+              <CSFUploader onDataExtracted={handleCSFData} onClear={handleCSFClear} />
+
               {/* SECTION 1 — Datos del cliente */}
               <section className="space-y-4">
                 <div className="border-b border-border pb-2">

@@ -4,6 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
@@ -22,6 +29,7 @@ import {
   RotateCcw,
   Package,
   Store,
+  Filter,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -64,6 +72,19 @@ interface Props {
   onViewProductos: (cliente: { id: string; nombre: string }) => void;
   getVendedorName: (id: string | null) => string | null;
   getCreditLabel: (term: string) => string;
+  // Filter props
+  filterActivo?: "activos" | "inactivos" | "todos";
+  filterZona?: string;
+  filterCredito?: string;
+  filterEstadoCredito?: string;
+  filterVendedor?: string;
+  // Filter options
+  zonasDisponibles?: { id: string; nombre: string }[];
+  vendedoresDisponibles?: { id: string; nombre: string }[];
+  onFilterZonaChange?: (v: string) => void;
+  onFilterCreditoChange?: (v: string) => void;
+  onFilterEstadoCreditoChange?: (v: string) => void;
+  onFilterVendedorChange?: (v: string) => void;
 }
 
 export function ClientesListaJerarquica({
@@ -79,10 +100,58 @@ export function ClientesListaJerarquica({
   onViewProductos,
   getVendedorName,
   getCreditLabel,
+  filterActivo = "activos",
+  filterZona = "todos",
+  filterCredito = "todos",
+  filterEstadoCredito = "todos",
+  filterVendedor = "todos",
+  zonasDisponibles,
+  vendedoresDisponibles,
+  onFilterZonaChange,
+  onFilterCreditoChange,
+  onFilterEstadoCreditoChange,
+  onFilterVendedorChange,
 }: Props) {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [sucursalMatches, setSucursalMatches] = useState<SucursalMatch[]>([]);
   const [searchingSucursales, setSearchingSucursales] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+
+  const hasActiveFilters = filterZona !== "todos" || filterCredito !== "todos" || filterEstadoCredito !== "todos" || filterVendedor !== "todos";
+
+  // Pre-filter clientes by activo, zona, credito, estadoCredito, vendedor
+  const preFilteredClientes = useMemo(() => {
+    return clientes.filter((c) => {
+      // Activo filter
+      if (filterActivo === "activos" && !c.activo) return false;
+      if (filterActivo === "inactivos" && c.activo) return false;
+
+      // Zona filter
+      if (filterZona !== "todos" && c.zona?.nombre !== filterZona) return false;
+
+      // Credito filter
+      if (filterCredito !== "todos" && c.termino_credito !== filterCredito) return false;
+
+      // Estado credito filter
+      if (filterEstadoCredito === "al_corriente" && (c.saldo_pendiente || 0) > 0) return false;
+      if (filterEstadoCredito === "con_saldo") {
+        const saldo = c.saldo_pendiente || 0;
+        const limite = c.limite_credito || 0;
+        if (saldo <= 0 || (limite > 0 && saldo > limite)) return false;
+      }
+      if (filterEstadoCredito === "excedido") {
+        const saldo = c.saldo_pendiente || 0;
+        const limite = c.limite_credito || 0;
+        if (limite <= 0 || saldo <= limite) return false;
+      }
+
+      // Vendedor filter
+      if (filterVendedor === "casa" && c.vendedor_asignado) return false;
+      if (filterVendedor !== "todos" && filterVendedor !== "casa" && c.vendedor_asignado !== filterVendedor) return false;
+
+      return true;
+    });
+  }, [clientes, filterActivo, filterZona, filterCredito, filterEstadoCredito, filterVendedor]);
 
   // Search sucursales when searchTerm changes
   useEffect(() => {
@@ -102,13 +171,12 @@ export function ClientesListaJerarquica({
           .limit(50);
         setSucursalMatches(data || []);
         
-        // Auto-expand groups that contain matching sucursales
         if (data && data.length > 0) {
           const matchingClienteIds = new Set(data.map((s) => s.cliente_id));
           const groupsToExpand = new Set<string>();
-          clientes.forEach((c) => {
+          preFilteredClientes.forEach((c) => {
             if (c.es_grupo) {
-              const hasMatchingChild = clientes.some(
+              const hasMatchingChild = preFilteredClientes.some(
                 (child) =>
                   child.grupo_cliente_id === c.id &&
                   (matchingClienteIds.has(child.id) ||
@@ -130,7 +198,7 @@ export function ClientesListaJerarquica({
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchTerm, clientes]);
+  }, [searchTerm, preFilteredClientes]);
 
   const toggleGroup = (groupId: string) => {
     setExpandedGroups((prev) => {
@@ -146,22 +214,19 @@ export function ClientesListaJerarquica({
     const grupos: ClienteBase[] = [];
     const individuales: ClienteBase[] = [];
 
-    // Build a set of cliente IDs that match sucursal searches
     const sucursalClienteIds = new Set(sucursalMatches.map((s) => s.cliente_id));
 
-    clientes.forEach((c) => {
+    preFilteredClientes.forEach((c) => {
       const matchesName =
         !searchTerm ||
         c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.rfc?.toLowerCase().includes(searchTerm.toLowerCase());
 
-      // A client matches if its name/rfc matches OR if a sucursal matches
       const matchesSucursal = sucursalClienteIds.has(c.id);
 
       if (c.es_grupo) {
-        // For groups, check if any child matches
-        const childMatches = clientes.some(
+        const childMatches = preFilteredClientes.some(
           (child) =>
             child.grupo_cliente_id === c.id &&
             (child.nombre.toLowerCase().includes(searchTerm?.toLowerCase() || "") ||
@@ -179,12 +244,11 @@ export function ClientesListaJerarquica({
     });
 
     return { grupos, individuales };
-  }, [clientes, searchTerm, sucursalMatches]);
+  }, [preFilteredClientes, searchTerm, sucursalMatches]);
 
-  // Get children for a group
   const getGroupChildren = (groupId: string) => {
     const sucursalClienteIds = new Set(sucursalMatches.map((s) => s.cliente_id));
-    return clientes.filter((c) => {
+    return preFilteredClientes.filter((c) => {
       if (c.grupo_cliente_id !== groupId) return false;
       if (!searchTerm) return true;
       return (
@@ -195,24 +259,23 @@ export function ClientesListaJerarquica({
     });
   };
 
-  // Get group stats
   const getGroupStats = (groupId: string) => {
-    const children = clientes.filter((c) => c.grupo_cliente_id === groupId);
+    const children = preFilteredClientes.filter((c) => c.grupo_cliente_id === groupId);
     const totalSucursales = children.reduce(
       (sum, c) => sum + (c.cliente_sucursales?.[0]?.count || 0),
       0
     );
-    // Count rosticerías from sucursal matches or estimate
     return {
       razonesSociales: children.length,
       totalSucursales,
     };
   };
 
-  // Get sucursal matches for a specific client
   const getSucursalMatchesForClient = (clienteId: string) => {
     return sucursalMatches.filter((s) => s.cliente_id === clienteId);
   };
+
+  const totalFiltered = grupos.length + individuales.length;
 
   if (loading) {
     return (
@@ -224,21 +287,116 @@ export function ClientesListaJerarquica({
 
   return (
     <div className="space-y-4">
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por nombre, RFC o # sucursal (ej: 309)..."
-          value={searchTerm}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-10"
-        />
-        {searchingSucursales && (
-          <span className="absolute right-3 top-3 text-xs text-muted-foreground animate-pulse">
-            Buscando...
-          </span>
+      {/* Search + Filter toggle */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nombre, RFC o # sucursal (ej: 309)..."
+            value={searchTerm}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="pl-10"
+          />
+          {searchingSucursales && (
+            <span className="absolute right-3 top-3 text-xs text-muted-foreground animate-pulse">
+              Buscando...
+            </span>
+          )}
+        </div>
+        {(onFilterZonaChange || onFilterCreditoChange) && (
+          <Button
+            variant={hasActiveFilters ? "default" : "outline"}
+            size="icon"
+            className="shrink-0"
+            onClick={() => setShowFilters(!showFilters)}
+            title="Filtros"
+          >
+            <Filter className="h-4 w-4" />
+          </Button>
         )}
       </div>
+
+      {/* Filter bar */}
+      {showFilters && (
+        <div className="flex flex-wrap gap-2 p-3 bg-muted/50 rounded-lg border">
+          {onFilterZonaChange && zonasDisponibles && zonasDisponibles.length > 0 && (
+            <Select value={filterZona} onValueChange={onFilterZonaChange}>
+              <SelectTrigger className="w-[160px] h-9 text-xs">
+                <SelectValue placeholder="Zona" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todas las zonas</SelectItem>
+                {zonasDisponibles.map(z => (
+                  <SelectItem key={z.id} value={z.nombre}>{z.nombre}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {onFilterCreditoChange && (
+            <Select value={filterCredito} onValueChange={onFilterCreditoChange}>
+              <SelectTrigger className="w-[140px] h-9 text-xs">
+                <SelectValue placeholder="Crédito" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos los plazos</SelectItem>
+                <SelectItem value="contado">Contado</SelectItem>
+                <SelectItem value="8_dias">8 días</SelectItem>
+                <SelectItem value="15_dias">15 días</SelectItem>
+                <SelectItem value="30_dias">30 días</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          {onFilterEstadoCreditoChange && (
+            <Select value={filterEstadoCredito} onValueChange={onFilterEstadoCreditoChange}>
+              <SelectTrigger className="w-[160px] h-9 text-xs">
+                <SelectValue placeholder="Estado crédito" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="al_corriente">Al corriente</SelectItem>
+                <SelectItem value="con_saldo">Con saldo</SelectItem>
+                <SelectItem value="excedido">Excedido</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          {onFilterVendedorChange && vendedoresDisponibles && vendedoresDisponibles.length > 0 && (
+            <Select value={filterVendedor} onValueChange={onFilterVendedorChange}>
+              <SelectTrigger className="w-[160px] h-9 text-xs">
+                <SelectValue placeholder="Vendedor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="casa">Casa (sin vendedor)</SelectItem>
+                {vendedoresDisponibles.map(v => (
+                  <SelectItem key={v.id} value={v.id}>{v.nombre}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 text-xs"
+              onClick={() => {
+                onFilterZonaChange?.("todos");
+                onFilterCreditoChange?.("todos");
+                onFilterEstadoCreditoChange?.("todos");
+                onFilterVendedorChange?.("todos");
+              }}
+            >
+              Limpiar filtros
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* Result count */}
+      {(searchTerm || hasActiveFilters) && (
+        <p className="text-xs text-muted-foreground">
+          {totalFiltered} cliente(s) encontrado(s)
+        </p>
+      )}
 
       {/* Groups section */}
       {grupos.length > 0 && (
@@ -332,7 +490,6 @@ export function ClientesListaJerarquica({
                                     </span>
                                   )}
                                 </div>
-                                {/* Show matched sucursales */}
                                 {childSucMatches.length > 0 && searchTerm && (
                                   <div className="ml-5 mt-1 space-y-0.5">
                                     {childSucMatches.slice(0, 3).map((suc) => (
@@ -418,7 +575,6 @@ export function ClientesListaJerarquica({
                             </span>
                           )}
                         </div>
-                        {/* Show matched sucursales */}
                         {clientSucMatches.length > 0 && searchTerm && (
                           <div className="mt-1 space-y-0.5">
                             {clientSucMatches.slice(0, 3).map((suc) => (
