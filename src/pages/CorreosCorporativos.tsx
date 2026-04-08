@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useGmailPermisos } from "@/hooks/useGmailPermisos";
+import { PageHeader } from "@/components/layout/PageHeader";
 import {
   Mail,
   CheckCircle,
@@ -17,11 +18,7 @@ import {
   Unlink,
   ExternalLink,
   Copy,
-  Inbox,
-  Settings,
-  Shield,
-  PenLine,
-  FileStack,
+  PenSquare,
 } from "lucide-react";
 import {
   Dialog,
@@ -46,6 +43,8 @@ interface GmailCuenta {
   refresh_token: string | null;
   token_expires_at: string | null;
 }
+
+const tabTriggerClass = "px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm";
 
 const CorreosCorporativos = () => {
   const { toast } = useToast();
@@ -79,7 +78,6 @@ const CorreosCorporativos = () => {
     return new Date(cuenta.token_expires_at) < new Date();
   };
 
-  // Filter connected accounts for the inbox based on permissions
   const allConnectedCuentas = cuentas?.filter(
     (c) => isConnected(c) && c.activo
   ) || [];
@@ -208,10 +206,7 @@ const CorreosCorporativos = () => {
 
     if (isTokenExpired(cuenta)) {
       return (
-        <Badge
-          variant="secondary"
-          className="gap-1 bg-yellow-500/20 text-yellow-700"
-        >
+        <Badge variant="secondary" className="gap-1">
           <RefreshCw className="h-3 w-3" />
           Token expirado
         </Badge>
@@ -219,10 +214,7 @@ const CorreosCorporativos = () => {
     }
 
     return (
-      <Badge
-        variant="default"
-        className="gap-1 bg-green-500/20 text-green-700"
-      >
+      <Badge variant="default" className="gap-1">
         <CheckCircle className="h-3 w-3" />
         Conectado
       </Badge>
@@ -230,15 +222,8 @@ const CorreosCorporativos = () => {
   };
 
   const getPropositoBadge = (proposito: string) => {
-    const colors: Record<string, string> = {
-      pedidos: "bg-blue-500/20 text-blue-700",
-      general: "bg-purple-500/20 text-purple-700",
-      facturas: "bg-orange-500/20 text-orange-700",
-      bancario: "bg-emerald-500/20 text-emerald-700",
-    };
-
     return (
-      <Badge variant="outline" className={colors[proposito] || "bg-muted"}>
+      <Badge variant="outline">
         {proposito.charAt(0).toUpperCase() + proposito.slice(1)}
       </Badge>
     );
@@ -247,46 +232,37 @@ const CorreosCorporativos = () => {
   return (
     <Layout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Correos Corporativos
-            </h1>
-            <p className="text-muted-foreground">
-              Gestiona las cuentas de correo integradas al sistema
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          eyebrow="Comunicaciones"
+          title="Correos"
+          titleAccent="corporativos."
+          lead="Gestiona las cuentas de correo integradas al sistema."
+        />
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="bandeja" className="gap-2">
-              <Inbox className="h-4 w-4" />
-              Bandeja de Entrada
+          <TabsList className="bg-transparent border-b border-ink-100 rounded-none p-0 h-auto gap-6">
+            <TabsTrigger value="bandeja" className={tabTriggerClass}>
+              Bandeja de entrada
             </TabsTrigger>
-            <TabsTrigger value="acumulativos" className="gap-2">
-              <FileStack className="h-4 w-4" />
-              Pedidos Acumulativos
+            <TabsTrigger value="acumulativos" className={tabTriggerClass}>
+              Pedidos acumulativos
             </TabsTrigger>
             {isAdmin && (
               <>
-                <TabsTrigger value="cuentas" className="gap-2">
-                  <Settings className="h-4 w-4" />
+                <TabsTrigger value="cuentas" className={tabTriggerClass}>
                   Cuentas
                 </TabsTrigger>
-                <TabsTrigger value="permisos" className="gap-2">
-                  <Shield className="h-4 w-4" />
+                <TabsTrigger value="permisos" className={tabTriggerClass}>
                   Permisos
                 </TabsTrigger>
-                <TabsTrigger value="firmas" className="gap-2">
-                  <PenLine className="h-4 w-4" />
+                <TabsTrigger value="firmas" className={tabTriggerClass}>
                   Firmas
                 </TabsTrigger>
               </>
             )}
           </TabsList>
 
-          <TabsContent value="bandeja" className="mt-6">
+          <TabsContent value="bandeja" className="mt-8">
             {isLoadingPermisos || isLoadingCuentas ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
@@ -297,37 +273,42 @@ const CorreosCorporativos = () => {
               <BandejaEntrada cuentas={connectedCuentas} />
             ) : (
               <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Mail className="h-12 w-12 text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground mb-2">
-                    No hay cuentas de correo {isAdmin ? "conectadas" : "configuradas"}
+                <CardContent className="flex flex-col items-center justify-center py-16">
+                  <svg width="48" height="48" viewBox="0 0 100 100" className="mb-6 text-ink-300">
+                    <path d="M50 10 C25 10, 10 30, 10 50 C10 75, 30 90, 50 90" stroke="currentColor" fill="none" strokeWidth="2.5" strokeLinecap="round" />
+                    <path d="M50 20 C30 20, 20 35, 20 50 C20 70, 35 80, 50 80" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
+                    <path d="M50 30 C35 30, 30 40, 30 50 C30 65, 40 70, 50 70" stroke="currentColor" fill="none" strokeWidth="1.5" strokeLinecap="round" opacity="0.3" />
+                    <circle cx="50" cy="50" r="3" fill="currentColor" opacity="0.4" />
+                  </svg>
+                  <p className="font-serif text-xl text-ink-700 italic mb-2">
+                    Sin cuentas disponibles
                   </p>
-                  {isAdmin ? (
-                    <>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Ve a la pestaña "Cuentas" para conectar una cuenta de correo
-                      </p>
-                      <Button onClick={() => setActiveTab("cuentas")}>
-                        Ir a Cuentas
-                      </Button>
-                    </>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      Contacta al administrador para que te asigne acceso a las cuentas de correo
-                    </p>
+                  <p className="text-sm text-ink-400 text-center max-w-sm">
+                    {isAdmin
+                      ? "Ve a la pestaña \"Cuentas\" para conectar una cuenta de correo."
+                      : "Contacta al administrador para que te asigne acceso a las cuentas de correo."}
+                  </p>
+                  {isAdmin && (
+                    <Button
+                      variant="outline"
+                      className="mt-6"
+                      onClick={() => setActiveTab("cuentas")}
+                    >
+                      Ir a Cuentas
+                    </Button>
                   )}
                 </CardContent>
               </Card>
             )}
           </TabsContent>
 
-          <TabsContent value="acumulativos" className="mt-6">
+          <TabsContent value="acumulativos" className="mt-8">
             <PedidosAcumulativosTab />
           </TabsContent>
 
-          <TabsContent value="cuentas" className="mt-6">
+          <TabsContent value="cuentas" className="mt-8">
             <div className="flex justify-end mb-4">
-              <Button variant="outline" onClick={() => refetch()}>
+              <Button variant="outline" size="sm" onClick={() => refetch()}>
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Actualizar
               </Button>
@@ -346,34 +327,29 @@ const CorreosCorporativos = () => {
                   >
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-full bg-primary/10">
-                            <Mail className="h-5 w-5 text-primary" />
-                          </div>
-                          <div>
-                            <CardTitle className="text-lg">
-                              {cuenta.nombre}
-                            </CardTitle>
-                            <CardDescription>{cuenta.email}</CardDescription>
-                          </div>
+                        <div>
+                          <CardTitle className="font-serif text-lg">
+                            {cuenta.nombre}
+                          </CardTitle>
+                          <CardDescription className="font-mono text-xs">
+                            {cuenta.email}
+                          </CardDescription>
                         </div>
                         {getStatusBadge(cuenta)}
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">
-                          Propósito:
+                        <span className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">
+                          Propósito
                         </span>
                         {getPropositoBadge(cuenta.proposito)}
                       </div>
 
                       {cuenta.token_expires_at && isConnected(cuenta) && (
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-ink-400">
                           Token expira:{" "}
-                          {new Date(cuenta.token_expires_at).toLocaleString(
-                            "es-MX"
-                          )}
+                          {new Date(cuenta.token_expires_at).toLocaleString("es-MX")}
                         </p>
                       )}
 
@@ -383,6 +359,7 @@ const CorreosCorporativos = () => {
                             onClick={() => handleConnect(cuenta.email)}
                             disabled={connectingEmail === cuenta.email}
                             className="flex-1"
+                            size="sm"
                           >
                             {connectingEmail === cuenta.email ? (
                               <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
@@ -396,6 +373,7 @@ const CorreosCorporativos = () => {
                             variant="outline"
                             onClick={() => handleDisconnect(cuenta)}
                             className="flex-1"
+                            size="sm"
                           >
                             <Unlink className="h-4 w-4 mr-2" />
                             Desconectar
@@ -413,9 +391,9 @@ const CorreosCorporativos = () => {
                           }
                         >
                           {cuenta.activo ? (
-                            <CheckCircle className="h-4 w-4 text-green-600" />
+                            <CheckCircle className="h-4 w-4 text-emerald-600" />
                           ) : (
-                            <XCircle className="h-4 w-4 text-muted-foreground" />
+                            <XCircle className="h-4 w-4 text-ink-400" />
                           )}
                         </Button>
                       </div>
@@ -426,8 +404,8 @@ const CorreosCorporativos = () => {
                 {cuentas?.length === 0 && (
                   <Card className="col-span-full">
                     <CardContent className="flex flex-col items-center justify-center py-12">
-                      <Mail className="h-12 w-12 text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground">
+                      <Mail className="h-12 w-12 text-ink-300 mb-4" />
+                      <p className="text-ink-500">
                         No hay cuentas de correo configuradas
                       </p>
                     </CardContent>
@@ -438,13 +416,13 @@ const CorreosCorporativos = () => {
           </TabsContent>
 
           {isAdmin && (
-            <TabsContent value="permisos" className="mt-6">
+            <TabsContent value="permisos" className="mt-8">
               <GmailPermisosManager />
             </TabsContent>
           )}
 
           {isAdmin && (
-            <TabsContent value="firmas" className="mt-6">
+            <TabsContent value="firmas" className="mt-8">
               <GmailFirmasManager cuentas={allConnectedCuentas} />
             </TabsContent>
           )}
@@ -458,7 +436,7 @@ const CorreosCorporativos = () => {
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Autorizar {authEmail}</DialogTitle>
+            <DialogTitle className="font-serif">Autorizar {authEmail}</DialogTitle>
             <DialogDescription>
               Haz clic en el botón para abrir Google y autorizar el acceso.
               Después regresa aquí y cierra este diálogo.
@@ -489,7 +467,7 @@ const CorreosCorporativos = () => {
               <Copy className="h-4 w-4 mr-2" />
               Copiar URL
             </Button>
-            <p className="text-xs text-muted-foreground text-center">
+            <p className="text-xs text-ink-400 text-center">
               Después de autorizar en Google, haz clic en "Actualizar" para
               verificar la conexión.
             </p>
