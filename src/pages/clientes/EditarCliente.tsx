@@ -322,6 +322,9 @@ export default function EditarCliente() {
             </div>
 
             <main className="space-y-10">
+              {/* CSF Uploader — re-upload fiscal data */}
+              <CSFUploader onDataExtracted={handleCSFData} onClear={handleCSFClear} />
+
               {/* SECTION 1 — Datos del cliente */}
               <section className="space-y-4">
                 <div className="border-b border-border pb-2">
