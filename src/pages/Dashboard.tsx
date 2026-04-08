@@ -39,18 +39,18 @@ import { VentasBajoCostoWidget } from "@/components/dashboard/VentasBajoCostoWid
 import { PageHeader } from "@/components/layout/PageHeader";
 import { supabase } from "@/integrations/supabase/client";
 
-// Collapsible section helper
+// Editorial section helper
 function DashSection({ title, defaultOpen = true, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger asChild>
         <button className="flex items-center justify-between w-full py-2 group cursor-pointer">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">{title}</h2>
-          {open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+          <div className="text-[9px] uppercase tracking-[0.22em] text-ink-400 font-medium">— {title}</div>
+          {open ? <ChevronUp className="h-3.5 w-3.5 text-ink-300" /> : <ChevronDown className="h-3.5 w-3.5 text-ink-300" />}
         </button>
       </CollapsibleTrigger>
-      <CollapsibleContent className="space-y-4">
+      <CollapsibleContent className="space-y-4 mt-2">
         {children}
       </CollapsibleContent>
     </Collapsible>

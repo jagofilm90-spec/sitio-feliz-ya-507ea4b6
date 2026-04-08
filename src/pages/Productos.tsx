@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { notificarProductoNuevo } from "@/lib/notificarVendedores";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -548,15 +549,19 @@ const Productos = () => {
           <NotificacionesSistema />
 
           {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 flex-shrink-0 mb-3">
-            <div>
-              <h1 className="text-xl sm:text-3xl font-bold">Productos</h1>
-              <p className="text-xs sm:text-sm text-muted-foreground">Gestión de catálogo de productos</p>
-            </div>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={resetForm}><Plus className="h-4 w-4 mr-2" />Nuevo Producto</Button>
-              </DialogTrigger>
+          <div className="flex-shrink-0 mb-4">
+          <PageHeader
+            eyebrow="Catálogos"
+            title="Tus"
+            titleAccent="productos."
+            lead={`${productosActivos} productos en catálogo.`}
+            actions={
+              <Button onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="h-4 w-4 mr-2" />Nuevo Producto</Button>
+            }
+          />
+          </div>
+
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
 
               {/* ═══════════════════════════════════════════════════
                   FORMULARIO COMPLETO
@@ -978,7 +983,6 @@ const Productos = () => {
                 </form>
               </DialogContent>
             </Dialog>
-          </div>
 
           {/* ═══════════════════════════════════════════════════
               BÚSQUEDA Y FILTROS
@@ -1037,9 +1041,9 @@ const Productos = () => {
               TABS + TABLA / CARDS
               ═══════════════════════════════════════════════════ */}
           <Tabs value={tabActivo} onValueChange={(value) => setTabActivo(value as "activos" | "inactivos")} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <TabsList className="flex-shrink-0">
-              <TabsTrigger value="activos">Activos ({productosActivos})</TabsTrigger>
-              <TabsTrigger value="inactivos">Inactivos ({productosInactivos})</TabsTrigger>
+            <TabsList className="flex-shrink-0 bg-transparent border-b border-ink-100 rounded-none p-0 h-auto gap-6">
+              <TabsTrigger value="activos" className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm">Activos · {productosActivos}</TabsTrigger>
+              <TabsTrigger value="inactivos" className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm">Inactivos · {productosInactivos}</TabsTrigger>
             </TabsList>
 
             <TabsContent value={tabActivo} className="mt-2 flex-1 min-h-0 overflow-hidden">

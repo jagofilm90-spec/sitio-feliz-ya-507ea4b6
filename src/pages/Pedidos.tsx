@@ -13,6 +13,8 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Layout from "@/components/Layout";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { StatCard } from "@/components/ui/stat-card";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -677,82 +679,44 @@ const PedidosContent = () => {
 
   return (
     <Layout>
-      <div className="space-y-4 sm:space-y-6">
-        <div>
-          <h1 className="text-xl sm:text-3xl font-bold">Pedidos y Cotizaciones</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            Gestión de pedidos de clientes y cotizaciones
-          </p>
-        </div>
+      <div className="space-y-6">
+        <PageHeader
+          eyebrow="Operación"
+          title="Tus"
+          titleAccent="pedidos."
+          lead="Gestión de pedidos de clientes y cotizaciones."
+          actions={
+            <Button onClick={() => setNuevoPedidoDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nuevo Pedido
+            </Button>
+          }
+        />
 
         {/* Resumen rápido */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
           {resumen.porAutorizar > 0 && (
-            <Card className="border-amber-300 dark:border-amber-700">
-              <CardContent className="p-3 flex items-center gap-3">
-                <div className="p-2 rounded-full bg-amber-100 dark:bg-amber-900/30"><AlertCircle className="h-4 w-4 text-amber-600" /></div>
-                <div><p className="text-xl font-bold">{resumen.porAutorizar}</p><p className="text-xs text-muted-foreground">Por autorizar</p></div>
-              </CardContent>
-            </Card>
+            <StatCard
+              label="Por Autorizar"
+              value={resumen.porAutorizar}
+              meta="Requieren revisión"
+              className="border-crimson-500/30"
+            />
           )}
-          <Card>
-            <CardContent className="p-3 flex items-center gap-3">
-              <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900/30"><Package className="h-4 w-4 text-blue-600" /></div>
-              <div><p className="text-xl font-bold">{resumen.pendientes}</p><p className="text-xs text-muted-foreground">Pendientes</p></div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-3 flex items-center gap-3">
-              <div className="p-2 rounded-full bg-indigo-100 dark:bg-indigo-900/30"><Truck className="h-4 w-4 text-indigo-600" /></div>
-              <div><p className="text-xl font-bold">{resumen.enRuta}</p><p className="text-xs text-muted-foreground">En ruta</p></div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-3 flex items-center gap-3">
-              <div className="p-2 rounded-full bg-muted"><Weight className="h-4 w-4 text-muted-foreground" /></div>
-              <div><p className="text-xl font-bold">{resumen.pesoKg > 0 ? `${(resumen.pesoKg / 1000).toFixed(1)}t` : "0"}</p><p className="text-xs text-muted-foreground">Peso pendiente</p></div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-3 flex items-center gap-3">
-              <div className="p-2 rounded-full bg-green-100 dark:bg-green-900/30"><DollarSign className="h-4 w-4 text-green-600" /></div>
-              <div><p className="text-xl font-bold">{formatCurrency(resumen.monto)}</p><p className="text-xs text-muted-foreground">Monto pendiente</p></div>
-            </CardContent>
-          </Card>
+          <StatCard label="Pendientes" value={resumen.pendientes} meta="Listos para surtir" />
+          <StatCard label="En Ruta" value={resumen.enRuta} meta="En camino" />
+          <StatCard label="Peso Pendiente" value={resumen.pesoKg > 0 ? `${(resumen.pesoKg / 1000).toFixed(1)}t` : "0"} meta="Por surtir" />
+          <StatCard label="Monto Pendiente" value={formatCurrency(resumen.monto)} meta="Total pendiente" />
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div className="relative">
-            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none sm:hidden" />
-            <div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
-              <TabsList className="inline-flex w-max gap-1">
-                <TabsTrigger value="por-autorizar" className="gap-1.5 px-2 sm:px-3">
-                  <AlertCircle className="h-4 w-4" />
-                  <span className="hidden sm:inline">Por Autorizar</span>
-                  <span className="sm:hidden">Autoriz</span>
-                </TabsTrigger>
-                <TabsTrigger value="pedidos" className="gap-1.5 px-2 sm:px-3">
-                  <ShoppingCart className="h-4 w-4" />
-                  Pedidos
-                </TabsTrigger>
-                <TabsTrigger value="cotizaciones" className="gap-1.5 px-2 sm:px-3">
-                  <FileText className="h-4 w-4" />
-                  <span className="hidden sm:inline">Cotizaciones</span>
-                  <span className="sm:hidden">Cotiz</span>
-                </TabsTrigger>
-                <TabsTrigger value="analisis" className="gap-1.5 px-2 sm:px-3">
-                  <BarChart3 className="h-4 w-4" />
-                  <span className="hidden sm:inline">Análisis</span>
-                  <span className="sm:hidden">Anál</span>
-                </TabsTrigger>
-                <TabsTrigger value="calendario" className="gap-1.5 px-2 sm:px-3">
-                  <CalendarDays className="h-4 w-4" />
-                  <span className="hidden sm:inline">Calendario</span>
-                  <span className="sm:hidden">Cal</span>
-                </TabsTrigger>
-              </TabsList>
-            </div>
-          </div>
+          <TabsList className="bg-transparent border-b border-ink-100 rounded-none p-0 h-auto gap-6 mb-6">
+            <TabsTrigger value="por-autorizar" className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm">Por Autorizar</TabsTrigger>
+            <TabsTrigger value="pedidos" className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm">Pedidos</TabsTrigger>
+            <TabsTrigger value="cotizaciones" className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm">Cotizaciones</TabsTrigger>
+            <TabsTrigger value="analisis" className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm">Análisis</TabsTrigger>
+            <TabsTrigger value="calendario" className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm">Calendario</TabsTrigger>
+          </TabsList>
 
           <TabsContent value="pedidos" className="mt-4 sm:mt-6 space-y-4">
             <div className={`flex gap-2 ${isMobile ? 'flex-col' : 'justify-between items-center'}`}>

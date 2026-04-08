@@ -9,7 +9,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Trash2, MapPin, BarChart3, ClipboardList, FileSpreadsheet, Users, Building2 } from "lucide-react";
+import { Plus, Search, Trash2, MapPin, BarChart3, ClipboardList, FileSpreadsheet, Users, Building2, MoreHorizontal } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { AuditoriaFiscalSheet } from "@/components/clientes/AuditoriaFiscalSheet";
@@ -36,6 +36,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Vendedor {
   user_id: string;
@@ -268,31 +274,23 @@ const Clientes = () => {
             lead={`${clientes.filter(c => c.activo).length} clientes activos.`}
             actions={
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setDetectarGruposDialogOpen(true)}>
-                  <Search className="h-4 w-4 mr-2" />
-                  Detectar Grupos
-                </Button>
-                <Button variant="outline" onClick={() => setAgruparDialogOpen(true)}>
-                  <Users className="h-4 w-4 mr-2" />
-                  Agrupar
-                </Button>
-                <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
-                  <FileSpreadsheet className="h-4 w-4 mr-2" />
-                  Importar ASPEL
-                </Button>
-                <Button variant="outline" onClick={() => setImportSucursalesDialogOpen(true)}>
-                  <Building2 className="h-4 w-4 mr-2" />
-                  Importar Sucursales
-                </Button>
-                <Button variant="outline" onClick={() => setAuditoriaSheetOpen(true)}>
-                  <ClipboardList className="h-4 w-4 mr-2" />
-                  Auditoría Fiscal
-                  {sucursalesConRfcCount > 0 && (
-                    <Badge variant="destructive" className="ml-2">
-                      {sucursalesConRfcCount}
-                    </Badge>
-                  )}
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                      <MoreHorizontal className="h-4 w-4 mr-2" />
+                      Más acciones
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setDetectarGruposDialogOpen(true)}>Detectar grupos</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setAgruparDialogOpen(true)}>Agrupar</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setImportDialogOpen(true)}>Importar ASPEL</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setImportSucursalesDialogOpen(true)}>Importar sucursales</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setAuditoriaSheetOpen(true)}>
+                      Auditoría fiscal {sucursalesConRfcCount > 0 && `· ${sucursalesConRfcCount}`}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <Button onClick={() => navigate("/clientes/nuevo")}>
                   <Plus className="h-4 w-4 mr-2" />
                   Nuevo Cliente
@@ -302,25 +300,28 @@ const Clientes = () => {
           />
         )}
 
-        {/* Vista selector: Lista | Mapa */}
-        <div className="flex gap-2 border-b pb-3 flex-wrap">
-          <Button variant={vistaActiva === "lista" ? "default" : "outline"} size="sm" onClick={() => setVistaActiva("lista")} className="cursor-pointer">
-            Lista
-          </Button>
-          <Button variant={vistaActiva === "mapa" ? "default" : "outline"} size="sm" onClick={() => setVistaActiva("mapa")} className="cursor-pointer">
-            <MapPin className="h-4 w-4 mr-1.5" />
-            Mapa
-          </Button>
-          <div className="ml-auto flex gap-1 bg-muted rounded-md p-0.5">
+        {/* Vista selector */}
+        <div className="flex items-center gap-4 border-b border-ink-100 pb-3">
+          <div className="flex items-center gap-0.5 p-1 bg-bg-soft border border-ink-100 rounded-lg">
+            <button
+              onClick={() => setVistaActiva("lista")}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${vistaActiva === "lista" ? 'text-white bg-crimson-500 shadow-xs-soft' : 'text-ink-700 hover:bg-white'}`}
+            >Lista</button>
+            <button
+              onClick={() => setVistaActiva("mapa")}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1.5 ${vistaActiva === "mapa" ? 'text-white bg-crimson-500 shadow-xs-soft' : 'text-ink-700 hover:bg-white'}`}
+            >
+              <MapPin className="h-3.5 w-3.5" />
+              Mapa
+            </button>
+          </div>
+          <div className="ml-auto flex items-center gap-0.5 p-1 bg-bg-soft border border-ink-100 rounded-lg">
             {(["activos", "inactivos", "todos"] as const).map((opt) => (
               <button
                 key={opt}
                 type="button"
                 onClick={() => setFilterActivo(opt)}
-                className={cn(
-                  "px-2.5 py-1 rounded text-xs font-medium transition-colors capitalize",
-                  filterActivo === opt ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"
-                )}
+                className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-all capitalize ${filterActivo === opt ? 'text-white bg-crimson-500 shadow-xs-soft' : 'text-ink-500 hover:bg-white'}`}
               >
                 {opt}
               </button>
