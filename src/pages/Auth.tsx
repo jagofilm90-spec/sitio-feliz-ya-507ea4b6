@@ -135,12 +135,12 @@ const Auth = () => {
       <div className="w-full max-w-sm space-y-6">
         {/* Branding */}
         <div className="text-center">
-          <AlmasaLogo size={64} className="mx-auto mb-2" />
-          <h1 className="font-serif text-2xl font-bold tracking-wide">ALMASA·OS</h1>
-          <p className="text-xs text-muted-foreground tracking-widest uppercase mt-1">Sistema operativo · Casa fundada en 1904</p>
+          <AlmasaLogoBoot size={80} className="almasa-logo-boot mx-auto mb-2" />
+          <h1 className="boot-wordmark font-serif text-2xl font-bold tracking-wide">ALMASA·OS</h1>
+          <p className="boot-tagline text-xs text-muted-foreground tracking-widest uppercase mt-1">Sistema operativo · Casa fundada en 1904</p>
         </div>
 
-        <Card className="shadow-lg border-0">
+        <Card className="boot-card shadow-lg border-0">
           <CardContent className="pt-6">
             {step === 1 && (
               <div className="space-y-4">
