@@ -496,8 +496,9 @@ export const SucursalFormModal = ({
                   </div>
                 </div>
 
-                {/* Row 2: Tipo + Foránea */}
+                {/* Row 2: Tipo (solo Lecaroz) + Foránea */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {grupoClienteId === GRUPO_LECAROZ_ID && (
                   <div className="space-y-1.5">
                     <Label className="text-sm">Tipo</Label>
                     <RadioGroup
@@ -515,6 +516,7 @@ export const SucursalFormModal = ({
                       </div>
                     </RadioGroup>
                   </div>
+                  )}
                   <div className="flex items-end pb-1">
                     <div className="flex items-center gap-2">
                       <Checkbox
