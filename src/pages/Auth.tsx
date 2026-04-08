@@ -170,19 +170,31 @@ const Auth = () => {
         <div className="boot-card"
              style={{
                background: 'hsl(var(--card))',
-               border: '0.5px solid hsl(var(--border))',
-               borderRadius: '16px',
-               padding: '40px',
+               border: '0.5px solid #e8e8e6',
+               borderRadius: '12px',
+               padding: '32px 36px',
                width: '100%',
                maxWidth: '400px',
                margin: '0 auto',
-               boxShadow: '0 16px 48px rgba(10,10,10,0.06)'
+               boxShadow: '0 1px 3px rgba(10,10,10,0.04), 0 12px 32px rgba(10,10,10,0.06)'
              }}>
             {step === 1 && (
               <div>
+                <label style={{
+                  display: 'block',
+                  fontFamily: "'Inter Tight', sans-serif",
+                  fontSize: '11px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.16em',
+                  color: '#8a8a87',
+                  fontWeight: 500,
+                  marginBottom: '8px'
+                }}>
+                  Correo electrónico
+                </label>
                 <input
                   type="email"
-                  placeholder="Correo electrónico"
+                  placeholder="tu@empresa.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") handleContinue(); }}
@@ -190,35 +202,36 @@ const Auth = () => {
                   className="auth-input"
                   style={{
                     width: '100%',
-                    padding: '14px 16px',
+                    padding: '12px 14px',
                     background: '#faf9f6',
-                    border: '0.5px solid #d4d4d0',
+                    border: '1px solid #e8e8e6',
                     borderRadius: '8px',
                     fontFamily: "'Inter Tight', sans-serif",
-                    fontSize: '15px',
+                    fontSize: '14px',
                     color: 'hsl(var(--foreground))',
                     outline: 'none',
-                    marginBottom: '20px'
+                    transition: 'all 0.18s ease'
                   }}
                 />
                 <button
                   onClick={handleContinue}
                   disabled={loading || !email}
-                  className="disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="auth-button disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{
                     width: '100%',
-                    padding: '16px',
+                    padding: '12px 16px',
                     background: '#c41e3a',
                     color: '#ffffff',
                     border: 'none',
                     borderRadius: '8px',
                     fontFamily: "'Inter Tight', sans-serif",
-                    fontSize: '15px',
+                    fontSize: '14px',
                     fontWeight: 500,
                     cursor: loading || !email ? 'not-allowed' : 'pointer',
                     letterSpacing: '0.01em',
-                    boxShadow: '0 1px 2px rgba(132,18,36,0.18)',
-                    transition: 'all 0.2s ease'
+                    marginTop: '24px',
+                    boxShadow: '0 1px 2px rgba(10, 10, 10, 0.08)',
+                    transition: 'all 0.18s ease'
                   }}
                 >
                   {loading ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : "Continuar"}
@@ -226,11 +239,12 @@ const Auth = () => {
                 <p style={{
                   textAlign: 'center',
                   marginTop: '20px',
-                  fontSize: '13px',
-                  color: '#6a6a6a',
-                  fontFamily: "'Inter Tight', sans-serif"
+                  fontSize: '12px',
+                  color: '#8a8a87',
+                  fontFamily: "'Inter Tight', sans-serif",
+                  fontWeight: 400
                 }}>
-                  ¿Necesitas acceso? <span style={{ color: '#c41e3a', cursor: 'pointer' }}>Contacta al administrador</span>
+                  ¿Necesitas acceso? <span style={{ color: '#c41e3a', fontWeight: 500, cursor: 'pointer' }}>Contacta al administrador</span>
                 </p>
               </div>
             )}
@@ -249,42 +263,55 @@ const Auth = () => {
                   <p className="font-bold text-xl">{userName}</p>
                   {userPuesto && <p className="text-sm text-muted-foreground">{userPuesto}</p>}
                 </div>
+                <label style={{
+                  display: 'block',
+                  fontFamily: "'Inter Tight', sans-serif",
+                  fontSize: '11px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.16em',
+                  color: '#8a8a87',
+                  fontWeight: 500,
+                  marginBottom: '8px'
+                }}>
+                  Contraseña
+                </label>
                 <input
                   type="password"
-                  placeholder="Contraseña"
+                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoFocus
                   className="auth-input"
                   style={{
                     width: '100%',
-                    padding: '14px 16px',
+                    padding: '12px 14px',
                     background: '#faf9f6',
-                    border: '0.5px solid #d4d4d0',
+                    border: '1px solid #e8e8e6',
                     borderRadius: '8px',
                     fontFamily: "'Inter Tight', sans-serif",
-                    fontSize: '15px',
+                    fontSize: '14px',
                     color: 'hsl(var(--foreground))',
                     outline: 'none',
-                    marginBottom: '20px'
+                    transition: 'all 0.18s ease'
                   }}
                 />
                 <button type="submit" disabled={loading}
-                  className="disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="auth-button disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{
                     width: '100%',
-                    padding: '16px',
+                    padding: '12px 16px',
                     background: '#c41e3a',
                     color: '#ffffff',
                     border: 'none',
                     borderRadius: '8px',
                     fontFamily: "'Inter Tight', sans-serif",
-                    fontSize: '15px',
+                    fontSize: '14px',
                     fontWeight: 500,
                     cursor: loading ? 'not-allowed' : 'pointer',
                     letterSpacing: '0.01em',
-                    boxShadow: '0 1px 2px rgba(132,18,36,0.18)',
-                    transition: 'all 0.2s ease'
+                    marginTop: '24px',
+                    boxShadow: '0 1px 2px rgba(10, 10, 10, 0.08)',
+                    transition: 'all 0.18s ease'
                   }}
                 >
                   {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin inline" />Iniciando sesión...</> : "Iniciar Sesión"}
