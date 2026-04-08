@@ -173,6 +173,25 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+    font-family: var(--sans);
+    font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+    font-variant-numeric: lining-nums;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3 {
+    font-family: var(--serif);
+    letter-spacing: -0.015em;
+    font-weight: 400;
+  }
+
+  .font-serif {
+    font-family: var(--serif);
+  }
+
+  .tabular-nums {
+    font-feature-settings: 'tnum' 1, 'lnum' 1;
+    font-variant-numeric: tabular-nums lining-nums;
   }
 
   /* Smooth theme transitions */
