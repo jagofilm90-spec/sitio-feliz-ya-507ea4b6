@@ -6,8 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft } from "lucide-react";
-import logoAlmasa from "@/assets/logo-almasa.png";
-import { AlmasaLogo } from "@/components/brand/AlmasaLogo";
+import { AlmasaLogoBoot } from "@/components/brand/AlmasaLogoBoot";
 
 const colors = ["#E24B4A", "#D85A30", "#BA7517", "#639922", "#1D9E75", "#378ADD", "#7F77DD", "#D4537E"];
 const getColor = (n: string) => colors[n.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % colors.length];
