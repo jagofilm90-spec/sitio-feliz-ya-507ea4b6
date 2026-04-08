@@ -2,8 +2,10 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
 import BandejaEntrada from "@/components/correos/BandejaEntrada";
+import { useGmailPermisos } from "@/hooks/useGmailPermisos";
+import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 import { useGmailPermisos } from "@/hooks/useGmailPermisos";
 
 interface GmailCuenta {
@@ -44,11 +46,7 @@ export const SecretariaCorreosTab = () => {
   const isLoading = isLoadingPermisos || isLoadingCuentas;
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <AlmasaLoading size={48} text="Cargando correos..." />;
   }
 
   if (connectedCuentas.length === 0) {
