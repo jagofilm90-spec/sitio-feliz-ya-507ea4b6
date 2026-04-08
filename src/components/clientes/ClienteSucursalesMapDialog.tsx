@@ -45,6 +45,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { MapPin, Navigation, Loader2, AlertCircle } from "lucide-react";
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
+import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 
 interface Cliente {
   id: string;
@@ -257,7 +258,7 @@ export function ClienteSucursalesMapDialog({
           <div className="border rounded-lg overflow-hidden">
             {!isLoaded ? (
               <div className="h-[500px] flex items-center justify-center bg-muted">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <AlmasaLoading size={48} />
               </div>
             ) : (
               <GoogleMap

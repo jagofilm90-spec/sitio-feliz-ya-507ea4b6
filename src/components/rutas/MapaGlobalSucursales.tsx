@@ -43,6 +43,7 @@ import { toast as sonnerToast } from "sonner";
 import { ErrorBoundaryModule } from "@/components/ErrorBoundaryModule";
 import { PanelEnRuta } from "./PanelEnRuta";
 import { useEnRutaCalculations, BODEGA_COORDS, SucursalConRuta, calcularDistanciaKm as calcDistanciaKm } from "./hooks/useEnRutaCalculations";
+import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 
 // Re-export para compatibilidad
 const calcularDistanciaKm = calcDistanciaKm;
@@ -742,7 +743,7 @@ const MapaContent = () => {
         <CardContent className="p-0 h-[350px] lg:h-[500px]">
           {!isLoaded ? (
             <div className="h-full flex items-center justify-center bg-muted">
-              <Loader2 className="h-8 w-8 animate-spin" />
+              <AlmasaLoading size={48} />
             </div>
           ) : (
             <div ref={mapContainerRef} className={`relative h-full ${isFullscreen ? 'bg-white' : ''}`}>

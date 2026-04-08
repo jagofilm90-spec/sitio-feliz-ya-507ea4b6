@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Search, MapPin, Loader2, AlertTriangle, Users, Truck, RefreshCw } from "lucide-react";
 import { ErrorBoundaryModule } from "@/components/ErrorBoundaryModule";
+import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 
 interface PuntoEntrega {
   id: string;
@@ -299,7 +300,7 @@ export function ClientesMapaTab({ onSugerirRutas }: ClientesMapaTabProps) {
         <div className="h-[600px] rounded-xl overflow-hidden border">
           {!isLoaded || loading ? (
             <div className="h-full flex items-center justify-center bg-muted">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <AlmasaLoading size={48} />
             </div>
           ) : (
             <GoogleMap
