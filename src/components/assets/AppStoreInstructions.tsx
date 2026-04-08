@@ -32,7 +32,7 @@ npx cap sync ios`}
               <li>• Plataforma: iOS</li>
               <li>• Nombre: ALMASA-OS</li>
               <li>• Bundle ID: app.lovable.0a4fe6f267d54980a499e679897a2f15</li>
-              <li>• SKU: almasa-erp-2024</li>
+              <li>• SKU: almasa-os-2024</li>
             </ul>
           </div>
 

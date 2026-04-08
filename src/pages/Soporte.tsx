@@ -194,7 +194,7 @@ const Soporte = () => {
               Nuestro equipo de soporte está listo para ayudarte con cualquier consulta.
             </p>
             <a 
-              href={`mailto:${COMPANY_DATA.emails.contacto}?subject=Solicitud%20de%20Soporte%20-%20ALMASA%20ERP`}
+              href={`mailto:${COMPANY_DATA.emails.contacto}?subject=Solicitud%20de%20Soporte%20-%20ALMASA-OS`}
               className="inline-flex items-center gap-2 bg-red-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-red-700 transition-colors"
             >
               <Mail className="h-4 w-4" />
