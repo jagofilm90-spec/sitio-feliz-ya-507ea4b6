@@ -208,7 +208,6 @@ const Layout = ({ children }: LayoutProps) => {
       label: "Principal",
       items: [
         { icon: Home, label: "Dashboard", path: "/dashboard" },
-        { icon: Mail, label: "Correos", path: "/correos" },
       ]
     },
     {
