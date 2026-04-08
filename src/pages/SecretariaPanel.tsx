@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CentroNotificaciones } from "@/components/CentroNotificaciones";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { Loader2, LogOut, Home } from "lucide-react";
+import { LogOut, Home } from "lucide-react";
+import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 import { format } from "date-fns";
 import {
   AlertDialog,
