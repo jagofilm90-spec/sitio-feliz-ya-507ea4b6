@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { PageContainer } from "@/components/ui/PageContainer";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -249,42 +250,19 @@ export default function DetalleCliente() {
     <Layout>
       <PageContainer maxWidth="medium" className="py-4 space-y-8">
         {/* Breadcrumb */}
-        <div>
-          <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
-            <button onClick={() => navigate("/clientes")} className="hover:text-foreground transition-colors">
-              Clientes
-            </button>
-            <ChevronRight className="h-3.5 w-3.5" />
-            <span className="text-foreground">{cliente.nombre}</span>
-          </div>
+        <div className="mb-2">
+          <Button variant="ghost" size="sm" className="text-ink-500 -ml-3" onClick={() => navigate("/clientes")}>
+            <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+            Clientes
+          </Button>
+        </div>
 
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">{cliente.razon_social || cliente.nombre}</h1>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                {cliente.rfc && (
-                  <Badge variant="outline" className="font-mono text-xs">
-                    {cliente.rfc}
-                  </Badge>
-                )}
-                <Badge variant={cliente.activo ? "default" : "secondary"}>
-                  {cliente.activo ? "Activo" : "Inactivo"}
-                </Badge>
-                {vendedorNombre && (
-                  <Badge variant="outline">
-                    <User className="h-3 w-3 mr-1" />
-                    {vendedorNombre}
-                  </Badge>
-                )}
-                <Badge variant="outline">{creditLabel}</Badge>
-                {cliente.limite_credito ? (
-                  <Badge variant="outline">${Number(cliente.limite_credito).toLocaleString("es-MX")}</Badge>
-                ) : (
-                  <Badge variant="outline">Sin límite</Badge>
-                )}
-              </div>
-            </div>
-            <div className="flex gap-2 shrink-0">
+        <PageHeader
+          eyebrow={cliente.codigo}
+          title={cliente.razon_social || cliente.nombre}
+          lead={`${sucursales.length} punto${sucursales.length !== 1 ? 's' : ''} de entrega · ${creditLabel}`}
+          actions={
+            <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={() => navigate(`/clientes/${id}/editar`)}>
                 <Edit className="h-4 w-4 mr-1" />
                 Editar
@@ -293,12 +271,30 @@ export default function DetalleCliente() {
                 <Trash2 className="h-4 w-4 mr-1" />
                 Eliminar
               </Button>
-              <Button variant="outline" size="sm" onClick={() => navigate("/clientes")}>
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Volver
-              </Button>
             </div>
-          </div>
+          }
+        />
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {cliente.rfc && (
+            <Badge variant="outline" className="font-mono text-xs">
+              {cliente.rfc}
+            </Badge>
+          )}
+          <Badge variant={cliente.activo ? "default" : "secondary"}>
+            {cliente.activo ? "Activo" : "Inactivo"}
+          </Badge>
+          {vendedorNombre && (
+            <Badge variant="outline">
+              <User className="h-3 w-3 mr-1" />
+              {vendedorNombre}
+            </Badge>
+          )}
+          {cliente.limite_credito ? (
+            <Badge variant="outline">${Number(cliente.limite_credito).toLocaleString("es-MX")}</Badge>
+          ) : (
+            <Badge variant="outline">Sin límite</Badge>
+          )}
         </div>
 
         {/* Info fiscal */}

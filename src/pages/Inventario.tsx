@@ -12,6 +12,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -508,23 +509,24 @@ const InventarioContent = () => {
       <div className="space-y-4 sm:space-y-6">
         <NotificacionesSistema />
         
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-          <div>
-            <h1 className="text-xl sm:text-3xl font-bold">Inventario</h1>
-            <p className="text-xs sm:text-sm text-muted-foreground">Control de movimientos de inventario</p>
-          </div>
-          {activeTab === "movimientos" && (
-            <Dialog open={dialogOpen} onOpenChange={(open) => {
-              setDialogOpen(open);
-              if (!open) resetForm();
-            }}>
-              <DialogTrigger asChild>
-                <Button onClick={resetForm}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  {isEditing ? "Editar movimiento" : "Registrar Movimiento"}
-                </Button>
-              </DialogTrigger>
-              <DialogContent className={`${isMobile ? 'w-[calc(100vw-2rem)]' : 'max-w-2xl'} overflow-x-hidden`}>
+        <PageHeader
+          eyebrow="Operaciones"
+          title="Tu"
+          titleAccent="inventario."
+          lead="Control de stock y movimientos del almacén."
+          actions={
+            activeTab === "movimientos" ? (
+              <Dialog open={dialogOpen} onOpenChange={(open) => {
+                setDialogOpen(open);
+                if (!open) resetForm();
+              }}>
+                <DialogTrigger asChild>
+                  <Button onClick={resetForm}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    {isEditing ? "Editar movimiento" : "Registrar Movimiento"}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className={`${isMobile ? 'w-[calc(100vw-2rem)]' : 'max-w-2xl'} overflow-x-hidden`}>
                 <DialogHeader>
                   <DialogTitle>
                     {isEditing ? "Editar Movimiento de Inventario" : "Registrar Movimiento de Inventario"}
@@ -709,35 +711,26 @@ const InventarioContent = () => {
                   </div>
                 </form>
               </DialogContent>
-            </Dialog>
-          )}
-        </div>
+              </Dialog>
+            ) : undefined
+          }
+        />
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
-            <TabsList className="inline-flex w-max gap-1">
-              <TabsTrigger value="productos" className="flex items-center gap-1.5 px-2 sm:px-3">
-                <Package className="h-4 w-4" />
-                <span className="hidden sm:inline">Productos</span>
-                <span className="sm:hidden">Prod</span>
-              </TabsTrigger>
-              <TabsTrigger value="lotes" className="flex items-center gap-1.5 px-2 sm:px-3">
-                <Boxes className="h-4 w-4" />
-                <span className="hidden sm:inline">Lotes</span>
-                <span className="sm:hidden">Lotes</span>
-              </TabsTrigger>
-              <TabsTrigger value="movimientos" className="flex items-center gap-1.5 px-2 sm:px-3">
-                <List className="h-4 w-4" />
-                <span className="hidden sm:inline">Movimientos</span>
-                <span className="sm:hidden">Movim</span>
-              </TabsTrigger>
-              <TabsTrigger value="categoria" className="flex items-center gap-1.5 px-2 sm:px-3">
-                <Warehouse className="h-4 w-4" />
-                <span className="hidden sm:inline">Por Categoría</span>
-                <span className="sm:hidden">Categ</span>
-              </TabsTrigger>
-            </TabsList>
-          </div>
+          <TabsList className="bg-transparent border-b border-ink-100 rounded-none p-0 h-auto gap-8 mb-6">
+            <TabsTrigger value="productos" className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm">
+              Productos
+            </TabsTrigger>
+            <TabsTrigger value="lotes" className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm">
+              Lotes
+            </TabsTrigger>
+            <TabsTrigger value="movimientos" className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm">
+              Movimientos
+            </TabsTrigger>
+            <TabsTrigger value="categoria" className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm">
+              Por categoría
+            </TabsTrigger>
+          </TabsList>
 
           {/* ===== TAB PRODUCTOS ===== */}
           <TabsContent value="productos" className="space-y-4">
@@ -761,10 +754,21 @@ const InventarioContent = () => {
 
               return (
                 <>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span>{filtrados.length} productos</span>
-                    <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">{conStock} con stock</Badge>
-                    {sinStock > 0 && <Badge variant="destructive">{sinStock} sin stock</Badge>}
+                  <div className="flex items-center gap-6 mb-4 pb-4 border-b border-ink-100">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium mb-1">— Total</div>
+                      <div className="font-sans text-2xl font-medium text-ink-900 tabular-nums">{filtrados.length}</div>
+                    </div>
+                    <div className="w-px h-10 bg-ink-100"></div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium mb-1">— Con stock</div>
+                      <div className="font-sans text-2xl font-medium tabular-nums" style={{color: 'hsl(var(--success))'}}>{conStock}</div>
+                    </div>
+                    <div className="w-px h-10 bg-ink-100"></div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium mb-1">— Sin stock</div>
+                      <div className="font-sans text-2xl font-medium text-destructive tabular-nums">{sinStock}</div>
+                    </div>
                   </div>
 
                   {loading ? (
@@ -794,12 +798,12 @@ const InventarioContent = () => {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Código</TableHead>
-                            <TableHead>Producto</TableHead>
-                            <TableHead>Categoría</TableHead>
-                            <TableHead className="text-right">Stock Total</TableHead>
-                            <TableHead>Unidad</TableHead>
-                            <TableHead>Estado</TableHead>
+                            <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">Código</TableHead>
+                            <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">Producto</TableHead>
+                            <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">Categoría</TableHead>
+                            <TableHead className="text-right text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">Stock Total</TableHead>
+                            <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">Unidad</TableHead>
+                            <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">Estado</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
