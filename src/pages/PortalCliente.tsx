@@ -14,6 +14,7 @@ import ClienteEntregas from "@/components/cliente/ClienteEntregas";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { COMPANY_DATA } from "@/constants/companyData";
+import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 
 interface VendedorInfo {
   full_name: string;
@@ -188,8 +189,7 @@ const PortalCliente = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Cargando...</p>
+          <AlmasaLoading size={48} />
         </div>
       </div>
     );

@@ -222,7 +222,7 @@ const LecarozCotizacionEditor = () => {
     return (
       <Layout>
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          <AlmasaLoading size={48} />
         </div>
       </Layout>
     );

@@ -15,6 +15,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 
 interface Cotizacion {
   id: string;
@@ -155,7 +156,7 @@ const LecarozCotizaciones = () => {
 
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            <AlmasaLoading size={48} />
           </div>
         ) : cotizaciones.length === 0 ? (
           <Card><CardContent className="py-12 text-center text-muted-foreground">No hay cotizaciones</CardContent></Card>
