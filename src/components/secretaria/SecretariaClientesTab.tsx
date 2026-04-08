@@ -11,28 +11,24 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  TableRow} from "@/components/ui/table";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  SelectValue} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency } from "@/lib/utils";
 import {
   Search,
-  Loader2,
   Users,
   Plus,
   Eye,
   MapPin,
   Phone,
   Mail,
-  Building2,
-} from "lucide-react";
+  Building2} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface Cliente {
@@ -86,8 +82,7 @@ export const SecretariaClientesTab = () => {
 
       if (error) throw error;
       return data as Cliente[];
-    },
-  });
+    }});
 
   // Fetch vendors
   const { data: vendedores } = useQuery({
@@ -100,8 +95,7 @@ export const SecretariaClientesTab = () => {
 
       if (error) throw error;
       return data as Vendedor[];
-    },
-  });
+    }});
 
   // Filter clients
   const filteredClientes = clientes?.filter((c) => {
@@ -133,9 +127,7 @@ export const SecretariaClientesTab = () => {
 
   if (loadingClientes) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <AlmasaLoading size={48} />
     );
   }
 

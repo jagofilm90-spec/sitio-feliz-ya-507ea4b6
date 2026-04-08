@@ -8,18 +8,16 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  SelectValue} from "@/components/ui/select";
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  TableRow} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, TrendingUp, TrendingDown, Minus, Package, DollarSign, Calendar } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Package, DollarSign, Calendar } from "lucide-react";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import { formatCurrency } from "@/lib/utils";
@@ -106,8 +104,7 @@ const ClienteHistorialAnalytics = ({ clienteId, clienteNombre }: ClienteHistoria
             mes,
             precio: det.precio_unitario,
             cantidad: det.cantidad,
-            fuente: "cotizacion",
-          });
+            fuente: "cotizacion"});
         });
       });
 
@@ -127,14 +124,12 @@ const ClienteHistorialAnalytics = ({ clienteId, clienteNombre }: ClienteHistoria
             mes,
             precio: det.precio_unitario,
             cantidad: det.cantidad,
-            fuente: "pedido",
-          });
+            fuente: "pedido"});
         });
       });
 
       return historialMap;
-    },
-  });
+    }});
 
   // Aggregate data by product
   const productosAgregados = historialData
@@ -156,8 +151,7 @@ const ClienteHistorialAnalytics = ({ clienteId, clienteNombre }: ClienteHistoria
             mes,
             mesLabel: format(new Date(mes + "-01"), "MMM yyyy", { locale: es }),
             precioPromedio: data.precios.reduce((a, b) => a + b, 0) / data.precios.length,
-            cantidadTotal: data.cantidades.reduce((a, b) => a + b, 0),
-          }));
+            cantidadTotal: data.cantidades.reduce((a, b) => a + b, 0)}));
 
         const primerRegistro = registros[0];
         const ultimoPrecio = mesesOrdenados[0]?.precioPromedio || 0;
@@ -171,8 +165,7 @@ const ClienteHistorialAnalytics = ({ clienteId, clienteNombre }: ClienteHistoria
           meses: mesesOrdenados,
           ultimoPrecio,
           tendencia,
-          cantidadTotalGlobal: mesesOrdenados.reduce((acc, m) => acc + m.cantidadTotal, 0),
-        };
+          cantidadTotalGlobal: mesesOrdenados.reduce((acc, m) => acc + m.cantidadTotal, 0)};
       })
     : [];
 
@@ -191,9 +184,7 @@ const ClienteHistorialAnalytics = ({ clienteId, clienteNombre }: ClienteHistoria
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <AlmasaLoading size={48} />
     );
   }
 

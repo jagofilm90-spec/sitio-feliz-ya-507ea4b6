@@ -9,15 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {
-  AlertTriangle, Package, Search, ShoppingCart, Loader2, TrendingDown,
-  Clock, XCircle, CalendarDays, DollarSign,
-} from "lucide-react";
+  AlertTriangle, Package, Search, ShoppingCart, TrendingDown,
+  Clock, XCircle, CalendarDays, DollarSign} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ─── Types ───
@@ -52,24 +49,19 @@ const URGENCIA_CONFIG: Record<string, { label: string; color: string; icon: type
   critico: {
     label: "Sin stock",
     color: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 border-red-300 dark:border-red-800",
-    icon: XCircle,
-  },
+    icon: XCircle},
   urgente: {
     label: "≤3 días",
     color: "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300 border-orange-300 dark:border-orange-800",
-    icon: AlertTriangle,
-  },
+    icon: AlertTriangle},
   bajo: {
     label: "≤7 días",
     color: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-amber-300 dark:border-amber-800",
-    icon: TrendingDown,
-  },
+    icon: TrendingDown},
   planificar: {
     label: "Planificar",
     color: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border-blue-300 dark:border-blue-800",
-    icon: CalendarDays,
-  },
-};
+    icon: CalendarDays}};
 
 const getUrgenciaBadge = (urgencia: string) => {
   const cfg = URGENCIA_CONFIG[urgencia];
@@ -84,8 +76,7 @@ const getUrgenciaBadge = (urgencia: string) => {
 };
 
 const DIAS_LABELS: Record<string, string> = {
-  lunes: "Lun", martes: "Mar", miercoles: "Mié", jueves: "Jue", viernes: "Vie", sabado: "Sáb",
-};
+  lunes: "Lun", martes: "Mar", miercoles: "Mié", jueves: "Jue", viernes: "Vie", sabado: "Sáb"};
 
 // ─── Component ───
 
@@ -163,8 +154,7 @@ export const SugerenciasReabastecimientoTab = () => {
               nombre: pp.proveedores.nombre,
               costo: pp.costo_proveedor || 0,
               dias_visita: pp.proveedores.dias_visita,
-              termino_pago: pp.proveedores.termino_pago,
-            };
+              termino_pago: pp.proveedores.termino_pago};
           }
         });
       }
@@ -234,15 +224,13 @@ export const SugerenciasReabastecimientoTab = () => {
           proveedor_termino_pago: proveedorTerminoPago,
           costo_unitario: costoUnitario,
           costo_estimado: costoEstimado,
-          urgencia,
-        };
+          urgencia};
       }).sort((a, b) => {
         const order = { critico: 0, urgente: 1, bajo: 2, planificar: 3 };
         return order[a.urgencia] - order[b.urgencia];
       });
     },
-    refetchInterval: 60000,
-  });
+    refetchInterval: 60000});
 
   // ─── Derived data ───
 
@@ -265,8 +253,7 @@ export const SugerenciasReabastecimientoTab = () => {
     total: sugerencias.length,
     criticos: sugerencias.filter(s => s.urgencia === "critico").length,
     costoTotal: sugerencias.reduce((sum, s) => sum + s.costo_estimado, 0),
-    proveedores: new Set(sugerencias.map(s => s.proveedor_id).filter(Boolean)).size,
-  }), [sugerencias]);
+    proveedores: new Set(sugerencias.map(s => s.proveedor_id).filter(Boolean)).size}), [sugerencias]);
 
   // ─── Selection ───
 
@@ -290,9 +277,7 @@ export const SugerenciasReabastecimientoTab = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <AlmasaLoading size={48} />
     );
   }
 

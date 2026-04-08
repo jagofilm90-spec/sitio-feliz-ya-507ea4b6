@@ -10,8 +10,7 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  TableRow} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
@@ -19,14 +18,12 @@ import { es } from "date-fns/locale";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Search,
-  Loader2,
   Warehouse,
   Package,
   AlertTriangle,
   ArrowUp,
   ArrowDown,
-  Boxes,
-} from "lucide-react";
+  Boxes} from "lucide-react";
 import { InventarioItemMobile } from "./InventarioItemMobile";
 
 interface Producto {
@@ -76,8 +73,7 @@ export const SecretariaInventarioTab = () => {
 
       if (error) throw error;
       return data as Producto[];
-    },
-  });
+    }});
 
   // Fetch recent lots
   const { data: lotes, isLoading: loadingLotes } = useQuery({
@@ -100,8 +96,7 @@ export const SecretariaInventarioTab = () => {
 
       if (error) throw error;
       return data as Lote[];
-    },
-  });
+    }});
 
   // Fetch recent movements
   const { data: movimientos, isLoading: loadingMovimientos } = useQuery({
@@ -124,8 +119,7 @@ export const SecretariaInventarioTab = () => {
 
       if (error) throw error;
       return data as Movimiento[];
-    },
-  });
+    }});
 
   // Filter products
   const filteredProductos = productos?.filter((p) => {
@@ -157,9 +151,7 @@ export const SecretariaInventarioTab = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <AlmasaLoading size={48} />
     );
   }
 

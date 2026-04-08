@@ -3,22 +3,20 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  DialogTitle} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  TableRow} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/utils";
 import { esProductoBolsas5kg, redondearABolsasCompletas, calcularNumeroBolsas, KG_POR_BOLSA, ordenarProductosAzucarPrimero } from "@/lib/calculos";
-import { Loader2, CreditCard } from "lucide-react";
+import { CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import logoAlmasa from "@/assets/logo-almasa.png";
@@ -81,8 +79,7 @@ export default function PedidoDetalleDialog({
   onNavigateNext,
   onNavigatePrevious,
   canNavigateNext = false,
-  canNavigatePrevious = false,
-}: PedidoDetalleDialogProps) {
+  canNavigatePrevious = false}: PedidoDetalleDialogProps) {
   const [pedido, setPedido] = useState<PedidoDetalle | null>(null);
   const [loading, setLoading] = useState(false);
   const isMobile = useIsMobile();
@@ -142,11 +139,9 @@ export default function PedidoDetalleDialog({
 
   const getStatusBadge = (status: string) => {
     const labels: Record<string, string> = {
-      pendiente: "Pendiente", en_ruta: "En Ruta", entregado: "Entregado", cancelado: "Cancelado",
-    };
+      pendiente: "Pendiente", en_ruta: "En Ruta", entregado: "Entregado", cancelado: "Cancelado"};
     const variants: Record<string, "default" | "secondary" | "destructive"> = {
-      pendiente: "secondary", en_ruta: "default", entregado: "default", cancelado: "destructive",
-    };
+      pendiente: "secondary", en_ruta: "default", entregado: "default", cancelado: "destructive"};
     return <Badge variant={variants[status] || "default"}>{labels[status] || status}</Badge>;
   };
 
@@ -163,9 +158,7 @@ export default function PedidoDetalleDialog({
         </DialogHeader>
 
         {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
+          <AlmasaLoading size={48} />
         ) : pedido ? (
           <div className="space-y-6">
             {/* Información general */}

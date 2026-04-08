@@ -815,9 +815,7 @@ export default function AlmacenCargaScan() {
           </div>
 
           {loadingOptions ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
+            <AlmasaLoading size={48} />
           ) : (
             <div className="space-y-4">
               {/* Chofer */}
@@ -1257,9 +1255,7 @@ export default function AlmacenCargaScan() {
           <p className="text-xs text-muted-foreground">También puedes pegar la URL o ID del pedido en el campo de arriba</p>
         </div>
       ) : loading ? (
-        <div className="flex items-center justify-center p-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
+        <AlmasaLoading size={48} />
       ) : (
         <div className="p-3 space-y-3">
           {/* Current order header */}

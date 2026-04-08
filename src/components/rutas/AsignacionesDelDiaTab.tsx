@@ -14,7 +14,6 @@ import {
   Truck, 
   UserCheck,
   AlertTriangle,
-  Loader2,
   Clock,
   Package,
   RefreshCw,
@@ -119,8 +118,7 @@ const AsignacionesDelDiaTab = () => {
         chofer_nombre: empleadosMap.get(ruta.chofer_id) || "Desconocido",
         ayudantes_nombres: (ruta.ayudantes_ids || []).map((id: string) => 
           empleadosMap.get(id) || "Desconocido"
-        ),
-      }));
+        )}));
 
       setRutas(rutasConNombres as Ruta[]);
 
@@ -139,8 +137,7 @@ const AsignacionesDelDiaTab = () => {
       toast({
         title: "Error",
         description: "No se pudo cargar la información",
-        variant: "destructive",
-      });
+        variant: "destructive"});
     } finally {
       setLoading(false);
     }
@@ -218,8 +215,7 @@ const AsignacionesDelDiaTab = () => {
       toast({
         title: "Error",
         description: error.message,
-        variant: "destructive",
-      });
+        variant: "destructive"});
     }
   };
 
@@ -324,9 +320,7 @@ const AsignacionesDelDiaTab = () => {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
+        <AlmasaLoading size={48} />
       ) : (
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Scheduled Routes - Takes 2 columns */}

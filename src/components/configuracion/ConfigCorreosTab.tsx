@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, RefreshCw, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import { RefreshCw, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 interface GmailCuenta {
@@ -38,14 +38,12 @@ export function ConfigCorreosTab() {
       
       if (error) throw error;
       return data as GmailCuenta[];
-    },
-  });
+    }});
 
   const handleConnect = async (email: string) => {
     try {
       const { data, error } = await supabase.functions.invoke("gmail-auth", {
-        body: { email },
-      });
+        body: { email }});
 
       if (error) throw error;
       if (data?.authUrl) {
@@ -64,8 +62,7 @@ export function ConfigCorreosTab() {
         .update({
           access_token: null,
           refresh_token: null,
-          token_expires_at: null,
-        })
+          token_expires_at: null})
         .eq("id", cuenta.id);
 
       if (error) throw error;
@@ -157,9 +154,7 @@ export function ConfigCorreosTab() {
           </div>
 
           {isLoading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
+            <AlmasaLoading size={48} />
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               {cuentas.map((cuenta) => (

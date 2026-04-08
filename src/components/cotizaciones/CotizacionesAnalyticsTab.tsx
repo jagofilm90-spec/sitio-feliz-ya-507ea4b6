@@ -8,25 +8,22 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  SelectValue} from "@/components/ui/select";
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Loader2, BarChart3, Users } from "lucide-react";
+  TableRow} from "@/components/ui/table";
+import { BarChart3, Users } from "lucide-react";
 import { subMonths } from "date-fns";
 import ClienteHistorialAnalytics from "@/components/analytics/ClienteHistorialAnalytics";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  DialogTitle} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
 interface Cliente {
@@ -51,8 +48,7 @@ const CotizacionesAnalyticsTab = () => {
 
       if (error) throw error;
       return data as Cliente[];
-    },
-  });
+    }});
 
   // Fetch summary stats from PEDIDOS (real sales) instead of cotizaciones
   const { data: stats, isLoading: loadingStats } = useQuery({
@@ -118,8 +114,7 @@ const CotizacionesAnalyticsTab = () => {
             montoTotal: 0,
             entregados: 0,
             facturados: 0,
-            cotizaciones: cotizacionesPorCliente.get(pedido.cliente_id) || 0,
-          });
+            cotizaciones: cotizacionesPorCliente.get(pedido.cliente_id) || 0});
         }
         const stat = clienteStats.get(key)!;
         stat.totalPedidos++;
@@ -129,14 +124,11 @@ const CotizacionesAnalyticsTab = () => {
       });
 
       return Array.from(clienteStats.values()).sort((a, b) => b.montoTotal - a.montoTotal);
-    },
-  });
+    }});
 
   if (loadingClientes || loadingStats) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <AlmasaLoading size={48} />
     );
   }
 
@@ -254,8 +246,7 @@ const CotizacionesAnalyticsTab = () => {
                         onClick={() => setSelectedCliente({
                           id: stat.cliente_id,
                           nombre: stat.nombre,
-                          codigo: stat.codigo,
-                        })}
+                          codigo: stat.codigo})}
                       >
                         Ver historial
                       </Button>

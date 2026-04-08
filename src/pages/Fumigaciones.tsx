@@ -8,8 +8,7 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  TableRow} from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { format, addMonths, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
-import { Loader2, Pencil, Check, X } from "lucide-react";
+import { Pencil, Check, X } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { FumigacionCardMobile } from "@/components/fumigaciones/FumigacionCardMobile";
 
@@ -65,8 +64,7 @@ const Fumigaciones = () => {
             ...producto,
             proximaFumigacion: null,
             diasRestantes: null,
-            estado: "sin_fecha" as const,
-          };
+            estado: "sin_fecha" as const};
         }
 
         const ultimaFumigacion = new Date(producto.fecha_ultima_fumigacion);
@@ -87,8 +85,7 @@ const Fumigaciones = () => {
           ...producto,
           proximaFumigacion,
           diasRestantes,
-          estado,
-        };
+          estado};
       });
 
       // Ordenar: sin fecha primero (más urgentes), luego por fecha más antigua a más reciente
@@ -107,8 +104,7 @@ const Fumigaciones = () => {
       toast({
         title: "Error",
         description: "No se pudieron cargar los productos",
-        variant: "destructive",
-      });
+        variant: "destructive"});
     } finally {
       setLoading(false);
     }
@@ -135,8 +131,7 @@ const Fumigaciones = () => {
 
       toast({
         title: "Fecha actualizada",
-        description: "La fecha de fumigación se actualizó correctamente. Próxima fumigación en 6 meses.",
-      });
+        description: "La fecha de fumigación se actualizó correctamente. Próxima fumigación en 6 meses."});
 
       setEditingId(null);
       setEditingDate("");
@@ -146,8 +141,7 @@ const Fumigaciones = () => {
       toast({
         title: "Error",
         description: "No se pudo actualizar la fecha",
-        variant: "destructive",
-      });
+        variant: "destructive"});
     }
   };
 
@@ -160,8 +154,7 @@ const Fumigaciones = () => {
     vencida: productos.filter((p) => p.estado === "vencida").length,
     proxima: productos.filter((p) => p.estado === "proxima").length,
     vigente: productos.filter((p) => p.estado === "vigente").length,
-    sin_fecha: productos.filter((p) => p.estado === "sin_fecha").length,
-  };
+    sin_fecha: productos.filter((p) => p.estado === "sin_fecha").length};
 
   const getEstadoBadge = (producto: ProductoFumigacion) => {
     if (producto.estado === "sin_fecha") {
@@ -214,9 +207,7 @@ const Fumigaciones = () => {
               </CardHeader>
               <CardContent className={isMobile ? 'p-4 pt-0' : ''}>
                 {loading ? (
-                  <div className="flex justify-center items-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  </div>
+                  <AlmasaLoading size={48} />
                 ) : productosFiltrados.length === 0 ? (
                   <p className="text-center text-muted-foreground py-8">
                     No hay productos en esta categoría
@@ -235,8 +226,7 @@ const Fumigaciones = () => {
                           presentacion: producto.peso_kg ? `${producto.peso_kg} kg` : null,
                           stock_actual: producto.stock_actual,
                           ultima_fumigacion: producto.fecha_ultima_fumigacion,
-                          proxima_fumigacion: producto.proximaFumigacion ? format(producto.proximaFumigacion, "yyyy-MM-dd") : null,
-                        }}
+                          proxima_fumigacion: producto.proximaFumigacion ? format(producto.proximaFumigacion, "yyyy-MM-dd") : null}}
                         onUpdateFecha={async (id, fecha) => {
                           try {
                             const { error } = await supabase

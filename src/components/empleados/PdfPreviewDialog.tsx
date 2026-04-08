@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2, Download } from "lucide-react";
+import { Download } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
@@ -21,8 +21,7 @@ export function PdfPreviewDialog({
   onOpenChange,
   blob,
   filename,
-  title,
-}: PdfPreviewDialogProps) {
+  title}: PdfPreviewDialogProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pages, setPages] = useState<RenderedPage[]>([]);
@@ -70,8 +69,7 @@ export function PdfPreviewDialog({
 
           renderedPages.push({
             pageNumber,
-            dataUrl: canvas.toDataURL("image/png"),
-          });
+            dataUrl: canvas.toDataURL("image/png")});
         }
 
         if (!cancelled) setPages(renderedPages);
@@ -119,10 +117,7 @@ export function PdfPreviewDialog({
         <div className="flex-1 overflow-auto bg-muted/30 px-4 py-5">
           {loading && (
             <div className="flex h-full min-h-[50vh] items-center justify-center">
-              <div className="flex flex-col items-center gap-3 text-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">Renderizando vista previa…</p>
-              </div>
+              <AlmasaLoading size={48} text="Renderizando vista previa…" />
             </div>
           )}
 

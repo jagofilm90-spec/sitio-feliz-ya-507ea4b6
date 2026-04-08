@@ -198,9 +198,7 @@ export const AvatarEmpleadoPopover = ({
       <Dialog open={showTarjeta} onOpenChange={setShowTarjeta}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           {loadingDetalle ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
+            <AlmasaLoading size={48} />
           ) : empleadoDetalle ? (
             <div className="space-y-4">
               {/* Header con foto */}

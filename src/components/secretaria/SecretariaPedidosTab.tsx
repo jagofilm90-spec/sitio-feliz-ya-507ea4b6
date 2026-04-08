@@ -6,15 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Search, Loader2, FileText, Clock, CheckCircle2, Truck, XCircle, Package, Pencil,
-} from "lucide-react";
+  Search, FileText, Clock, CheckCircle2, Truck, XCircle, Package, Pencil} from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { formatCurrency } from "@/lib/utils";
@@ -42,8 +39,7 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
   pendiente: { label: "Pendiente", variant: "default", icon: Package },
   en_ruta: { label: "En ruta", variant: "outline", icon: Truck },
   entregado: { label: "Entregado", variant: "default", icon: CheckCircle2 },
-  cancelado: { label: "Cancelado", variant: "destructive", icon: XCircle },
-};
+  cancelado: { label: "Cancelado", variant: "destructive", icon: XCircle }};
 
 const creditoLabels: Record<string, string> = { contado: "Contado", "8_dias": "8 días", "15_dias": "15 días", "30_dias": "30 días", "60_dias": "60 días" };
 
@@ -77,8 +73,7 @@ export const SecretariaPedidosTab = () => {
       if (error) throw error;
       return data as unknown as Pedido[];
     },
-    refetchInterval: 30000,
-  });
+    refetchInterval: 30000});
 
   const filteredPedidos = pedidos?.filter(p => {
     const q = searchTerm.toLowerCase();
@@ -92,7 +87,7 @@ export const SecretariaPedidosTab = () => {
   };
 
   if (isLoading) {
-    return <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+    return <AlmasaLoading size={48} />;
   }
 
   return (

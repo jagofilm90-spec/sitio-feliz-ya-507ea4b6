@@ -121,10 +121,7 @@ export default function DisenosCamioneta() {
       <CardContent>
         <div className="aspect-video bg-muted rounded-lg overflow-hidden mb-4 flex items-center justify-center">
           {loadingDesigns[option.id] ? (
-            <div className="flex flex-col items-center gap-3 text-muted-foreground">
-              <Loader2 className="h-10 w-10 animate-spin" />
-              <span>Generando diseño...</span>
-            </div>
+            <AlmasaLoading size={56} text="Generando diseño..." />
           ) : generatedDesigns[option.id] ? (
             <img 
               src={generatedDesigns[option.id]} 
