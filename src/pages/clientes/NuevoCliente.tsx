@@ -653,6 +653,7 @@ export default function NuevoCliente() {
 /* ─── Preview Panel Component ─── */
 
 interface PreviewPanelProps {
+  nuevoCodigo: string | null;
   razonSocial: string;
   rfc: string;
   vendedorNombre: string;
@@ -665,7 +666,7 @@ interface PreviewPanelProps {
 }
 
 function PreviewPanel({
-  razonSocial, rfc, vendedorNombre, creditoLabel, limiteLabel,
+  nuevoCodigo, razonSocial, rfc, vendedorNombre, creditoLabel, limiteLabel,
   puntos, perteneceGrupo, grupoNombre, tipMessage,
 }: PreviewPanelProps) {
   const puntosDisplay = puntos.map((p) => {
