@@ -379,3 +379,22 @@
   transform: translateY(20px);
   animation: rise-in 0.8s cubic-bezier(0.16, 1, 0.3, 1) 3.1s forwards;
 }
+
+/* Auth input focus */
+.auth-input:focus {
+  border-color: #c41e3a !important;
+  box-shadow: 0 0 0 3px #f9eef0 !important;
+  background: #ffffff !important;
+}
+
+/* Dark mode auth overrides */
+.dark .auth-input {
+  background: hsl(220 18% 11%) !important;
+  border-color: hsl(220 15% 20%) !important;
+  color: hsl(220 10% 93%) !important;
+}
+.dark .auth-input:focus {
+  background: hsl(220 18% 14%) !important;
+  border-color: #c41e3a !important;
+  box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.15) !important;
+}

@@ -132,33 +132,106 @@ const Auth = () => {
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-b from-background to-muted p-4">
-      <div className="w-full max-w-sm space-y-6">
+      <div className="w-full max-w-sm" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         {/* Branding */}
         <div className="text-center">
           <AlmasaLogoBoot size={80} className="almasa-logo-boot mx-auto mb-2" />
-          <h1 className="boot-wordmark font-serif text-2xl font-bold tracking-wide">ALMASA·OS</h1>
-          <p className="boot-tagline text-xs text-muted-foreground tracking-widest uppercase mt-1">Sistema operativo · Casa fundada en 1904</p>
+          <h1 className="boot-wordmark text-center mb-3"
+              style={{
+                fontFamily: "'Cormorant Garamond', Georgia, serif",
+                fontSize: '56px',
+                fontWeight: 600,
+                color: '#c41e3a',
+                letterSpacing: '0.03em',
+                lineHeight: 1
+              }}>
+            ALMASA<span style={{
+              fontStyle: 'italic',
+              fontWeight: 400,
+              fontSize: '0.75em',
+              marginLeft: '0.05em'
+            }}>·OS</span>
+          </h1>
+          <p className="boot-tagline text-center"
+             style={{
+               fontFamily: "'Inter Tight', sans-serif",
+               fontSize: '11px',
+               textTransform: 'uppercase',
+               letterSpacing: '0.22em',
+               color: '#6a6a6a',
+               fontWeight: 500,
+               marginTop: '16px',
+               marginBottom: '48px'
+             }}>
+            Sistema operativo · Casa fundada en 1904
+          </p>
         </div>
 
-        <Card className="boot-card shadow-lg border-0">
-          <CardContent className="pt-6">
+        <div className="boot-card"
+             style={{
+               background: 'hsl(var(--card))',
+               border: '0.5px solid hsl(var(--border))',
+               borderRadius: '16px',
+               padding: '40px',
+               width: '100%',
+               maxWidth: '400px',
+               margin: '0 auto',
+               boxShadow: '0 16px 48px rgba(10,10,10,0.06)'
+             }}>
             {step === 1 && (
-              <div className="space-y-4">
-                <div>
-                  <Input
-                    type="email"
-                    placeholder="Correo electrónico"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") handleContinue(); }}
-                    autoFocus
-                    className="h-11"
-                  />
-                </div>
-                <Button className="w-full h-11" onClick={handleContinue} disabled={loading || !email}>
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Continuar"}
-                </Button>
-                <p className="text-xs text-center text-muted-foreground">¿Necesitas acceso? Contacta al administrador</p>
+              <div>
+                <input
+                  type="email"
+                  placeholder="Correo electrónico"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleContinue(); }}
+                  autoFocus
+                  className="auth-input"
+                  style={{
+                    width: '100%',
+                    padding: '14px 16px',
+                    background: '#faf9f6',
+                    border: '0.5px solid #d4d4d0',
+                    borderRadius: '8px',
+                    fontFamily: "'Inter Tight', sans-serif",
+                    fontSize: '15px',
+                    color: 'hsl(var(--foreground))',
+                    outline: 'none',
+                    marginBottom: '20px'
+                  }}
+                />
+                <button
+                  onClick={handleContinue}
+                  disabled={loading || !email}
+                  className="disabled:opacity-60 disabled:cursor-not-allowed"
+                  style={{
+                    width: '100%',
+                    padding: '16px',
+                    background: '#c41e3a',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontFamily: "'Inter Tight', sans-serif",
+                    fontSize: '15px',
+                    fontWeight: 500,
+                    cursor: loading || !email ? 'not-allowed' : 'pointer',
+                    letterSpacing: '0.01em',
+                    boxShadow: '0 1px 2px rgba(132,18,36,0.18)',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : "Continuar"}
+                </button>
+                <p style={{
+                  textAlign: 'center',
+                  marginTop: '20px',
+                  fontSize: '13px',
+                  color: '#6a6a6a',
+                  fontFamily: "'Inter Tight', sans-serif"
+                }}>
+                  ¿Necesitas acceso? <span style={{ color: '#c41e3a', cursor: 'pointer' }}>Contacta al administrador</span>
+                </p>
               </div>
             )}
 
@@ -176,17 +249,46 @@ const Auth = () => {
                   <p className="font-bold text-xl">{userName}</p>
                   {userPuesto && <p className="text-sm text-muted-foreground">{userPuesto}</p>}
                 </div>
-                <Input
+                <input
                   type="password"
                   placeholder="Contraseña"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoFocus
-                  className="h-11"
+                  className="auth-input"
+                  style={{
+                    width: '100%',
+                    padding: '14px 16px',
+                    background: '#faf9f6',
+                    border: '0.5px solid #d4d4d0',
+                    borderRadius: '8px',
+                    fontFamily: "'Inter Tight', sans-serif",
+                    fontSize: '15px',
+                    color: 'hsl(var(--foreground))',
+                    outline: 'none',
+                    marginBottom: '20px'
+                  }}
                 />
-                <Button type="submit" className="w-full h-11" disabled={loading}>
-                  {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Iniciando sesión...</> : "Iniciar Sesión"}
-                </Button>
+                <button type="submit" disabled={loading}
+                  className="disabled:opacity-60 disabled:cursor-not-allowed"
+                  style={{
+                    width: '100%',
+                    padding: '16px',
+                    background: '#c41e3a',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontFamily: "'Inter Tight', sans-serif",
+                    fontSize: '15px',
+                    fontWeight: 500,
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    letterSpacing: '0.01em',
+                    boxShadow: '0 1px 2px rgba(132,18,36,0.18)',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin inline" />Iniciando sesión...</> : "Iniciar Sesión"}
+                </button>
                 <div className="flex justify-between text-xs">
                   <button type="button" className="text-muted-foreground hover:text-foreground flex items-center gap-1" onClick={handleBack}>
                     <ArrowLeft className="h-3 w-3" /> Cambiar cuenta
@@ -204,7 +306,20 @@ const Auth = () => {
                 <p className="text-xs text-muted-foreground">Enviaremos un enlace a <strong>{email}</strong></p>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" className="flex-1" onClick={() => setShowReset(false)}>Cancelar</Button>
-                  <Button size="sm" className="flex-1" disabled={resetLoading} onClick={async () => {
+                  <button size="sm" className="flex-1 disabled:opacity-60" disabled={resetLoading}
+                    style={{
+                      padding: '8px 16px',
+                      background: '#c41e3a',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontFamily: "'Inter Tight', sans-serif",
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      cursor: resetLoading ? 'not-allowed' : 'pointer',
+                      flex: 1
+                    }}
+                    onClick={async () => {
                     setResetLoading(true);
                     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + "/reset-password" });
                     setResetLoading(false);
@@ -212,12 +327,11 @@ const Auth = () => {
                     else { toast({ title: "Enlace enviado", description: "Revisa tu correo." }); setShowReset(false); }
                   }}>
                     {resetLoading ? "Enviando..." : "Enviar enlace"}
-                  </Button>
+                  </button>
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
 
       </div>
     </div>
