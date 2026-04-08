@@ -135,14 +135,14 @@ const Auth = () => {
       <div className="w-full max-w-sm" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         {/* Branding */}
         <div className="text-center">
-          <AlmasaLogoBoot size={80} className="almasa-logo-boot mx-auto mb-2" />
-          <h1 className="boot-wordmark text-center mb-3"
+          <AlmasaLogoBoot size={130} className="almasa-logo-boot mx-auto mb-4" />
+          <h1 className="boot-wordmark text-center"
               style={{
                 fontFamily: "'Cormorant Garamond', Georgia, serif",
-                fontSize: '56px',
+                fontSize: '26px',
                 fontWeight: 600,
                 color: '#c41e3a',
-                letterSpacing: '0.03em',
+                letterSpacing: '0.06em',
                 lineHeight: 1
               }}>
             ALMASA<span style={{
@@ -160,8 +160,8 @@ const Auth = () => {
                letterSpacing: '0.22em',
                color: '#6a6a6a',
                fontWeight: 500,
-               marginTop: '16px',
-               marginBottom: '48px'
+               marginTop: '12px',
+               marginBottom: '40px'
              }}>
             Sistema operativo · Casa fundada en 1904
           </p>
