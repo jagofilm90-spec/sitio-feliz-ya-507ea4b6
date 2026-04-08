@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.almasa.erp',
-  appName: 'ALMASA ERP',
+  appName: 'ALMASA-OS',
   webDir: 'dist',
   server: {
     url: 'https://erp.almasa.com.mx',
@@ -33,7 +33,7 @@ const config: CapacitorConfig = {
   ios: {
     contentInset: 'automatic',
     preferredContentMode: 'mobile',
-    scheme: 'ALMASA ERP'
+    scheme: 'ALMASA-OS'
   }
 };
 

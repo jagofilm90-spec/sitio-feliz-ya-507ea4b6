@@ -15,7 +15,7 @@ const Privacidad = () => {
           <div className="flex items-center gap-3">
             <img src={logoAlmasa} alt="ALMASA" className="h-10 w-auto" />
             <div>
-              <h1 className="text-white font-bold text-lg">ALMASA ERP</h1>
+              <h1 className="text-white font-bold text-lg">ALMASA-OS</h1>
               <p className="text-white/70 text-xs">Sistema de Gestión Empresarial</p>
             </div>
           </div>
@@ -68,7 +68,7 @@ const Privacidad = () => {
                 <h2 className="text-xl font-semibold text-gray-900">2. Datos Personales que Recopilamos</h2>
               </div>
               <p className="mb-3">
-                ALMASA ERP es un sistema de gestión empresarial de uso interno. Recopilamos los siguientes datos personales:
+                ALMASA-OS es un sistema de gestión empresarial de uso interno. Recopilamos los siguientes datos personales:
               </p>
               <ul className="list-disc list-inside space-y-2 ml-4">
                 <li><strong>Datos de identificación:</strong> Nombre completo, correo electrónico corporativo, número de empleado.</li>
@@ -166,7 +166,7 @@ const Privacidad = () => {
                 <h2 className="text-xl font-semibold text-gray-900">7. Cookies y Tecnologías Similares</h2>
               </div>
               <p>
-                ALMASA ERP utiliza cookies técnicas esenciales para el funcionamiento del sistema, 
+                ALMASA-OS utiliza cookies técnicas esenciales para el funcionamiento del sistema, 
                 incluyendo tokens de sesión para mantener su autenticación activa. No utilizamos 
                 cookies de seguimiento ni compartimos información con terceros para fines publicitarios.
               </p>

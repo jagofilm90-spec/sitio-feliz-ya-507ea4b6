@@ -64,7 +64,7 @@ export function LocationPermissionRequest({
               <p className="font-medium">Pasos para habilitar:</p>
               <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
                 <li>Abre la configuración de tu dispositivo</li>
-                <li>Busca "ALMASA ERP" en la lista de apps</li>
+                <li>Busca "ALMASA-OS" en la lista de apps</li>
                 <li>Selecciona "Permisos" o "Ubicación"</li>
                 <li>Elige "Permitir siempre" o "Siempre"</li>
               </ol>

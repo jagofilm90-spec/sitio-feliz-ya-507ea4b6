@@ -30,9 +30,9 @@ npx cap sync ios`}
               <li>• Ir a <strong>appstoreconnect.apple.com</strong></li>
               <li>• My Apps → + → New App</li>
               <li>• Plataforma: iOS</li>
-              <li>• Nombre: ALMASA ERP</li>
+              <li>• Nombre: ALMASA-OS</li>
               <li>• Bundle ID: app.lovable.0a4fe6f267d54980a499e679897a2f15</li>
-              <li>• SKU: almasa-erp-2024</li>
+              <li>• SKU: almasa-os-2024</li>
             </ul>
           </div>
 
@@ -53,7 +53,7 @@ npx cap sync ios`}
             <div className="text-sm mt-2 space-y-2">
               <div>
                 <span className="text-muted-foreground">Nombre:</span>
-                <span className="ml-2">ALMASA ERP</span>
+                <span className="ml-2">ALMASA-OS</span>
               </div>
               <div>
                 <span className="text-muted-foreground">Subtítulo:</span>

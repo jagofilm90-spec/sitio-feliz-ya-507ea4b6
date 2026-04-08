@@ -76,7 +76,7 @@ const LandingAlmasa = () => {
             ))}
             <Link to="/auth"
               className="text-sm font-medium text-white bg-[#222222] px-5 py-2.5 rounded-lg hover:bg-[#B22234] transition-colors cursor-pointer">
-              Portal ERP
+              Portal ALMASA-OS
             </Link>
           </div>
 
@@ -93,7 +93,7 @@ const LandingAlmasa = () => {
                   className="block text-base font-medium text-[#222222] capitalize cursor-pointer">{id}</button>
               ))}
               <Link to="/auth" className="block mt-3 text-center text-white bg-[#222222] py-3 rounded-lg font-medium cursor-pointer">
-                Portal ERP
+                Portal ALMASA-OS
               </Link>
             </div>
           </div>

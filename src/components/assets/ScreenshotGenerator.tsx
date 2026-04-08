@@ -102,7 +102,7 @@ const ScreenshotGenerator = () => {
           <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
             <li>Abre Xcode → Window → Devices and Simulators</li>
             <li>Selecciona un simulador iPhone (15 Pro Max recomendado)</li>
-            <li>Navega a cada pantalla del ERP</li>
+            <li>Navega a cada pantalla de ALMASA-OS</li>
             <li>Presiona Cmd + S para capturar screenshot</li>
             <li>Repite para cada tamaño de dispositivo requerido</li>
           </ol>

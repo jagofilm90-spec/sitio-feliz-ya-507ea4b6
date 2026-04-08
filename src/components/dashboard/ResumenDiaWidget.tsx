@@ -342,7 +342,7 @@ export const ResumenDiaWidget = () => {
           {/* Footer fijo */}
           <div className="p-4 border-t bg-muted/30 flex-shrink-0 text-center">
             <p className="text-xs text-muted-foreground">
-              Generado por ALMASA ERP · {fechaDisplay}
+              Generado por ALMASA-OS · {fechaDisplay}
             </p>
           </div>
         </DialogContent>
