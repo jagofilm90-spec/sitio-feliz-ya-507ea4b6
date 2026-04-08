@@ -66,8 +66,27 @@ const Dashboard = () => {
   const [periodo, setPeriodo] = useState<Periodo>('mes');
   const [dashTab, setDashTab] = useState("general");
   const { data: dashData, loading: dashLoading, refresh, lastRefresh } = useDashboardData(periodo);
+  const [userName, setUserName] = useState<string>('');
 
   useSystemPresence('dashboard');
+
+  // Get user's first name
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: emp } = await supabase
+          .from('empleados')
+          .select('nombre, nombre_completo')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (emp) {
+          setUserName((emp.nombre || emp.nombre_completo?.split(' ')[0] || '').trim());
+        }
+      }
+    };
+    getUser();
+  }, []);
 
   // Redirect almacen/chofer
   useEffect(() => {
