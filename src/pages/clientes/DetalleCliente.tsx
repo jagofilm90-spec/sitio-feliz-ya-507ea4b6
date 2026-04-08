@@ -5,9 +5,6 @@ import { PageContainer } from "@/components/ui/PageContainer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -19,9 +16,38 @@ import {
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Sheet, SheetContent, SheetHeader, SheetTitle,
-} from "@/components/ui/sheet";
+import { SucursalFormModal } from "@/components/clientes/SucursalFormModal";
+
+interface Zona {
+  id: string;
+  nombre: string;
+  es_foranea?: boolean;
+}
+
+const emptySucursalForm = () => ({
+  nombre: "",
+  codigo_sucursal: "",
+  cl: "",
+  direccion: "",
+  zona_id: "",
+  telefono: "",
+  contacto: "",
+  notas: "",
+  horario_entrega: "",
+  restricciones_vehiculo: "",
+  dias_sin_entrega: "",
+  no_combinar_pedidos: false,
+  es_rosticeria: false,
+  rfc: "",
+  razon_social: "",
+  direccion_fiscal: "",
+  email_facturacion: "",
+  latitud: null as number | null,
+  longitud: null as number | null,
+  metadata_entrega: {},
+  sucursal_hermana_id: "",
+  sucursal_entrega_id: "",
+});
 
 export default function DetalleCliente() {
   const { id } = useParams<{ id: string }>();
@@ -30,6 +56,7 @@ export default function DetalleCliente() {
   const [cliente, setCliente] = useState<any>(null);
   const [sucursales, setSucursales] = useState<any[]>([]);
   const [vendedorNombre, setVendedorNombre] = useState<string>("");
+  const [zonas, setZonas] = useState<Zona[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Delete client dialog
@@ -38,28 +65,22 @@ export default function DetalleCliente() {
   // Delete punto dialog
   const [deletePuntoTarget, setDeletePuntoTarget] = useState<any>(null);
 
-  // Edit/Add punto sheet
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [editingPunto, setEditingPunto] = useState<any>(null); // null = new
-
-  // Punto form state
-  const [pCodigo, setPCodigo] = useState("");
-  const [pNombre, setPNombre] = useState("");
-  const [pEntregarFiscal, setPEntregarFiscal] = useState(true);
-  const [pDireccion, setPDireccion] = useState("");
-  const [pContacto, setPContacto] = useState("");
-  const [pTelefono, setPTelefono] = useState("");
-  const [pHorario, setPHorario] = useState("");
+  // SucursalFormModal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingSucursalId, setEditingSucursalId] = useState<string | null>(null);
+  const [sucursalFormData, setSucursalFormData] = useState(emptySucursalForm());
   const [savingPunto, setSavingPunto] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!id) return;
-    const [{ data: c }, { data: s }] = await Promise.all([
+    const [{ data: c }, { data: s }, { data: z }] = await Promise.all([
       supabase.from("clientes").select("*").eq("id", id).single(),
       supabase.from("cliente_sucursales").select("*").eq("cliente_id", id).eq("activo", true).order("created_at"),
+      supabase.from("zonas").select("id, nombre").eq("activo", true).order("nombre"),
     ]);
     setCliente(c);
     setSucursales(s || []);
+    setZonas(z || []);
 
     if (c?.vendedor_asignado) {
       const { data: p } = await supabase
@@ -103,43 +124,70 @@ export default function DetalleCliente() {
   };
 
   const openEditPunto = (s: any) => {
-    setEditingPunto(s);
-    setPCodigo(s.codigo_sucursal || "");
-    setPNombre(s.nombre || "");
-    setPEntregarFiscal(s.direccion === (cliente?.direccion || ""));
-    setPDireccion(s.direccion || "");
-    setPContacto(s.contacto || "");
-    setPTelefono(s.telefono || "");
-    setPHorario(s.horario_entrega || "");
-    setSheetOpen(true);
+    setEditingSucursalId(s.id);
+    setSucursalFormData({
+      nombre: s.nombre || "",
+      codigo_sucursal: s.codigo_sucursal || "",
+      cl: s.cl || "",
+      direccion: s.direccion || "",
+      zona_id: s.zona_id || "",
+      telefono: s.telefono || "",
+      contacto: s.contacto || "",
+      notas: s.notas || "",
+      horario_entrega: s.horario_entrega || "",
+      restricciones_vehiculo: s.restricciones_vehiculo || "",
+      dias_sin_entrega: s.dias_sin_entrega || "",
+      no_combinar_pedidos: s.no_combinar_pedidos || false,
+      es_rosticeria: s.es_rosticeria || false,
+      rfc: s.rfc || "",
+      razon_social: s.razon_social || "",
+      direccion_fiscal: s.direccion_fiscal || "",
+      email_facturacion: s.email_facturacion || "",
+      latitud: s.latitud || null,
+      longitud: s.longitud || null,
+      metadata_entrega: s.metadata_entrega || {},
+      sucursal_hermana_id: s.sucursal_hermana_id || "",
+      sucursal_entrega_id: s.sucursal_entrega_id || "",
+    });
+    setModalOpen(true);
   };
 
   const openNewPunto = () => {
-    setEditingPunto(null);
-    setPCodigo("");
-    setPNombre("");
-    setPEntregarFiscal(true);
-    setPDireccion("");
-    setPContacto("");
-    setPTelefono("");
-    setPHorario("");
-    setSheetOpen(true);
+    setEditingSucursalId(null);
+    setSucursalFormData(emptySucursalForm());
+    setModalOpen(true);
   };
 
   const handleSavePunto = async () => {
     setSavingPunto(true);
     try {
-      const data = {
-        codigo_sucursal: pCodigo.trim() || null,
-        nombre: pNombre.trim() || "Principal",
-        direccion: pEntregarFiscal ? (cliente?.direccion || "") : pDireccion.trim(),
-        contacto: pContacto.trim() || null,
-        telefono: pTelefono.trim() || null,
-        horario_entrega: pHorario.trim() || null,
+      const data: any = {
+        codigo_sucursal: sucursalFormData.codigo_sucursal.trim() || null,
+        nombre: sucursalFormData.nombre.trim() || "Principal",
+        direccion: sucursalFormData.direccion.trim() || null,
+        zona_id: sucursalFormData.zona_id || null,
+        contacto: sucursalFormData.contacto.trim() || null,
+        telefono: sucursalFormData.telefono.trim() || null,
+        horario_entrega: sucursalFormData.horario_entrega || null,
+        notas: sucursalFormData.notas.trim() || null,
+        restricciones_vehiculo: sucursalFormData.restricciones_vehiculo || null,
+        dias_sin_entrega: sucursalFormData.dias_sin_entrega || null,
+        no_combinar_pedidos: sucursalFormData.no_combinar_pedidos,
+        es_rosticeria: sucursalFormData.es_rosticeria,
+        rfc: sucursalFormData.rfc.trim() || null,
+        razon_social: sucursalFormData.razon_social.trim() || null,
+        direccion_fiscal: sucursalFormData.direccion_fiscal.trim() || null,
+        email_facturacion: sucursalFormData.email_facturacion.trim() || null,
+        latitud: sucursalFormData.latitud,
+        longitud: sucursalFormData.longitud,
+        cl: sucursalFormData.cl.trim() || null,
+        metadata_entrega: Object.keys(sucursalFormData.metadata_entrega).length > 0 ? sucursalFormData.metadata_entrega : null,
+        sucursal_hermana_id: sucursalFormData.sucursal_hermana_id || null,
+        sucursal_entrega_id: sucursalFormData.sucursal_entrega_id || null,
       };
 
-      if (editingPunto) {
-        const { error } = await supabase.from("cliente_sucursales").update(data).eq("id", editingPunto.id);
+      if (editingSucursalId) {
+        const { error } = await supabase.from("cliente_sucursales").update(data).eq("id", editingSucursalId);
         if (error) throw error;
         toast({ title: "Punto actualizado" });
       } else {
@@ -147,12 +195,27 @@ export default function DetalleCliente() {
         if (error) throw error;
         toast({ title: "Punto de entrega agregado" });
       }
-      setSheetOpen(false);
+      setModalOpen(false);
       loadData();
     } catch (err: any) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
       setSavingPunto(false);
+    }
+  };
+
+  const handleDeletePuntoFromModal = async () => {
+    if (!editingSucursalId) return;
+    const { error } = await supabase
+      .from("cliente_sucursales")
+      .update({ activo: false })
+      .eq("id", editingSucursalId);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Punto de entrega eliminado" });
+      setModalOpen(false);
+      loadData();
     }
   };
 
@@ -276,11 +339,14 @@ export default function DetalleCliente() {
                           {i === 0 && (
                             <Badge variant="outline" className="text-xs">Matriz</Badge>
                           )}
+                          {s.es_rosticeria && (
+                            <Badge variant="secondary" className="text-xs">🍗 Rosticería</Badge>
+                          )}
                         </div>
                         {s.direccion && (
                           <p className="text-sm text-muted-foreground pl-6">{s.direccion}</p>
                         )}
-                        <div className="flex gap-4 pl-6 text-xs text-muted-foreground">
+                        <div className="flex gap-4 pl-6 text-xs text-muted-foreground flex-wrap">
                           {s.contacto && (
                             <span className="flex items-center gap-1">
                               <User className="h-3 w-3" />
@@ -297,6 +363,12 @@ export default function DetalleCliente() {
                             <span className="flex items-center gap-1">
                               <Clock className="h-3 w-3" />
                               {s.horario_entrega}
+                            </span>
+                          )}
+                          {s.zona_id && zonas.find(z => z.id === s.zona_id) && (
+                            <span className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {zonas.find(z => z.id === s.zona_id)?.nombre}
                             </span>
                           )}
                         </div>
@@ -395,113 +467,20 @@ export default function DetalleCliente() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Edit/Add punto sheet */}
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent className="sm:max-w-[480px] overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>{editingPunto ? "Editar punto de entrega" : "Nuevo punto de entrega"}</SheetTitle>
-          </SheetHeader>
-          <div className="space-y-4 mt-6">
-            {/* Checkbox entregar en fiscal */}
-            <label className="flex items-start gap-3 cursor-pointer">
-              <Checkbox
-                checked={pEntregarFiscal}
-                onCheckedChange={(checked) => setPEntregarFiscal(!!checked)}
-                className="mt-0.5"
-              />
-              <div>
-                <span className="text-sm font-medium text-foreground">Entregar en la dirección fiscal</span>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  La dirección del RFC. Destildar si la entrega va a otro lado.
-                </p>
-              </div>
-            </label>
-
-            {!pEntregarFiscal && (
-              <div>
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Dirección de entrega <span className="text-primary">*</span>
-                </label>
-                <Textarea
-                  value={pDireccion}
-                  onChange={(e) => setPDireccion(e.target.value)}
-                  placeholder="Calle, número, colonia, CP, ciudad..."
-                  className="mt-1 min-h-[60px] resize-none"
-                />
-              </div>
-            )}
-
-            <div className="grid grid-cols-[100px_1fr] gap-3">
-              <div>
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  # sucursal
-                </label>
-                <Input
-                  value={pCodigo}
-                  onChange={(e) => setPCodigo(e.target.value)}
-                  placeholder="7"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Nombre del punto
-                </label>
-                <Input
-                  value={pNombre}
-                  onChange={(e) => setPNombre(e.target.value)}
-                  placeholder={pEntregarFiscal ? "Matriz" : "BOSQUES"}
-                  className="mt-1"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Persona de contacto
-                </label>
-                <Input
-                  value={pContacto}
-                  onChange={(e) => setPContacto(e.target.value)}
-                  placeholder="Sra. Lupita"
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Teléfono
-                </label>
-                <Input
-                  value={pTelefono}
-                  onChange={(e) => setPTelefono(e.target.value)}
-                  placeholder="55 1234 5678"
-                  className="mt-1"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Horario de entrega
-              </label>
-              <Input
-                value={pHorario}
-                onChange={(e) => setPHorario(e.target.value)}
-                placeholder="6am - 2pm"
-                className="mt-1"
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4 border-t border-border">
-              <Button variant="outline" onClick={() => setSheetOpen(false)}>Cancelar</Button>
-              <Button onClick={handleSavePunto} disabled={savingPunto}>
-                {savingPunto ? "Guardando..." : (editingPunto ? "Guardar cambios" : "Agregar punto")}
-              </Button>
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+      {/* SucursalFormModal — unified branch editor */}
+      <SucursalFormModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        formData={sucursalFormData}
+        setFormData={setSucursalFormData}
+        zonas={zonas}
+        isEditing={!!editingSucursalId}
+        onSave={handleSavePunto}
+        onCancel={() => setModalOpen(false)}
+        onDelete={editingSucursalId ? handleDeletePuntoFromModal : undefined}
+        clienteNombre={cliente?.razon_social || cliente?.nombre}
+        grupoClienteId={cliente?.grupo_cliente_id}
+      />
     </Layout>
   );
 }
