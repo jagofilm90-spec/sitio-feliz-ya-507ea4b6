@@ -11,6 +11,7 @@ import {
 import { CheckCircle, AlertTriangle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import type { ParseResult, ParsedSucursal } from "@/lib/lecarozParser";
+import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 
 const GRUPO_LECAROZ_ID = "aaaaaaaa-1eca-4047-aaaa-aaaaaaaaaaaa";
 
@@ -314,7 +315,7 @@ const LecarozPreviewModal = ({ open, onClose, parseResult, emailLogId, tandas, m
 
         {loading ? (
           <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            <AlmasaLoading size={48} />
           </div>
         ) : (
           <div className="space-y-4">

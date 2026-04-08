@@ -16,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Search, Plus, Trash2, Star, GripVertical, Package } from "lucide-react";
+import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 
 interface ClienteProductosTabProps {
   clienteId: string;
@@ -209,7 +210,7 @@ export function ClienteProductosTab({ clienteId }: ClienteProductosTabProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <AlmasaLoading size={48} />
       </div>
     );
   }

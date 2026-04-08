@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 
 interface Empleado {
   id: string;
@@ -194,7 +195,7 @@ const PersonalFlotillaTab = () => {
   // Available vehicles for select (not assigned to someone else)
   const vehiculosDisponibles = vehiculos.filter(v => !v.chofer_asignado_id || v.chofer_asignado_id === choferEditar?.id);
 
-  if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+  if (loading) return <div className="flex items-center justify-center h-64"><AlmasaLoading size={48} /></div>;
 
   const renderTable = (list: EmpleadoConVehiculo[], isChofer: boolean) => (
     <Table>
