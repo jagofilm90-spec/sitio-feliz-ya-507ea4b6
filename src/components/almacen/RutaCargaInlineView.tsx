@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { CargaHojaInteractiva } from "./CargaHojaInteractiva";
-import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface PedidoEnCola {
@@ -65,8 +64,7 @@ export const RutaCargaInlineView = ({ ruta, onClose, onCargaCompletada }: RutaCa
             sucursalNombre: suc?.nombre || null,
             direccion: suc?.direccion || cli?.direccion || null,
             latitud: suc?.latitud || null,
-            longitud: suc?.longitud || null,
-          });
+            longitud: suc?.longitud || null});
         }
       }
 
@@ -117,8 +115,7 @@ export const RutaCargaInlineView = ({ ruta, onClose, onCargaCompletada }: RutaCa
         carga_completada: true,
         carga_completada_por: user?.id,
         carga_completada_en: new Date().toISOString(),
-        status: "cargada",
-      }).eq("id", ruta.id);
+        status: "cargada"}).eq("id", ruta.id);
 
       toast.success("¡Carga completada! Puedes enviar la ruta cuando esté lista.");
       onCargaCompletada();
@@ -163,9 +160,7 @@ export const RutaCargaInlineView = ({ ruta, onClose, onCargaCompletada }: RutaCa
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <AlmasaLoading size={48} />
     );
   }
 
@@ -184,8 +179,7 @@ export const RutaCargaInlineView = ({ ruta, onClose, onCargaCompletada }: RutaCa
         choferNombre: ruta.chofer?.nombre_completo || "",
         ayudantesNombres,
         vehiculoNombre: ruta.vehiculo?.nombre || "",
-        vehiculoPlaca: ruta.vehiculo?.placas || "",
-      }}
+        vehiculoPlaca: ruta.vehiculo?.placas || ""}}
     />
   );
 };

@@ -34,6 +34,7 @@ import BandejaEntrada from "@/components/correos/BandejaEntrada";
 import GmailPermisosManager from "@/components/correos/GmailPermisosManager";
 import GmailFirmasManager from "@/components/correos/GmailFirmasManager";
 import { PedidosAcumulativosTab } from "@/components/correos/PedidosAcumulativosTab";
+import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 
 interface GmailCuenta {
   id: string;
@@ -289,8 +290,7 @@ const CorreosCorporativos = () => {
             {isLoadingPermisos || isLoadingCuentas ? (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
-                  <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">Cargando cuentas de correo...</p>
+                  <AlmasaLoading size={48} text="Cargando cuentas de correo..." />
                 </CardContent>
               </Card>
             ) : connectedCuentas.length > 0 ? (
@@ -335,7 +335,7 @@ const CorreosCorporativos = () => {
 
             {isLoadingCuentas ? (
               <div className="flex items-center justify-center py-12">
-                <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+                <AlmasaLoading size={48} />
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2">

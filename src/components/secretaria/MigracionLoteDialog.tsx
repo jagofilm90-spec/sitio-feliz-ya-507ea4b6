@@ -36,6 +36,7 @@ import {
   Edit2,
 } from "lucide-react";
 import { getDisplayName, UNIDADES_SAT, getUnidadSATDescripcion } from "@/lib/productUtils";
+import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 
 interface Producto {
   id: string;
@@ -529,7 +530,7 @@ export const MigracionLoteDialog = ({
         {fase === 'aplicando' && (
           <div className="space-y-4 py-8">
             <div className="text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-pink-600 mx-auto mb-4" />
+              <AlmasaLoading size={48} />
               <p>Aplicando cambios...</p>
             </div>
             <Progress value={progreso} className="h-2" />

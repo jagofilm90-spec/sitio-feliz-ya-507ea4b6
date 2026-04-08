@@ -6,8 +6,7 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  DialogTitle} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -25,11 +24,9 @@ import {
   TrendingDown,
   Sparkles,
   ArrowRight,
-  Loader2,
   Sun,
   Moon,
-  Sunset,
-} from "lucide-react";
+  Sunset} from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -78,8 +75,7 @@ export const SecretariaBienvenidaDialog = ({
   open,
   onOpenChange,
   secretariaNombre,
-  onNavigate,
-}: Props) => {
+  onNavigate}: Props) => {
   const [loading, setLoading] = useState(true);
   const [esCumpleanos, setEsCumpleanos] = useState(false);
   const [alertas, setAlertas] = useState<Alertas>({
@@ -88,8 +84,7 @@ export const SecretariaBienvenidaDialog = ({
     ocPorEnviar: 0,
     correosNoLeidos: 0,
     solicitudesMostrador: 0,
-    mensajesChat: 0,
-  });
+    mensajesChat: 0});
   const [entregasHoy, setEntregasHoy] = useState<EntregaHoy[]>([]);
   const [productosNuevos, setProductosNuevos] = useState<ProductoNuevo[]>([]);
   const [cambiosPrecios, setCambiosPrecios] = useState<CambioPrecio[]>([]);
@@ -190,8 +185,7 @@ export const SecretariaBienvenidaDialog = ({
           id: e.id,
           proveedorNombre: "Proveedor",
           productoNombre: "Productos varios",
-          cantidad: e.cantidad_bultos || 0,
-        }));
+          cantidad: e.cantidad_bultos || 0}));
         setEntregasHoy(entregas.slice(0, 3));
       }
 
@@ -207,8 +201,7 @@ export const SecretariaBienvenidaDialog = ({
           codigo: "",
           nombre: "",
           precio_anterior: p.precio_anterior,
-          precio_nuevo: p.precio_nuevo,
-        }));
+          precio_nuevo: p.precio_nuevo}));
         setCambiosPrecios(cambios);
       }
 
@@ -217,8 +210,7 @@ export const SecretariaBienvenidaDialog = ({
         const inhabilitados: ProductoInhabilitado[] = estadoResult.data.map((p) => ({
           producto_id: p.producto_id,
           codigo: "",
-          nombre: "",
-        }));
+          nombre: ""}));
         setProductosInhabilitados(inhabilitados);
       }
     } catch (error) {
@@ -238,8 +230,7 @@ export const SecretariaBienvenidaDialog = ({
     label,
     count,
     tab,
-    color,
-  }: {
+    color}: {
     icon: any;
     label: string;
     count: number;
@@ -289,9 +280,7 @@ export const SecretariaBienvenidaDialog = ({
         </DialogHeader>
 
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-pink-600" />
-          </div>
+          <AlmasaLoading size={48} />
         ) : (
           <ScrollArea className="max-h-[calc(90vh-120px)] pr-4">
             <div className="space-y-4">

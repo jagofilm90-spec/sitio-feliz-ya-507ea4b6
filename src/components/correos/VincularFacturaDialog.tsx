@@ -510,10 +510,7 @@ export default function VincularFacturaDialog({
 
         {/* Loading state */}
         {step === "loading" && (
-          <div className="flex flex-col items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">Procesando archivo XML CFDI...</p>
-          </div>
+          <AlmasaLoading size={48} text="Procesando archivo XML CFDI..." />
         )}
 
         {/* Main content */}

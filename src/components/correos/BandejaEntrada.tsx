@@ -25,6 +25,7 @@ import GmailSearchBar from "./GmailSearchBar";
 import { playNotificationSound } from "@/utils/notificationSound";
 import { showGlobalRetrying, showGlobalSuccess, hideGlobalRetrying } from "@/hooks/useNetworkRetry";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 
 interface Email {
   id: string;
@@ -975,7 +976,7 @@ const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
           {/* Loading overlay for email detail */}
           {isLoadingDetail && (
             <div className="fixed inset-0 bg-background/80 flex items-center justify-center z-50">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <AlmasaLoading size={48} />
             </div>
           )}
         </div>
@@ -1365,7 +1366,7 @@ const BandejaEntrada = ({ cuentas }: BandejaEntradaProps) => {
         {/* Loading overlay for email detail */}
         {isLoadingDetail && (
           <div className="fixed inset-0 bg-background/80 flex items-center justify-center z-50">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <AlmasaLoading size={48} />
           </div>
         )}
       </div>

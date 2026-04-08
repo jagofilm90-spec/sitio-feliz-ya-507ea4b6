@@ -263,9 +263,7 @@ const ImprimirCotizacionDialog = ({
 
         <div className="flex-1 overflow-auto bg-gray-100 p-4">
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
+            <AlmasaLoading size={48} />
           ) : datosCotizacion ? (
             <div ref={printRef} className="shadow-lg">
               <CotizacionPrintTemplate datos={datosCotizacion} />

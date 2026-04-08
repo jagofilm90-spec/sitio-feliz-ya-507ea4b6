@@ -341,9 +341,7 @@ const CotizacionesTab = () => {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
+              <AlmasaLoading size={48} />
             ) : isMobile ? (
               // Vista móvil con cards
               <div className="space-y-3">
