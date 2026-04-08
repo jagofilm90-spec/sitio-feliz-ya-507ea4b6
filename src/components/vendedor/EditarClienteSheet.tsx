@@ -22,6 +22,7 @@ import {
 import { VendedorCorreosCliente, CorreoCliente } from "./VendedorCorreosCliente";
 import { VendedorTelefonosCliente, TelefonoCliente } from "./VendedorTelefonosCliente";
 import { VendedorContactosCliente, ContactoCliente } from "./VendedorContactosCliente";
+import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 
 interface Props {
   open: boolean;
@@ -610,7 +611,7 @@ export function EditarClienteSheet({ open, onOpenChange, clienteId, onClienteAct
 
         {loading ? (
           <div className="flex-1 flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <AlmasaLoading size={48} />
           </div>
         ) : (
           <>

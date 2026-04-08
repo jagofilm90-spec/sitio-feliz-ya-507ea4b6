@@ -22,6 +22,7 @@ import { es } from "date-fns/locale";
 import { CargaEvidenciasSection } from "./CargaEvidenciasSection";
 import { SellosSection } from "./SellosSection";
 import { FirmaChoferDialog } from "./FirmaChoferDialog";
+import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 
 interface PedidoEnCola {
   pedidoId: string;
@@ -811,7 +812,7 @@ export const CargaHojaInteractiva = ({
   if (loading) {
     return (
       <div className="fixed inset-0 z-50 bg-background flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <AlmasaLoading size={48} />
       </div>
     );
   }
