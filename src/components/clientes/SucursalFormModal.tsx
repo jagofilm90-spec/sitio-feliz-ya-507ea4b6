@@ -192,6 +192,8 @@ const VEHICULOS = [
   { label: "Tráiler", value: "trailer" },
 ];
 
+const GRUPO_LECAROZ_ID = "aaaaaaaa-1eca-4047-aaaa-aaaaaaaaaaaa";
+
 // ====== MAIN COMPONENT ======
 export const SucursalFormModal = ({
   open,
