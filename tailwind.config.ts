@@ -14,7 +14,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        serif: ['Cormorant Garamond', 'Georgia', 'serif'],
+        sans: ['Inter Tight', '-apple-system', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
       },
       colors: {
           border: "hsl(var(--border))",
@@ -67,7 +69,36 @@ export default {
             "4": "hsl(var(--chart-4))",
             "5": "hsl(var(--chart-5))",
           },
+          crimson: {
+            50:  '#fdf2f4',
+            100: '#f9eef0',
+            200: '#f3d8de',
+            500: '#c41e3a',
+            600: '#a8172f',
+            700: '#871224',
+            900: '#4a0612',
+          },
+          ink: {
+            50:  '#f0eee8',
+            100: '#e8e8e6',
+            200: '#d4d4d0',
+            300: '#b8b8b5',
+            400: '#8a8a87',
+            500: '#6a6a6a',
+            700: '#2a2a2a',
+            800: '#1f1f1f',
+            900: '#0a0a0a',
+          },
+          'bg-soft': '#faf9f6',
+          'bg-soft-2': '#f5f3ee',
+          'bg-warm': '#f7f5ef',
         },
+      boxShadow: {
+        'xs-soft': '0 1px 2px rgba(10,10,10,0.04)',
+        'sm-soft': '0 2px 8px rgba(10,10,10,0.05), 0 1px 2px rgba(10,10,10,0.03)',
+        'md-soft': '0 8px 24px rgba(10,10,10,0.07), 0 2px 4px rgba(10,10,10,0.04)',
+        'lg-soft': '0 24px 48px rgba(10,10,10,0.10), 0 4px 8px rgba(10,10,10,0.04)',
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
