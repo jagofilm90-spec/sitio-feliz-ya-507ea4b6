@@ -56,6 +56,7 @@ export default function NuevoCliente() {
   const { toast } = useToast();
   const { isAdmin } = useUserRoles();
   const [saving, setSaving] = useState(false);
+  const [nuevoCodigo, setNuevoCodigo] = useState<string | null>(null);
 
   // Section 1
   const [razonSocial, setRazonSocial] = useState("");
@@ -78,6 +79,15 @@ export default function NuevoCliente() {
   const [perteneceGrupo, setPerteneceGrupo] = useState(false);
   const [grupoId, setGrupoId] = useState("");
   const [grupos, setGrupos] = useState<{ id: string; nombre: string }[]>([]);
+
+  // Pre-generate código
+  useEffect(() => {
+    const genCodigo = async () => {
+      const { data } = await supabase.rpc("generar_codigo_cliente");
+      if (data) setNuevoCodigo(data as string);
+    };
+    genCodigo();
+  }, []);
 
   // Load vendedores
   useEffect(() => {
