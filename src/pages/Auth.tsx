@@ -135,9 +135,9 @@ const Auth = () => {
       <div className="w-full max-w-sm space-y-6">
         {/* Branding */}
         <div className="text-center">
-          <p className="text-xs text-muted-foreground tracking-widest uppercase">Desde 1904</p>
-          <img src={logoAlmasa} alt="ALMASA" className="h-20 mx-auto my-2" />
-          <p className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">Trabajando por un México mejor</p>
+          <AlmasaLogo size={64} className="mx-auto mb-2" />
+          <h1 className="font-serif text-2xl font-bold tracking-wide">ALMASA·OS</h1>
+          <p className="text-xs text-muted-foreground tracking-widest uppercase mt-1">Sistema operativo · Casa fundada en 1904</p>
         </div>
 
         <Card className="shadow-lg border-0">

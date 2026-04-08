@@ -12,6 +12,7 @@ import { CentroNotificaciones } from "@/components/CentroNotificaciones";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UserPreferencesPopover } from "@/components/UserPreferencesPopover";
 import logoAlmasa from "@/assets/logo-almasa.png";
+import { AlmasaLogo } from "@/components/brand/AlmasaLogo";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { QuickActions } from "@/components/QuickActions";
 import {
@@ -479,10 +480,11 @@ const Layout = ({ children }: LayoutProps) => {
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
             <Link to="/dashboard" className="flex items-center gap-3">
-              <img src={logoAlmasa} alt="ALMASA" className="h-10" />
-              <span className="text-sm text-muted-foreground hidden lg:inline">
-                Abarrotes la Manita SA de CV
-              </span>
+              <AlmasaLogo size={36} />
+              <div className="hidden lg:flex flex-col">
+                <span className="font-serif font-bold text-base tracking-wide text-foreground">ALMASA</span>
+                <span className="text-[10px] text-muted-foreground tracking-widest uppercase">Sistema · 1904</span>
+              </div>
             </Link>
             <QuickActions />
           </div>
