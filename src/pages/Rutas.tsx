@@ -14,6 +14,7 @@
 
 import { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorBoundaryModule } from "@/components/ErrorBoundaryModule";
@@ -53,6 +54,7 @@ import AyudantesExternosTab from "@/components/rutas/AyudantesExternosTab";
 import DisponibilidadPersonalTab from "@/components/rutas/DisponibilidadPersonalTab";
 import { MonitoreoRutasTab } from "@/components/rutas/MonitoreoRutasTab";
 import { useMonitoreoRutas } from "@/hooks/useMonitoreoRutas";
+import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Users, CalendarCheck, UserPlus, ClipboardList } from "lucide-react";
@@ -318,58 +320,40 @@ const RutasContent = () => {
 
   return (
     <Layout>
-      <div className="space-y-4 sm:space-y-6">
-        <div>
-          <h1 className="text-xl sm:text-3xl font-bold">Rutas y Entregas</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground">Control de rutas de entrega, vehículos y zonas</p>
-        </div>
+      <div className="space-y-8">
+        <PageHeader
+          eyebrow="Operaciones"
+          title="Tus"
+          titleAccent="rutas."
+          lead="Planificación y seguimiento de entregas."
+        />
 
-        <Tabs defaultValue="planificar" className="space-y-4">
+        <Tabs defaultValue="planificar" className="space-y-6">
           <div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
-            <TabsList className="inline-flex w-max gap-1">
-              <TabsTrigger value="planificar" className="flex items-center gap-1.5 px-2 sm:px-3">
-                <Route className="h-4 w-4" />
-                <span className="hidden sm:inline">Planificar</span>
-                <span className="sm:hidden">Plan</span>
-              </TabsTrigger>
-              <TabsTrigger value="asignaciones" className="flex items-center gap-1.5 px-2 sm:px-3">
-                <CalendarCheck className="h-4 w-4" />
-                <span className="hidden sm:inline">Asignaciones</span>
-                <span className="sm:hidden">Asign</span>
-              </TabsTrigger>
-              <TabsTrigger value="monitoreo" className="flex items-center gap-1.5 px-2 sm:px-3">
-                <Activity className="h-4 w-4" />
-                <span className="hidden sm:inline">Monitoreo</span>
-                <span className="sm:hidden">Mon</span>
-                {alertas.length > 0 && (
-                  <Badge variant="destructive" className="ml-1 h-5 min-w-5 px-1">
-                    {alertas.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="mapa" className="flex items-center gap-1.5 px-2 sm:px-3">
-                <Globe className="h-4 w-4" />
-                <span className="hidden sm:inline">Mapa Global</span>
-                <span className="sm:hidden">Mapa</span>
-              </TabsTrigger>
-              <TabsTrigger value="rutas" className="flex items-center gap-1.5 px-2 sm:px-3">
-                <Truck className="h-4 w-4" />
-                Rutas
-              </TabsTrigger>
-              <TabsTrigger value="zonas" className="flex items-center gap-1.5 px-2 sm:px-3">
-                <MapPin className="h-4 w-4" />
-                Zonas
-              </TabsTrigger>
-              <TabsTrigger value="disponibilidad" className="flex items-center gap-1.5 px-2 sm:px-3">
-                <ClipboardList className="h-4 w-4" />
-                <span className="hidden sm:inline">Disponibilidad</span>
-                <span className="sm:hidden">Disp</span>
-              </TabsTrigger>
-              <TabsTrigger value="externos" className="flex items-center gap-1.5 px-2 sm:px-3">
-                <UserPlus className="h-4 w-4" />
-                <span className="hidden sm:inline">Externos</span>
-                <span className="sm:hidden">Ext</span>
-              </TabsTrigger>
+            <TabsList className="bg-transparent border-b border-ink-100 rounded-none p-0 h-auto gap-4 sm:gap-6 inline-flex w-max">
+              {[
+                { value: "planificar", label: "Planificar" },
+                { value: "asignaciones", label: "Asignaciones" },
+                { value: "monitoreo", label: "Monitoreo", badge: alertas.length },
+                { value: "mapa", label: "Mapa Global" },
+                { value: "rutas", label: "Rutas" },
+                { value: "zonas", label: "Zonas" },
+                { value: "disponibilidad", label: "Disponibilidad" },
+                { value: "externos", label: "Externos" },
+              ].map((tab) => (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm whitespace-nowrap"
+                >
+                  {tab.label}
+                  {tab.badge && tab.badge > 0 && (
+                    <Badge className="ml-1.5 h-5 min-w-5 px-1.5 text-[10px] font-bold bg-crimson-500 text-white">
+                      {tab.badge}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              ))}
             </TabsList>
           </div>
 
@@ -412,38 +396,38 @@ const RutasContent = () => {
               )}
             </div>
 
-            <div className="border rounded-lg">
+            <div className="rounded-xl border border-ink-100 overflow-hidden">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="w-12 text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">
                       <Checkbox
                         checked={deletableRutas.length > 0 && selectedRutas.length === deletableRutas.length}
                         onCheckedChange={handleSelectAll}
                         disabled={deletableRutas.length === 0}
                       />
                     </TableHead>
-                    <TableHead>Folio</TableHead>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Vehículo</TableHead>
-                    <TableHead>Chofer</TableHead>
-                    <TableHead>Peso</TableHead>
-                    <TableHead>Kilometraje</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Acciones</TableHead>
+                    <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">Folio</TableHead>
+                    <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">Fecha</TableHead>
+                    <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">Tipo</TableHead>
+                    <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">Vehículo</TableHead>
+                    <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">Chofer</TableHead>
+                    <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">Peso</TableHead>
+                    <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">Kilometraje</TableHead>
+                    <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">Estado</TableHead>
+                    <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center">
-                        Cargando...
+                      <TableCell colSpan={10} className="text-center py-12">
+                        <AlmasaLoading size={48} text="Cargando rutas..." />
                       </TableCell>
                     </TableRow>
                   ) : filteredRutas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center">
+                      <TableCell colSpan={10} className="text-center py-8 text-ink-500">
                         No hay rutas registradas
                       </TableCell>
                     </TableRow>
