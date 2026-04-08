@@ -2,18 +2,61 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ALMASA Design System - Minimalist Theme
-   Primary Brand Color: ALMASA Red (#B22234) = HSL 352 69% 42%
-   All colors MUST be HSL.
+/* ALMASA·OS Design System v1.1
+   Primary Brand Color: Crimson (#C41E3A) = HSL 350 74% 44%
+   All shadcn colors MUST be HSL.
 */
 
 @layer base {
   :root {
-    /* Backgrounds - Clean white/light grays */
+    /* ── ALMASA·OS Custom Tokens ── */
+    --crimson-50:  #fdf2f4;
+    --crimson-100: #f9eef0;
+    --crimson-200: #f3d8de;
+    --crimson-500: #c41e3a;
+    --crimson-600: #a8172f;
+    --crimson-700: #871224;
+    --crimson-900: #4a0612;
+
+    --ink-900: #0a0a0a;
+    --ink-800: #1f1f1f;
+    --ink-700: #2a2a2a;
+    --ink-500: #6a6a6a;
+    --ink-400: #8a8a87;
+    --ink-300: #b8b8b5;
+    --ink-200: #d4d4d0;
+    --ink-100: #e8e8e6;
+    --ink-50:  #f0eee8;
+
+    --bg:        #ffffff;
+    --bg-soft:   #faf9f6;
+    --bg-soft-2: #f5f3ee;
+    --bg-warm:   #f7f5ef;
+
+    --success:    #2d7a4f;
+    --success-bg: #e8f3ec;
+    --warning:    #b87333;
+    --warning-bg: #fbf0e3;
+    --danger:     #c41e3a;
+    --danger-bg:  #fce8eb;
+    --info:       #4a6fa5;
+    --info-bg:    #ebf0f8;
+
+    --serif: 'Cormorant Garamond', Georgia, serif;
+    --sans: 'Inter Tight', -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+
+    --shadow-xs: 0 1px 2px rgba(10,10,10,0.04);
+    --shadow-sm: 0 2px 8px rgba(10,10,10,0.05), 0 1px 2px rgba(10,10,10,0.03);
+    --shadow-md: 0 8px 24px rgba(10,10,10,0.07), 0 2px 4px rgba(10,10,10,0.04);
+    --shadow-lg: 0 24px 48px rgba(10,10,10,0.10), 0 4px 8px rgba(10,10,10,0.04);
+
+    /* ── Shadcn Semantic Tokens ── */
+    /* Backgrounds */
     --background: 0 0% 100%;
     --foreground: 220 15% 15%;
 
-    /* Cards - Subtle elevation */
+    /* Cards */
     --card: 0 0% 100%;
     --card-foreground: 220 15% 15%;
 
@@ -21,57 +64,57 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 15% 15%;
 
-    /* Primary - ALMASA Red */
-    --primary: 352 69% 42%;
+    /* Primary - Crimson ALMASA */
+    --primary: 350 74% 44%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary - Neutral gray */
+    /* Secondary */
     --secondary: 220 14% 96%;
     --secondary-foreground: 220 15% 25%;
 
-    /* Muted - Soft backgrounds */
+    /* Muted */
     --muted: 220 14% 96%;
     --muted-foreground: 220 10% 46%;
 
-    /* Accent - Light red tint */
-    --accent: 352 69% 97%;
-    --accent-foreground: 352 69% 35%;
+    /* Accent */
+    --accent: 350 74% 97%;
+    --accent-foreground: 350 74% 35%;
 
     /* Destructive */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Borders - Subtle */
+    /* Borders */
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 352 69% 42%;
+    --ring: 350 74% 44%;
 
     --radius: 0.5rem;
 
-    /* Sidebar - Clean */
+    /* Sidebar */
     --sidebar-background: 220 14% 98%;
     --sidebar-foreground: 220 15% 25%;
-    --sidebar-primary: 352 69% 42%;
+    --sidebar-primary: 350 74% 44%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 352 69% 97%;
-    --sidebar-accent-foreground: 352 69% 35%;
+    --sidebar-accent: 350 74% 97%;
+    --sidebar-accent-foreground: 350 74% 35%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 352 69% 42%;
+    --sidebar-ring: 350 74% 44%;
 
     /* Chart colors */
-    --chart-1: 352 69% 42%;
-    --chart-2: 352 50% 55%;
+    --chart-1: 350 74% 44%;
+    --chart-2: 350 50% 55%;
     --chart-3: 220 15% 50%;
     --chart-4: 220 10% 65%;
     --chart-5: 220 8% 80%;
   }
 
   .dark {
-    /* Backgrounds - Deeper dark for less eye strain */
+    /* Backgrounds */
     --background: 220 20% 6%;
     --foreground: 220 10% 93%;
 
-    /* Cards - Clearly separated from background */
+    /* Cards */
     --card: 220 18% 11%;
     --card-foreground: 220 10% 93%;
 
@@ -79,44 +122,44 @@
     --popover: 220 18% 11%;
     --popover-foreground: 220 10% 93%;
 
-    /* Primary - ALMASA Red (brighter for dark mode visibility) */
-    --primary: 352 69% 52%;
+    /* Primary - Crimson (brighter for dark mode) */
+    --primary: 350 74% 52%;
     --primary-foreground: 0 0% 100%;
 
     /* Secondary */
     --secondary: 220 15% 16%;
     --secondary-foreground: 220 10% 88%;
 
-    /* Muted - Better contrast for alternating rows */
+    /* Muted */
     --muted: 220 15% 14%;
     --muted-foreground: 220 10% 58%;
 
-    /* Accent - Dark red tint */
-    --accent: 352 40% 14%;
-    --accent-foreground: 352 69% 72%;
+    /* Accent */
+    --accent: 350 40% 14%;
+    --accent-foreground: 350 74% 72%;
 
     /* Destructive */
     --destructive: 0 62% 52%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Borders - More visible for structure */
+    /* Borders */
     --border: 220 15% 20%;
     --input: 220 15% 20%;
-    --ring: 352 69% 52%;
+    --ring: 350 74% 52%;
 
-    /* Sidebar - Deepest layer for visual hierarchy */
+    /* Sidebar */
     --sidebar-background: 220 20% 4%;
     --sidebar-foreground: 220 10% 88%;
-    --sidebar-primary: 352 69% 52%;
+    --sidebar-primary: 350 74% 52%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 352 40% 13%;
-    --sidebar-accent-foreground: 352 69% 72%;
+    --sidebar-accent: 350 40% 13%;
+    --sidebar-accent-foreground: 350 74% 72%;
     --sidebar-border: 220 15% 14%;
-    --sidebar-ring: 352 69% 52%;
+    --sidebar-ring: 350 74% 52%;
 
-    /* Chart colors - dark mode (more saturated) */
-    --chart-1: 352 72% 58%;
-    --chart-2: 352 55% 68%;
+    /* Chart colors - dark mode */
+    --chart-1: 350 72% 58%;
+    --chart-2: 350 55% 68%;
     --chart-3: 220 20% 62%;
     --chart-4: 220 12% 52%;
     --chart-5: 220 10% 42%;
