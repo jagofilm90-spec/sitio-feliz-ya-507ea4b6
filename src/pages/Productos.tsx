@@ -556,10 +556,12 @@ const Productos = () => {
             titleAccent="productos."
             lead={`${productosActivos} productos en catálogo.`}
             actions={
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={resetForm}><Plus className="h-4 w-4 mr-2" />Nuevo Producto</Button>
-              </DialogTrigger>
+              <Button onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="h-4 w-4 mr-2" />Nuevo Producto</Button>
+            }
+          />
+          </div>
+
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
 
               {/* ═══════════════════════════════════════════════════
                   FORMULARIO COMPLETO
