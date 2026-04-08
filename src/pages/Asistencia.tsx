@@ -7,10 +7,13 @@ import { ReporteSemanal } from "@/components/asistencia/ReporteSemanal";
 import { ReporteQuincenal } from "@/components/asistencia/ReporteQuincenal";
 import { ReporteAsistenciaMensual } from "@/components/asistencia/ReporteAsistenciaMensual";
 import { useUserRoles } from "@/hooks/useUserRoles";
-import { Clock, Link2, BarChart3, Calendar, CalendarDays, Palmtree } from "lucide-react";
+import { Palmtree } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { VacacionesMasivasDialog } from "@/components/asistencia/VacacionesMasivasDialog";
+import { PageHeader } from "@/components/layout/PageHeader";
+
+const tabTriggerClass = "px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm";
 
 export default function Asistencia() {
   const { isAdmin } = useUserRoles();
@@ -18,44 +21,42 @@ export default function Asistencia() {
 
   return (
     <Layout>
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Asistencia</h1>
-            <p className="text-muted-foreground text-sm">Control de entradas y salidas</p>
-          </div>
-          {isAdmin && (
-            <Button variant="outline" size="sm" onClick={() => setShowVacMasivas(true)}>
-              <Palmtree className="h-4 w-4 mr-1" />Vacaciones masivas
-            </Button>
-          )}
-        </div>
+      <div className="space-y-6">
+        <PageHeader
+          eyebrow="Recursos Humanos"
+          title="Control de"
+          titleAccent="asistencia."
+          lead="Entradas y salidas registradas en tiempo real."
+          actions={
+            isAdmin ? (
+              <Button variant="outline" size="sm" onClick={() => setShowVacMasivas(true)}>
+                <Palmtree className="h-4 w-4 mr-2" />
+                Vacaciones masivas
+              </Button>
+            ) : undefined
+          }
+        />
 
         <Tabs defaultValue="registros">
-          <ResponsiveTabsList>
-            <TabsTrigger value="registros" className="gap-1.5">
-              <Clock className="h-4 w-4" />
+          <TabsList className="bg-transparent border-b border-ink-100 rounded-none p-0 h-auto gap-8 mb-6">
+            <TabsTrigger value="registros" className={tabTriggerClass}>
               Hoy
             </TabsTrigger>
-            <TabsTrigger value="semanal" className="gap-1.5">
-              <Calendar className="h-4 w-4" />
+            <TabsTrigger value="semanal" className={tabTriggerClass}>
               Semanal
             </TabsTrigger>
-            <TabsTrigger value="quincenal" className="gap-1.5">
-              <CalendarDays className="h-4 w-4" />
+            <TabsTrigger value="quincenal" className={tabTriggerClass}>
               Quincenal
             </TabsTrigger>
-            <TabsTrigger value="mensual" className="gap-1.5">
-              <BarChart3 className="h-4 w-4" />
+            <TabsTrigger value="mensual" className={tabTriggerClass}>
               Mensual
             </TabsTrigger>
             {isAdmin && (
-              <TabsTrigger value="mapeo" className="gap-1.5">
-                <Link2 className="h-4 w-4" />
+              <TabsTrigger value="mapeo" className={tabTriggerClass}>
                 Mapeo ZKTeco
               </TabsTrigger>
             )}
-          </ResponsiveTabsList>
+          </TabsList>
           <TabsContent value="registros">
             <AsistenciaView />
           </TabsContent>

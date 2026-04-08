@@ -1397,22 +1397,19 @@ const Empleados = () => {
   return (
     <Layout>
       <div className="space-y-6">
-        {/* Notificaciones se muestran solo en la campana del header */}
-
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Empleados</h1>
-            <p className="text-muted-foreground">
-              Gestión completa de empleados con documentos
-            </p>
-          </div>
-          <Dialog open={isDialogOpen} onOpenChange={(o) => { setIsDialogOpen(o); if (!o && volverATarjeta) { setCardEmpleado(volverATarjeta); setVolverATarjeta(null); } }}>
-            <DialogTrigger asChild>
-              <Button onClick={() => resetForm()}>
-                <UserPlus className="h-4 w-4 mr-2" />
-                Nuevo Empleado
-              </Button>
-            </DialogTrigger>
+        <PageHeader
+          eyebrow="Recursos Humanos"
+          title="Tus"
+          titleAccent="empleados."
+          lead={`${empleados.filter(e => e.activo).length} empleados activos en ALMASA.`}
+          actions={
+            <Dialog open={isDialogOpen} onOpenChange={(o) => { setIsDialogOpen(o); if (!o && volverATarjeta) { setCardEmpleado(volverATarjeta); setVolverATarjeta(null); } }}>
+              <DialogTrigger asChild>
+                <Button onClick={() => resetForm()}>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Nuevo empleado
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
@@ -2086,27 +2083,27 @@ const Empleados = () => {
             setActiveTab(v);
             setFiltroPuesto(v as any);
           }}>
-            <TabsList className="flex-wrap h-auto">
-              <TabsTrigger value="todos">
-                Todos ({empleados.length})
+            <TabsList className="bg-transparent border-b border-ink-100 rounded-none p-0 h-auto gap-6 flex-wrap mb-4">
+              <TabsTrigger value="todos" className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm">
+                Todos · {empleados.length}
               </TabsTrigger>
-              <TabsTrigger value="secretaria">
-                Secretaria ({getEmpleadosPorPuesto('Secretaria').length})
+              <TabsTrigger value="secretaria" className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm">
+                Secretaría · {getEmpleadosPorPuesto('Secretaria').length}
               </TabsTrigger>
-              <TabsTrigger value="vendedor">
-                Vendedor ({getEmpleadosPorPuesto('Vendedor').length})
+              <TabsTrigger value="vendedor" className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm">
+                Vendedor · {getEmpleadosPorPuesto('Vendedor').length}
               </TabsTrigger>
-              <TabsTrigger value="chofer">
-                Chofer ({getEmpleadosPorPuesto('Chofer').length})
+              <TabsTrigger value="chofer" className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm">
+                Chofer · {getEmpleadosPorPuesto('Chofer').length}
               </TabsTrigger>
-              <TabsTrigger value="almacenista">
-                Almacenista ({getEmpleadosPorPuesto('Almacenista').length})
+              <TabsTrigger value="almacenista" className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm">
+                Almacenista · {getEmpleadosPorPuesto('Almacenista').length}
               </TabsTrigger>
-              <TabsTrigger value="gerente de almacén">
-                Gte. Almacén ({getEmpleadosPorPuesto('Gerente de Almacén').length})
+              <TabsTrigger value="gerente de almacén" className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm">
+                Gte. Almacén · {getEmpleadosPorPuesto('Gerente de Almacén').length}
               </TabsTrigger>
-              <TabsTrigger value="ayudante de chofer">
-                Ayudantes ({getEmpleadosPorPuesto('Ayudante de Chofer').length})
+              <TabsTrigger value="ayudante de chofer" className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm">
+                Ayudantes · {getEmpleadosPorPuesto('Ayudante de Chofer').length}
               </TabsTrigger>
             </TabsList>
 
