@@ -143,6 +143,7 @@ const Clientes = () => {
           *,
           zona:zona_id (id, nombre),
           cliente_sucursales (count),
+          sucursales_zona:cliente_sucursales (zona_id),
           cliente_productos_frecuentes (count),
           grupo_padre:grupo_cliente_id (id, nombre, codigo)
         `)
