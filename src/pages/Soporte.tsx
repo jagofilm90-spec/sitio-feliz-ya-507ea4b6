@@ -18,7 +18,7 @@ const Soporte = () => {
   
   const faqs = [
     {
-      question: "¿Cómo accedo al sistema ALMASA ERP?",
+      question: "¿Cómo accedo al sistema ALMASA-OS?",
       answer: "Ingresa a erp.almasa.com.mx desde tu navegador o abre la app móvil. Utiliza las credenciales (correo y contraseña) proporcionadas por tu supervisor o el departamento de sistemas."
     },
     {
@@ -39,7 +39,7 @@ const Soporte = () => {
     },
     {
       question: "¿El sistema está disponible las 24 horas?",
-      answer: "Sí, ALMASA ERP está disponible 24/7. Sin embargo, el soporte técnico tiene horarios específicos. Para emergencias fuera de horario, envía un correo y se atenderá al inicio del siguiente día hábil."
+      answer: "Sí, ALMASA-OS está disponible 24/7. Sin embargo, el soporte técnico tiene horarios específicos. Para emergencias fuera de horario, envía un correo y se atenderá al inicio del siguiente día hábil."
     }
   ];
   
@@ -51,7 +51,7 @@ const Soporte = () => {
           <div className="flex items-center gap-3">
             <img src={logoAlmasa} alt="ALMASA" className="h-10 w-auto" />
             <div>
-              <h1 className="text-white font-bold text-lg">ALMASA ERP</h1>
+              <h1 className="text-white font-bold text-lg">ALMASA-OS</h1>
               <p className="text-white/70 text-xs">Sistema de Gestión Empresarial</p>
             </div>
           </div>

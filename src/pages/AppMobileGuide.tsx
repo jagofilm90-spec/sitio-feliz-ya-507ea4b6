@@ -318,7 +318,7 @@ const AppMobileGuide = () => {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                ERP completo con acceso a todos los módulos
+                ALMASA-OS completo con acceso a todos los módulos
               </p>
               <div className="mt-2 flex items-center gap-2">
                 <Badge>iOS / Xcode</Badge>
@@ -412,8 +412,8 @@ const AppMobileGuide = () => {
                   step={1}
                   title="Clonar/Actualizar proyecto"
                   description="Si es primera vez, clona el repositorio. Si ya lo tienes, actualiza con git pull."
-                  command="git clone https://github.com/tu-usuario/almasa-erp.git
-cd almasa-erp
+                  command="git clone https://github.com/tu-usuario/almasa-os.git
+cd almasa-os
 # O si ya existe:
 git pull origin main"
                 />
@@ -499,8 +499,8 @@ git pull origin main"
                   step={1}
                   title="Clonar/Actualizar proyecto"
                   description="Si es primera vez, clona el repositorio. Si ya lo tienes, actualiza con git pull."
-                  command="git clone https://github.com/tu-usuario/almasa-erp.git
-cd almasa-erp
+                  command="git clone https://github.com/tu-usuario/almasa-os.git
+cd almasa-os
 # O si ya existe:
 git pull origin main"
                 />

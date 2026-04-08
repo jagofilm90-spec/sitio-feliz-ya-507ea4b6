@@ -1472,7 +1472,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
           
           <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;" />
           <p style="color: #666666; font-size: 12px;">
-            Notificación automática del sistema ERP - Abarrotes La Manita
+            Notificación automática del sistema ALMASA-OS
           </p>
           </div>
         </div>
@@ -1577,7 +1577,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
           
           <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;" />
           <p style="color: #666; font-size: 12px;">
-            Notificación automática del sistema ERP - Abarrotes La Manita
+            Notificación automática del sistema ALMASA-OS
           </p>
         </div>
       `;

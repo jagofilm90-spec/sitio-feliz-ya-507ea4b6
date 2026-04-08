@@ -177,7 +177,7 @@ export const startBackgroundTracking = async (
   try {
     watcherId = await BackgroundGeolocation.addWatcher(
       {
-        backgroundMessage: 'ALMASA ERP está compartiendo tu ubicación para el monitoreo de la ruta',
+        backgroundMessage: 'ALMASA-OS está compartiendo tu ubicación para el monitoreo de la ruta',
         backgroundTitle: 'Tracking de ruta activo',
         requestPermissions: true,
         stale: false,

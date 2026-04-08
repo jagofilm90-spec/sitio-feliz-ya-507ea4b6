@@ -103,7 +103,7 @@ function buildRawEmail(to: string, from: string, subject: string, htmlContent: s
   const boundary = "boundary_" + Date.now();
   
   const emailLines = [
-    `From: Almasa ERP <${from}>`,
+    `From: ALMASA-OS <${from}>`,
     `To: ${to}`,
     `Subject: =?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`,
     'MIME-Version: 1.0',
@@ -210,7 +210,7 @@ function generateEmailContent(data: SecretaryNotificationRequest, appUrl: string
     </div>
     
     <p style="text-align: center; color: #666; font-size: 11px; margin-top: 20px;">
-      Este correo fue enviado automáticamente por el sistema Almasa ERP.<br>
+      Este correo fue enviado automáticamente por el sistema ALMASA-OS.<br>
       Por favor no responda a este correo.
     </p>
   </div>

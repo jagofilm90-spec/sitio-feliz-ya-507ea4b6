@@ -135,7 +135,7 @@ export function ConfigSistemaTab() {
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Versión</p>
               <p className="font-medium flex items-center gap-2">
-                ERP ALMASA v2.0
+                ALMASA-OS v2.0
                 <Badge variant="secondary">Producción</Badge>
               </p>
             </div>
