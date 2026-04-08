@@ -12,10 +12,8 @@ import { useUserRoles, useUserModulePermissions } from "@/hooks/useUserRoles";
 import { CentroNotificaciones } from "@/components/CentroNotificaciones";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UserPreferencesPopover } from "@/components/UserPreferencesPopover";
-import logoAlmasa from "@/assets/logo-almasa.png";
 import { AlmasaLogo } from "@/components/brand/AlmasaLogo";
 import { GlobalSearch } from "@/components/GlobalSearch";
-import { QuickActions } from "@/components/QuickActions";
 import {
   Collapsible,
   CollapsibleContent,
