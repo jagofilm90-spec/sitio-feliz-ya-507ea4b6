@@ -199,9 +199,7 @@ export default function EditarCliente() {
 
   const canSave =
     razonSocial.trim() &&
-    rfc.trim() &&
-    !rfcError &&
-    direccionFiscal.trim() &&
+    (!rfc.trim() || !rfcError) &&
     puntosValid &&
     puntosNeedAddress;
 
