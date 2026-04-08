@@ -172,16 +172,12 @@ export default function NuevoCliente() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Generate codigo
-      const { data: lastCliente } = await supabase
-        .from("clientes")
-        .select("codigo")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
+      // Generate codigo using SQL function (concurrency-safe)
+      const { data: codigoResult, error: codigoError } = await supabase
+        .rpc("generar_codigo_cliente");
       
-      const lastNum = lastCliente?.codigo ? parseInt(lastCliente.codigo.replace(/\D/g, "")) || 0 : 0;
-      const newCodigo = `C${String(lastNum + 1).padStart(4, "0")}`;
+      if (codigoError) throw codigoError;
+      const newCodigo = codigoResult as string;
 
       // Validate duplicate RFC
       if (rfc.trim()) {
