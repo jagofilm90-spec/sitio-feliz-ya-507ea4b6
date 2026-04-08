@@ -1,9 +1,10 @@
 import Layout from "@/components/Layout";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { AdminListaPreciosTab } from "@/components/admin/AdminListaPreciosTab";
 import { SecretariaListaPreciosTab } from "@/components/secretaria/SecretariaListaPreciosTab";
 import { VendedorListaPreciosTab } from "@/components/vendedor/VendedorListaPreciosTab";
-import { Skeleton } from "@/components/ui/skeleton";
+import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 
 const Precios = () => {
   const { isAdmin, isSecretaria, isLoading } = useUserRoles();
@@ -11,26 +12,31 @@ const Precios = () => {
   if (isLoading) {
     return (
       <Layout>
-        <div className="p-6">
-          <Skeleton className="h-96 w-full" />
+        <div className="py-12">
+          <AlmasaLoading size={48} text="Cargando lista de precios..." />
         </div>
       </Layout>
     );
   }
 
-  // Admin: Vista completa con análisis de márgenes
-  // Secretaria: Vista editable sin análisis profundo
-  // Vendedor: Vista solo lectura
   return (
     <Layout>
-      <div className="h-full">
-        {isAdmin ? (
-          <AdminListaPreciosTab />
-        ) : isSecretaria ? (
-          <SecretariaListaPreciosTab />
-        ) : (
-          <VendedorListaPreciosTab />
-        )}
+      <div className="space-y-8">
+        <PageHeader
+          eyebrow="Catálogo"
+          title="Lista de"
+          titleAccent="precios."
+          lead="Precios vigentes por producto y presentación."
+        />
+        <div className="h-full">
+          {isAdmin ? (
+            <AdminListaPreciosTab />
+          ) : isSecretaria ? (
+            <SecretariaListaPreciosTab />
+          ) : (
+            <VendedorListaPreciosTab />
+          )}
+        </div>
       </div>
     </Layout>
   );
