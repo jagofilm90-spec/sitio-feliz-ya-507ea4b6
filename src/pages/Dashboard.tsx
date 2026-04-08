@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
@@ -38,6 +38,8 @@ import { LicenciasVencimientoAlert } from "@/components/dashboard/LicenciasVenci
 import { VacacionesHoyWidget } from "@/components/dashboard/VacacionesHoyWidget";
 import { AsistenciaHoyWidget } from "@/components/dashboard/AsistenciaHoyWidget";
 import { VentasBajoCostoWidget } from "@/components/dashboard/VentasBajoCostoWidget";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { supabase } from "@/integrations/supabase/client";
 
 // Collapsible section helper
 function DashSection({ title, defaultOpen = true, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
