@@ -6,7 +6,6 @@ import { Mail } from "lucide-react";
 import BandejaEntrada from "@/components/correos/BandejaEntrada";
 import { useGmailPermisos } from "@/hooks/useGmailPermisos";
 import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
-import { useGmailPermisos } from "@/hooks/useGmailPermisos";
 
 interface GmailCuenta {
   id: string;
