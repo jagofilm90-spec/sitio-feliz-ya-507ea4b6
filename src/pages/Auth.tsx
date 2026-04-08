@@ -306,7 +306,7 @@ const Auth = () => {
                 <p className="text-xs text-muted-foreground">Enviaremos un enlace a <strong>{email}</strong></p>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" className="flex-1" onClick={() => setShowReset(false)}>Cancelar</Button>
-                  <button size="sm" className="flex-1 disabled:opacity-60" disabled={resetLoading}
+                  <button className="flex-1 disabled:opacity-60" disabled={resetLoading}
                     style={{
                       padding: '8px 16px',
                       background: '#c41e3a',
