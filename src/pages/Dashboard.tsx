@@ -7,7 +7,6 @@ import { NotificacionesSistema } from "@/components/NotificacionesSistema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 import { UsuariosConectadosPanel } from "@/components/admin/UsuariosConectadosPanel";
