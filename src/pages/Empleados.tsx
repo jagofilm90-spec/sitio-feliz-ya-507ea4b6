@@ -2054,7 +2054,6 @@ const Empleados = () => {
               </form>
             </DialogContent>
           </Dialog>
-        </div>
 
         <Card className="p-6">
           <div className="flex flex-wrap items-center gap-3 mb-4">
