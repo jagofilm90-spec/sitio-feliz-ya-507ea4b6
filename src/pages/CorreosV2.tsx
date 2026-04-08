@@ -156,7 +156,7 @@ const CorreosV2 = () => {
   // Desktop: 4-pane layout
   return (
     <Layout>
-      <div className="h-[calc(100vh-64px)] overflow-hidden grid" style={{
+      <div className="correos-grid-root h-[calc(100vh-64px)] overflow-hidden grid" style={{
         gridTemplateColumns: 'clamp(64px, 5vw, 76px) clamp(300px, 28vw, 400px) 1fr minmax(0, 360px)',
       }}>
         {/* Hide context panel on laptop-sized screens via CSS */}
