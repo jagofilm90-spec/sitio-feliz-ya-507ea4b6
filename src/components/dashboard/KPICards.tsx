@@ -162,32 +162,35 @@ export const KPICards = ({ data, loading }: Props) => {
   ];
 
   return (
-    <div className="space-y-6">
-      {sections.map((section) => (
-        <div key={section.label}>
-          <div className="text-[9px] uppercase tracking-[0.22em] text-ink-400 font-medium mb-3">
-            — {section.label}
+    <div className="space-y-10">
+      {sections.map((section) => {
+        const isDinero = section.label === "Dinero";
+        return (
+          <div key={section.label}>
+            <div className="text-[9px] uppercase tracking-[0.22em] text-ink-400 font-medium mb-4">
+              — {section.label}
+            </div>
+            <div className={`grid gap-4 grid-cols-2 ${isDinero ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}>
+              {section.cards.map((card) => (
+                <div
+                  key={card.label}
+                  className="cursor-pointer"
+                  onClick={() => navigate((card as any).route)}
+                >
+                  <StatCard
+                    label={card.label}
+                    value={card.value}
+                    meta={<span>{(card as any).meta}</span>}
+                    trend={(card as any).trend}
+                    trendValue={(card as any).trendValue}
+                    className={(card as any).alert ? "border-crimson-500/30" : undefined}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-            {section.cards.map((card) => (
-              <div
-                key={card.label}
-                className="cursor-pointer"
-                onClick={() => navigate((card as any).route)}
-              >
-                <StatCard
-                  label={card.label}
-                  value={card.value}
-                  meta={<span>{(card as any).meta}</span>}
-                  trend={(card as any).trend}
-                  trendValue={(card as any).trendValue}
-                  className={(card as any).alert ? "border-crimson-500/30" : undefined}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };

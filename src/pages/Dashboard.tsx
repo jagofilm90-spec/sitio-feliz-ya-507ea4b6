@@ -6,8 +6,6 @@ import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 import { NotificacionesSistema } from "@/components/NotificacionesSistema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
@@ -137,7 +135,7 @@ const Dashboard = () => {
 
   return (
     <Layout>
-      <div className={`space-y-4 ${isMobile ? 'space-y-3' : 'md:space-y-5'}`}>
+      <div className="space-y-6">
         {/* Header */}
         <PageHeader
           eyebrow="Hoy"
@@ -146,26 +144,31 @@ const Dashboard = () => {
           lead="Aquí está cómo va ALMASA hoy."
           actions={
             <div className="flex items-center gap-2">
-              <ToggleGroup type="single" value={periodo} onValueChange={(v) => v && setPeriodo(v as Periodo)} className="hidden sm:flex">
-                <ToggleGroupItem value="hoy" className="text-xs h-8 px-3">Hoy</ToggleGroupItem>
-                <ToggleGroupItem value="semana" className="text-xs h-8 px-3">Semana</ToggleGroupItem>
-                <ToggleGroupItem value="mes" className="text-xs h-8 px-3">Mes</ToggleGroupItem>
-                <ToggleGroupItem value="anio" className="text-xs h-8 px-3">Año</ToggleGroupItem>
-              </ToggleGroup>
-              <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => refresh()} title="Actualizar">
+              <div className="flex items-center gap-0.5 p-1 bg-bg-soft border border-ink-100 rounded-lg">
+                {(['hoy', 'semana', 'mes', 'anio'] as Periodo[]).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setPeriodo(p)}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                      periodo === p
+                        ? 'text-white bg-crimson-500 shadow-xs-soft'
+                        : 'text-ink-700 hover:bg-white hover:shadow-xs-soft'
+                    }`}
+                  >
+                    {p === 'hoy' ? 'Hoy' : p === 'semana' ? 'Semana' : p === 'mes' ? 'Mes' : 'Año'}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => refresh()}
+                title="Actualizar"
+                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-ink-200 bg-white text-ink-700 hover:bg-bg-soft transition-all"
+              >
                 <RefreshCw className={`h-4 w-4 ${dashLoading ? 'animate-spin' : ''}`} />
-              </Button>
+              </button>
             </div>
           }
         />
-
-        {/* Mobile period selector */}
-        <ToggleGroup type="single" value={periodo} onValueChange={(v) => v && setPeriodo(v as Periodo)} className="sm:hidden justify-start">
-          <ToggleGroupItem value="hoy" className="text-xs h-8 px-3">Hoy</ToggleGroupItem>
-          <ToggleGroupItem value="semana" className="text-xs h-8 px-3">Semana</ToggleGroupItem>
-          <ToggleGroupItem value="mes" className="text-xs h-8 px-3">Mes</ToggleGroupItem>
-          <ToggleGroupItem value="anio" className="text-xs h-8 px-3">Año</ToggleGroupItem>
-        </ToggleGroup>
 
         <NotificacionesSistema />
 
@@ -183,14 +186,14 @@ const Dashboard = () => {
         {/* Admin tabs: General | RRHH | Finanzas */}
         {isAdmin ? (
           <Tabs value={dashTab} onValueChange={setDashTab}>
-            <TabsList className="mb-4">
-              <TabsTrigger value="general" className="text-xs">General</TabsTrigger>
-              <TabsTrigger value="rrhh" className="text-xs">RRHH</TabsTrigger>
-              <TabsTrigger value="finanzas" className="text-xs">Finanzas</TabsTrigger>
+            <TabsList className="bg-transparent border-b border-ink-100 rounded-none p-0 h-auto gap-6 mb-8">
+              <TabsTrigger value="general" className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm">General</TabsTrigger>
+              <TabsTrigger value="rrhh" className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm">RRHH</TabsTrigger>
+              <TabsTrigger value="finanzas" className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm">Finanzas</TabsTrigger>
             </TabsList>
 
             {/* ==================== TAB: GENERAL ==================== */}
-            <TabsContent value="general" className="space-y-4 mt-0">
+            <TabsContent value="general" className="space-y-10 mt-0">
               {/* KPIs */}
               <KPICards data={dashData?.kpis ?? null} loading={dashLoading} />
 
