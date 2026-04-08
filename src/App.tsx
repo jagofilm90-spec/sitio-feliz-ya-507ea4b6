@@ -29,6 +29,7 @@ import Compras from "./pages/Compras";
 import Rentabilidad from "./pages/Rentabilidad";
 import Fumigaciones from "./pages/Fumigaciones";
 import CorreosCorporativos from "./pages/CorreosCorporativos";
+import CorreosV2 from "./pages/CorreosV2";
 import GenerateAssets from "./pages/GenerateAssets";
 import DisenosCamioneta from "./pages/DisenosCamioneta";
 import Permisos from "./pages/Permisos";
@@ -223,6 +224,11 @@ const App = () => (
                 </ProtectedRoute>
               } />
               <Route path="/correos" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria']} redirectTo="/auth">
+                  <CorreosV2 />
+                </ProtectedRoute>
+              } />
+              <Route path="/correos/config" element={
                 <ProtectedRoute allowedRoles={['admin', 'secretaria']} redirectTo="/auth">
                   <CorreosCorporativos />
                 </ProtectedRoute>
