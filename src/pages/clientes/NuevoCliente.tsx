@@ -179,39 +179,20 @@ export default function NuevoCliente() {
   const handleSave = async () => {
     if (!canSave) return;
     setSaving(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
 
-      // Generate codigo using SQL function (concurrency-safe)
-      const { data: codigoResult, error: codigoError } = await supabase
-        .rpc("generar_codigo_cliente");
-      
-      if (codigoError) throw codigoError;
-      const newCodigo = codigoResult as string;
-
-      // Validate duplicate RFC
-      if (rfc.trim()) {
-        const { data: existente } = await supabase
-          .from("clientes")
-          .select("id, razon_social")
-          .eq("rfc", rfc.toUpperCase().trim())
-          .maybeSingle();
-
-        if (existente) {
-          toast({
-            title: "RFC duplicado",
-            description: `Ya existe un cliente con RFC ${rfc.toUpperCase().trim()}: ${existente.razon_social}`,
-            variant: "destructive",
-          });
-          setSaving(false);
-          return;
-        }
+    const attemptInsert = async (retries = 2): Promise<any> => {
+      // Use pre-generated code, or regenerate on retry
+      let codigoToUse = nuevoCodigo;
+      if (!codigoToUse) {
+        const { data: codigoResult, error: codigoError } = await supabase.rpc("generar_codigo_cliente");
+        if (codigoError) throw codigoError;
+        codigoToUse = codigoResult as string;
       }
 
       const vendId = vendedorAsignado && vendedorAsignado !== "casa" ? vendedorAsignado : null;
 
       const clientData = {
-        codigo: newCodigo,
+        codigo: codigoToUse,
         nombre: razonSocial.trim(),
         razon_social: razonSocial.trim(),
         rfc: rfc.toUpperCase().trim(),
@@ -232,7 +213,43 @@ export default function NuevoCliente() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // Collision on codigo — regenerate and retry
+        if (retries > 0 && error.message?.includes("clientes_codigo_key")) {
+          const { data: freshCodigo } = await supabase.rpc("generar_codigo_cliente");
+          setNuevoCodigo(freshCodigo as string);
+          return attemptInsert(retries - 1);
+        }
+        throw error;
+      }
+
+      return newCliente;
+    };
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // Validate duplicate RFC
+      if (rfc.trim()) {
+        const { data: existente } = await supabase
+          .from("clientes")
+          .select("id, razon_social")
+          .eq("rfc", rfc.toUpperCase().trim())
+          .maybeSingle();
+
+        if (existente) {
+          toast({
+            title: "RFC duplicado",
+            description: `Ya existe un cliente con RFC ${rfc.toUpperCase().trim()}: ${existente.razon_social}`,
+            variant: "destructive",
+          });
+          setSaving(false);
+          return;
+        }
+      }
+
+      const newCliente = await attemptInsert();
+      if (!newCliente) throw new Error("No se pudo crear el cliente");
 
       // Create sucursales
       const sucursalesData = puntos.map((p, i) => ({
