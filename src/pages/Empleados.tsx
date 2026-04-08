@@ -1403,13 +1403,14 @@ const Empleados = () => {
           titleAccent="empleados."
           lead={`${empleados.filter(e => e.activo).length} empleados activos en ALMASA.`}
           actions={
-            <Dialog open={isDialogOpen} onOpenChange={(o) => { setIsDialogOpen(o); if (!o && volverATarjeta) { setCardEmpleado(volverATarjeta); setVolverATarjeta(null); } }}>
-              <DialogTrigger asChild>
-                <Button onClick={() => resetForm()}>
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Nuevo empleado
-                </Button>
-              </DialogTrigger>
+            <Button onClick={() => { resetForm(); setIsDialogOpen(true); }}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Nuevo empleado
+            </Button>
+          }
+        />
+
+        <Dialog open={isDialogOpen} onOpenChange={(o) => { setIsDialogOpen(o); if (!o && volverATarjeta) { setCardEmpleado(volverATarjeta); setVolverATarjeta(null); } }}>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
