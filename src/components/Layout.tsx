@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useState, useMemo, lazy, Suspense } from "react";
+import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 import { useNavigate, Link, useLocation, Navigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
