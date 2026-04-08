@@ -192,6 +192,8 @@ const VEHICULOS = [
   { label: "Tráiler", value: "trailer" },
 ];
 
+const GRUPO_LECAROZ_ID = "aaaaaaaa-1eca-4047-aaaa-aaaaaaaaaaaa";
+
 // ====== MAIN COMPONENT ======
 export const SucursalFormModal = ({
   open,
@@ -494,8 +496,9 @@ export const SucursalFormModal = ({
                   </div>
                 </div>
 
-                {/* Row 2: Tipo + Foránea */}
+                {/* Row 2: Tipo (solo Lecaroz) + Foránea */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {grupoClienteId === GRUPO_LECAROZ_ID && (
                   <div className="space-y-1.5">
                     <Label className="text-sm">Tipo</Label>
                     <RadioGroup
@@ -513,6 +516,7 @@ export const SucursalFormModal = ({
                       </div>
                     </RadioGroup>
                   </div>
+                  )}
                   <div className="flex items-end pb-1">
                     <div className="flex items-center gap-2">
                       <Checkbox
@@ -955,10 +959,10 @@ export const SucursalFormModal = ({
                 {previewLines.length > 0 && (
                   <div className="border border-amber-500/30 rounded-lg p-3 bg-amber-500/5 space-y-2">
                     <p className="text-xs font-medium text-amber-400 flex items-center gap-1.5">
-                      {formData.es_rosticeria ? "🍗" : "🥖"} Así lo verá el chofer:
+                      {grupoClienteId === GRUPO_LECAROZ_ID ? (formData.es_rosticeria ? "🍗" : "🥖") : "📦"} Así lo verá el chofer:
                     </p>
                     <div className="text-sm font-medium">
-                      #{formData.codigo_sucursal || "?"} {formData.nombre || "..."} — {formData.es_rosticeria ? "Rosticería" : "Panadería"}
+                      #{formData.codigo_sucursal || "?"} {formData.nombre || "..."}{grupoClienteId === GRUPO_LECAROZ_ID ? ` — ${formData.es_rosticeria ? "Rosticería" : "Panadería"}` : ""}
                     </div>
                     {formData.direccion && (
                       <p className="text-xs text-muted-foreground truncate">{formData.direccion}</p>

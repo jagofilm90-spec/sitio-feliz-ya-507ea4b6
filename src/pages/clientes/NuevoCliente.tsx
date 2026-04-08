@@ -56,6 +56,7 @@ export default function NuevoCliente() {
   const { toast } = useToast();
   const { isAdmin } = useUserRoles();
   const [saving, setSaving] = useState(false);
+  const [nuevoCodigo, setNuevoCodigo] = useState<string | null>(null);
 
   // Section 1
   const [razonSocial, setRazonSocial] = useState("");
@@ -78,6 +79,15 @@ export default function NuevoCliente() {
   const [perteneceGrupo, setPerteneceGrupo] = useState(false);
   const [grupoId, setGrupoId] = useState("");
   const [grupos, setGrupos] = useState<{ id: string; nombre: string }[]>([]);
+
+  // Pre-generate código
+  useEffect(() => {
+    const genCodigo = async () => {
+      const { data } = await supabase.rpc("generar_codigo_cliente");
+      if (data) setNuevoCodigo(data as string);
+    };
+    genCodigo();
+  }, []);
 
   // Load vendedores
   useEffect(() => {
@@ -169,39 +179,20 @@ export default function NuevoCliente() {
   const handleSave = async () => {
     if (!canSave) return;
     setSaving(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
 
-      // Generate codigo using SQL function (concurrency-safe)
-      const { data: codigoResult, error: codigoError } = await supabase
-        .rpc("generar_codigo_cliente");
-      
-      if (codigoError) throw codigoError;
-      const newCodigo = codigoResult as string;
-
-      // Validate duplicate RFC
-      if (rfc.trim()) {
-        const { data: existente } = await supabase
-          .from("clientes")
-          .select("id, razon_social")
-          .eq("rfc", rfc.toUpperCase().trim())
-          .maybeSingle();
-
-        if (existente) {
-          toast({
-            title: "RFC duplicado",
-            description: `Ya existe un cliente con RFC ${rfc.toUpperCase().trim()}: ${existente.razon_social}`,
-            variant: "destructive",
-          });
-          setSaving(false);
-          return;
-        }
+    const attemptInsert = async (retries = 2): Promise<any> => {
+      // Use pre-generated code, or regenerate on retry
+      let codigoToUse = nuevoCodigo;
+      if (!codigoToUse) {
+        const { data: codigoResult, error: codigoError } = await supabase.rpc("generar_codigo_cliente");
+        if (codigoError) throw codigoError;
+        codigoToUse = codigoResult as string;
       }
 
       const vendId = vendedorAsignado && vendedorAsignado !== "casa" ? vendedorAsignado : null;
 
       const clientData = {
-        codigo: newCodigo,
+        codigo: codigoToUse,
         nombre: razonSocial.trim(),
         razon_social: razonSocial.trim(),
         rfc: rfc.toUpperCase().trim(),
@@ -222,7 +213,43 @@ export default function NuevoCliente() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // Collision on codigo — regenerate and retry
+        if (retries > 0 && error.message?.includes("clientes_codigo_key")) {
+          const { data: freshCodigo } = await supabase.rpc("generar_codigo_cliente");
+          setNuevoCodigo(freshCodigo as string);
+          return attemptInsert(retries - 1);
+        }
+        throw error;
+      }
+
+      return newCliente;
+    };
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // Validate duplicate RFC
+      if (rfc.trim()) {
+        const { data: existente } = await supabase
+          .from("clientes")
+          .select("id, razon_social")
+          .eq("rfc", rfc.toUpperCase().trim())
+          .maybeSingle();
+
+        if (existente) {
+          toast({
+            title: "RFC duplicado",
+            description: `Ya existe un cliente con RFC ${rfc.toUpperCase().trim()}: ${existente.razon_social}`,
+            variant: "destructive",
+          });
+          setSaving(false);
+          return;
+        }
+      }
+
+      const newCliente = await attemptInsert();
+      if (!newCliente) throw new Error("No se pudo crear el cliente");
 
       // Create sucursales
       const sucursalesData = puntos.map((p, i) => ({
@@ -561,6 +588,7 @@ export default function NuevoCliente() {
                 {/* Mobile-only preview (below form on small screens) */}
                 <div className="lg:hidden">
                   <PreviewPanel
+                    nuevoCodigo={nuevoCodigo}
                     razonSocial={razonSocial}
                     rfc={rfc}
                     vendedorNombre={vendedorNombre}
@@ -580,6 +608,7 @@ export default function NuevoCliente() {
               {/* SIDEBAR PREVIEW — desktop only */}
               <aside className="hidden lg:block lg:sticky lg:top-20 lg:self-start">
                 <PreviewPanel
+                  nuevoCodigo={nuevoCodigo}
                   razonSocial={razonSocial}
                   rfc={rfc}
                   vendedorNombre={vendedorNombre}
@@ -624,6 +653,7 @@ export default function NuevoCliente() {
 /* ─── Preview Panel Component ─── */
 
 interface PreviewPanelProps {
+  nuevoCodigo: string | null;
   razonSocial: string;
   rfc: string;
   vendedorNombre: string;
@@ -636,7 +666,7 @@ interface PreviewPanelProps {
 }
 
 function PreviewPanel({
-  razonSocial, rfc, vendedorNombre, creditoLabel, limiteLabel,
+  nuevoCodigo, razonSocial, rfc, vendedorNombre, creditoLabel, limiteLabel,
   puntos, perteneceGrupo, grupoNombre, tipMessage,
 }: PreviewPanelProps) {
   const puntosDisplay = puntos.map((p) => {
@@ -652,6 +682,11 @@ function PreviewPanel({
     <div className="rounded-xl border border-border bg-card p-6 space-y-5">
       <div>
         <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest mb-2">Vista previa</p>
+        <div className="flex items-baseline gap-2 mb-1">
+          <span className="font-mono text-sm text-primary font-semibold">
+            {nuevoCodigo || <span className="text-muted-foreground animate-pulse">Generando...</span>}
+          </span>
+        </div>
         <p className="text-lg font-semibold text-foreground leading-tight">
           {razonSocial.trim() || <span className="text-muted-foreground/50 italic">Sin razón social</span>}
         </p>

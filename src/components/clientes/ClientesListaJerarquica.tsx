@@ -46,6 +46,7 @@ interface ClienteBase {
   limite_credito: number | null;
   termino_credito: string;
   cliente_sucursales: { count: number }[];
+  sucursales_zona?: { zona_id: string | null }[];
   cliente_productos_frecuentes: { count: number }[];
   zona: { id: string; nombre: string } | null;
   grupo_padre: { id: string; nombre: string; codigo: string } | null;
@@ -126,8 +127,12 @@ export function ClientesListaJerarquica({
       if (filterActivo === "activos" && !c.activo) return false;
       if (filterActivo === "inactivos" && c.activo) return false;
 
-      // Zona filter
-      if (filterZona !== "todos" && c.zona?.nombre !== filterZona) return false;
+      // Zona filter — check client zona_id OR any sucursal zona_id
+      if (filterZona !== "todos") {
+        const clientZonaMatch = c.zona?.id === filterZona;
+        const sucursalZonaMatch = c.sucursales_zona?.some(s => s.zona_id === filterZona) || false;
+        if (!clientZonaMatch && !sucursalZonaMatch) return false;
+      }
 
       // Credito filter
       if (filterCredito !== "todos" && c.termino_credito !== filterCredito) return false;
@@ -327,7 +332,7 @@ export function ClientesListaJerarquica({
               <SelectContent>
                 <SelectItem value="todos">Todas las zonas</SelectItem>
                 {zonasDisponibles.map(z => (
-                  <SelectItem key={z.id} value={z.nombre}>{z.nombre}</SelectItem>
+                <SelectItem key={z.id} value={z.id}>{z.nombre}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
