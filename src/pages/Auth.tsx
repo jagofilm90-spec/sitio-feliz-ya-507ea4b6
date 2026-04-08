@@ -6,8 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft } from "lucide-react";
-import logoAlmasa from "@/assets/logo-almasa.png";
-import { AlmasaLogo } from "@/components/brand/AlmasaLogo";
+import { AlmasaLogoBoot } from "@/components/brand/AlmasaLogoBoot";
 
 const colors = ["#E24B4A", "#D85A30", "#BA7517", "#639922", "#1D9E75", "#378ADD", "#7F77DD", "#D4537E"];
 const getColor = (n: string) => colors[n.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % colors.length];
@@ -136,12 +135,12 @@ const Auth = () => {
       <div className="w-full max-w-sm space-y-6">
         {/* Branding */}
         <div className="text-center">
-          <AlmasaLogo size={64} className="mx-auto mb-2" />
-          <h1 className="font-serif text-2xl font-bold tracking-wide">ALMASA·OS</h1>
-          <p className="text-xs text-muted-foreground tracking-widest uppercase mt-1">Sistema operativo · Casa fundada en 1904</p>
+          <AlmasaLogoBoot size={80} className="almasa-logo-boot mx-auto mb-2" />
+          <h1 className="boot-wordmark font-serif text-2xl font-bold tracking-wide">ALMASA·OS</h1>
+          <p className="boot-tagline text-xs text-muted-foreground tracking-widest uppercase mt-1">Sistema operativo · Casa fundada en 1904</p>
         </div>
 
-        <Card className="shadow-lg border-0">
+        <Card className="boot-card shadow-lg border-0">
           <CardContent className="pt-6">
             {step === 1 && (
               <div className="space-y-4">
