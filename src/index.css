@@ -405,3 +405,21 @@
   border-color: #c41e3a !important;
   box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.1) !important;
 }
+
+/* ALMASA·OS Loading State — pulse wave */
+@keyframes almasa-pulse {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
+.loading-arc-1 { 
+  animation: almasa-pulse 1.6s ease-in-out infinite; 
+}
+.loading-arc-2 { 
+  animation: almasa-pulse 1.6s ease-in-out infinite 0.18s; 
+}
+.loading-arc-3 { 
+  animation: almasa-pulse 1.6s ease-in-out infinite 0.36s; 
+}
+.loading-dot { 
+  animation: almasa-pulse 1.6s ease-in-out infinite 0.54s; 
+}

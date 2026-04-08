@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CentroNotificaciones } from "@/components/CentroNotificaciones";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { Loader2, LogOut, Home } from "lucide-react";
+import { LogOut, Home } from "lucide-react";
+import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 import { format } from "date-fns";
 import {
   AlertDialog,
@@ -155,7 +156,7 @@ const SecretariaPanel = () => {
   if (rolesLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-pink-600" />
+        <AlmasaLoading size={48} text="Cargando panel..." />
       </div>
     );
   }

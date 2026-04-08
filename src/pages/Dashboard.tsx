@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
-import { Loader2, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
+import { RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
+import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 import { NotificacionesSistema } from "@/components/NotificacionesSistema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
@@ -108,7 +109,7 @@ const Dashboard = () => {
   if (isOnlyAlmacen || isOnlyChofer) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <AlmasaLoading size={48} text="Cargando..." />
       </div>
     );
   }
