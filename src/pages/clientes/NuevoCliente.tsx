@@ -588,6 +588,7 @@ export default function NuevoCliente() {
                 {/* Mobile-only preview (below form on small screens) */}
                 <div className="lg:hidden">
                   <PreviewPanel
+                    nuevoCodigo={nuevoCodigo}
                     razonSocial={razonSocial}
                     rfc={rfc}
                     vendedorNombre={vendedorNombre}
@@ -607,6 +608,7 @@ export default function NuevoCliente() {
               {/* SIDEBAR PREVIEW — desktop only */}
               <aside className="hidden lg:block lg:sticky lg:top-20 lg:self-start">
                 <PreviewPanel
+                  nuevoCodigo={nuevoCodigo}
                   razonSocial={razonSocial}
                   rfc={rfc}
                   vendedorNombre={vendedorNombre}
