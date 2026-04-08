@@ -156,7 +156,7 @@ const SecretariaPanel = () => {
   if (rolesLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-pink-600" />
+        <AlmasaLoading size={48} text="Cargando panel..." />
       </div>
     );
   }
