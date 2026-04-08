@@ -150,7 +150,7 @@ export const AccountRail = ({ accounts, activeAccountId, onSelectAccount }: Acco
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                onClick={() => navigate('/correos')}
+                onClick={() => navigate('/correos/config')}
                 className="w-[40px] h-[40px] rounded-[9px] flex items-center justify-center text-ink-400 hover:text-ink-700 hover:bg-white hover:border hover:border-ink-100 transition-all"
               >
                 <Settings className="w-[18px] h-[18px]" />
