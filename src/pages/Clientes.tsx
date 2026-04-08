@@ -60,8 +60,13 @@ const Clientes = () => {
   const [importSucursalesDialogOpen, setImportSucursalesDialogOpen] = useState(false);
   const [sucursalesConRfcCount, setSucursalesConRfcCount] = useState(0);
   const [vendedores, setVendedores] = useState<Vendedor[]>([]);
+  const [zonas, setZonas] = useState<{ id: string; nombre: string }[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [filterActivo, setFilterActivo] = useState<"activos" | "inactivos" | "todos">("activos");
+  const [filterZona, setFilterZona] = useState("todos");
+  const [filterCredito, setFilterCredito] = useState("todos");
+  const [filterEstadoCredito, setFilterEstadoCredito] = useState("todos");
+  const [filterVendedor, setFilterVendedor] = useState("todos");
   const { toast } = useToast();
   const { isAdmin } = useUserRoles();
 
@@ -69,7 +74,21 @@ const Clientes = () => {
     loadClientes();
     loadSucursalesConRfcCount();
     loadVendedores();
+    loadZonas();
   }, []);
+
+  const loadZonas = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("zonas")
+        .select("id, nombre")
+        .eq("activo", true)
+        .order("nombre");
+      if (!error) setZonas(data || []);
+    } catch (error) {
+      console.error("Error loading zonas:", error);
+    }
+  };
 
   const loadVendedores = async () => {
     try {
@@ -344,6 +363,17 @@ const Clientes = () => {
             }}
             getVendedorName={getVendedorName}
             getCreditLabel={getCreditLabel}
+            filterActivo={filterActivo}
+            filterZona={filterZona}
+            filterCredito={filterCredito}
+            filterEstadoCredito={filterEstadoCredito}
+            filterVendedor={filterVendedor}
+            zonasDisponibles={zonas}
+            vendedoresDisponibles={vendedores.map(v => ({ id: v.user_id, nombre: v.nombre }))}
+            onFilterZonaChange={setFilterZona}
+            onFilterCreditoChange={setFilterCredito}
+            onFilterEstadoCreditoChange={setFilterEstadoCredito}
+            onFilterVendedorChange={setFilterVendedor}
           />
         </>
         )}
