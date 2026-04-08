@@ -12,10 +12,8 @@ import { useUserRoles, useUserModulePermissions } from "@/hooks/useUserRoles";
 import { CentroNotificaciones } from "@/components/CentroNotificaciones";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { UserPreferencesPopover } from "@/components/UserPreferencesPopover";
-import logoAlmasa from "@/assets/logo-almasa.png";
 import { AlmasaLogo } from "@/components/brand/AlmasaLogo";
 import { GlobalSearch } from "@/components/GlobalSearch";
-import { QuickActions } from "@/components/QuickActions";
 import {
   Collapsible,
   CollapsibleContent,
@@ -399,16 +397,13 @@ const Layout = ({ children }: LayoutProps) => {
   // Renderizar items del menú con categorías
   const renderMenuItems = (isMobile: boolean = false) => {
     return filteredCategories.map((category, categoryIndex) => (
-      <div key={category.label} className="mb-1">
-        {/* Separador visual entre categorías (excepto la primera) */}
-        {categoryIndex > 0 && (
-          <div className="h-px bg-border my-3" />
-        )}
-        {/* Label de categoría */}
-        <div className="px-3 py-1.5 mb-1">
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
-            {category.label}
-          </span>
+      <div key={category.label}>
+        {/* Nav group label */}
+        <div
+          className="text-[9px] uppercase tracking-[0.22em] text-ink-400 font-medium px-3 mb-2"
+          style={{ marginTop: categoryIndex === 0 ? 0 : '20px' }}
+        >
+          — {category.label.toUpperCase()}
         </div>
         {/* Items de la categoría */}
         {category.items.map((item) => {
@@ -420,22 +415,23 @@ const Layout = ({ children }: LayoutProps) => {
               key={item.path} 
               to={item.path}
               onClick={isMobile ? () => setMobileMenuOpen(false) : undefined}
+              className={`
+                flex items-center gap-3 px-3 py-[9px] text-[13.5px] rounded-md transition-all duration-150 mb-0.5
+                ${isActive 
+                  ? 'bg-crimson-100 text-crimson-700 font-medium' 
+                  : 'text-ink-700 font-normal hover:bg-ink-50 hover:text-ink-900'}
+              `}
             >
-              <Button
-                variant={isActive ? "secondary" : "ghost"}
-                className="w-full justify-start relative group hover:bg-accent/80 hover:translate-x-1 transition-all duration-200 mb-0.5"
-              >
-                <Icon className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform duration-200" />
-                {item.label}
-                {showBadge && (
-                  <Badge 
-                    variant="destructive" 
-                    className="ml-auto h-5 min-w-5 flex items-center justify-center px-1.5"
-                  >
-                    {unreadCount > 99 ? "99+" : unreadCount}
-                  </Badge>
-                )}
-              </Button>
+              <Icon className="h-4 w-4 shrink-0" />
+              <span className="flex-1">{item.label}</span>
+              {showBadge && (
+                <Badge 
+                  variant="destructive" 
+                  className="h-5 min-w-5 flex items-center justify-center px-1.5"
+                >
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </Badge>
+              )}
             </Link>
           );
         })}
@@ -455,8 +451,8 @@ const Layout = ({ children }: LayoutProps) => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pt-[env(safe-area-inset-top)]">
-        <div className="container flex h-16 items-center justify-between px-4">
+      <header className="sticky top-0 z-50 w-full bg-white border-b border-ink-100 pt-[env(safe-area-inset-top)]" style={{ borderBottomWidth: '0.5px' }}>
+        <div className="flex h-14 items-center justify-between px-4 sm:px-8">
           <div className="flex items-center gap-2">
             {/* Botón regresar - solo móvil y no en dashboard */}
             {location.pathname !== '/dashboard' && (
@@ -477,27 +473,13 @@ const Layout = ({ children }: LayoutProps) => {
             >
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
-            <Link to="/dashboard" className="flex items-center gap-3">
-              <AlmasaLogo size={36} />
-              <div className="hidden lg:flex flex-col">
-                <span className="font-serif font-bold text-base tracking-wide text-foreground">ALMASA</span>
-                <span className="text-[10px] text-muted-foreground tracking-widest uppercase">Sistema · 1904</span>
-              </div>
-            </Link>
-            <QuickActions />
-          </div>
-          <div className="flex items-center gap-1 sm:gap-2">
             <GlobalSearch />
+          </div>
+          <div className="flex items-center gap-2">
             <ThemeToggle className="hidden sm:flex" />
             <UserPreferencesPopover />
             <CentroNotificaciones />
-            <Link to="/tarjeta" className="hidden sm:block">
-              <Button variant="ghost" size="sm">
-                <CreditCard className="h-4 w-4 mr-2" />
-                Mi Tarjeta
-              </Button>
-            </Link>
-            <Link to="/mi-perfil" className="hidden lg:flex items-center gap-2 hover:opacity-80">
+            <Link to="/mi-perfil" className="hidden lg:flex items-center gap-2 rounded-full bg-bg-soft border border-ink-100 py-1 pl-1 pr-3 hover:opacity-80" style={{ borderWidth: '0.5px' }}>
               {userFoto ? (
                 <img src={userFoto} className="w-7 h-7 rounded-full object-cover" />
               ) : (
@@ -505,28 +487,38 @@ const Layout = ({ children }: LayoutProps) => {
                   {user?.email?.charAt(0).toUpperCase()}
                 </div>
               )}
-              <span className="text-sm text-muted-foreground max-w-[130px] truncate">{user?.email}</span>
+              <span className="text-xs text-ink-700 font-medium max-w-[130px] truncate">{user?.email}</span>
             </Link>
             <Button variant="outline" size="icon" className="sm:hidden" onClick={handleLogout}>
               <LogOut className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="sm" className="hidden sm:flex" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Salir
+            <Button variant="ghost" size="sm" className="hidden sm:flex text-ink-500 hover:text-ink-900" onClick={handleLogout}>
+              <LogOut className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </header>
 
       <div className="flex h-[calc(100vh-4rem)]">
-        {/* Sidebar - Desktop (más angosto en tablets) */}
-        <aside className="hidden md:flex md:w-52 lg:w-64 min-h-[calc(100vh-4rem)] border-r bg-card flex-shrink-0">
-          <nav className="flex flex-col w-full p-3 lg:p-4 overflow-y-auto">
+        {/* Sidebar - Desktop */}
+        <aside className="hidden md:flex md:w-56 lg:w-64 flex-shrink-0 bg-bg-soft border-r border-ink-100 overflow-y-auto" style={{ borderRightWidth: '0.5px' }}>
+          <nav className="flex flex-col w-full py-6 px-4">
+            {/* Brand header */}
+            <div className="flex items-center gap-3.5 px-3 pb-6 mb-5 border-b border-ink-100" style={{ borderBottomWidth: '0.5px' }}>
+              <AlmasaLogo size={36} />
+              <div style={{ lineHeight: 1 }}>
+                <div className="font-serif text-[22px] font-semibold text-crimson-500 tracking-wide" style={{ lineHeight: 1, letterSpacing: '0.03em' }}>
+                  ALMASA
+                </div>
+                <div className="text-[9px] uppercase tracking-[0.18em] text-ink-500 mt-1.5 font-medium">
+                  Sistema · 1904
+                </div>
+              </div>
+            </div>
             {renderMenuItems(false)}
             {/* Correos después de las categorías */}
             {canViewEmails && (
               <div className="mt-1">
-                <div className="h-px bg-border my-3" />
                 {renderEmailMenuItem(false)}
               </div>
             )}
@@ -571,7 +563,7 @@ const Layout = ({ children }: LayoutProps) => {
         {/* Birthday Banner */}
         <CumpleanosBannerLazy />
         {/* Main Content */}
-        <main className="flex-1 px-4 sm:px-6 lg:px-8 xl:px-10 py-4 sm:py-6 lg:py-8 overflow-auto min-h-0">{children}</main>
+        <main className="flex-1 px-6 sm:px-8 lg:px-12 py-8 lg:py-10 overflow-auto min-h-0">{children}</main>
       </div>
     </div>
   );

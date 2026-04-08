@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Trash2, MapPin, BarChart3, ClipboardList, FileSpreadsheet, Users, Building2 } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { AuditoriaFiscalSheet } from "@/components/clientes/AuditoriaFiscalSheet";
 import {
@@ -260,58 +261,45 @@ const Clientes = () => {
             </div>
           </div>
         ) : (
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold">Clientes</h1>
-              <p className="text-muted-foreground">Gestión de clientes y créditos</p>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setDetectarGruposDialogOpen(true)}
-              >
-                <Search className="h-4 w-4 mr-2" />
-                Detectar Grupos
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setAgruparDialogOpen(true)}
-              >
-                <Users className="h-4 w-4 mr-2" />
-                Agrupar
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setImportDialogOpen(true)}
-              >
-                <FileSpreadsheet className="h-4 w-4 mr-2" />
-                Importar ASPEL
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setImportSucursalesDialogOpen(true)}
-              >
-                <Building2 className="h-4 w-4 mr-2" />
-                Importar Sucursales
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setAuditoriaSheetOpen(true)}
-              >
-                <ClipboardList className="h-4 w-4 mr-2" />
-                Auditoría Fiscal
-                {sucursalesConRfcCount > 0 && (
-                  <Badge variant="destructive" className="ml-2">
-                    {sucursalesConRfcCount}
-                  </Badge>
-                )}
-              </Button>
-              <Button onClick={() => navigate("/clientes/nuevo")}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuevo Cliente
-              </Button>
-            </div>
-          </div>
+          <PageHeader
+            eyebrow="Catálogos"
+            title="Tus"
+            titleAccent="clientes."
+            lead={`${clientes.filter(c => c.activo).length} clientes activos.`}
+            actions={
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setDetectarGruposDialogOpen(true)}>
+                  <Search className="h-4 w-4 mr-2" />
+                  Detectar Grupos
+                </Button>
+                <Button variant="outline" onClick={() => setAgruparDialogOpen(true)}>
+                  <Users className="h-4 w-4 mr-2" />
+                  Agrupar
+                </Button>
+                <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Importar ASPEL
+                </Button>
+                <Button variant="outline" onClick={() => setImportSucursalesDialogOpen(true)}>
+                  <Building2 className="h-4 w-4 mr-2" />
+                  Importar Sucursales
+                </Button>
+                <Button variant="outline" onClick={() => setAuditoriaSheetOpen(true)}>
+                  <ClipboardList className="h-4 w-4 mr-2" />
+                  Auditoría Fiscal
+                  {sucursalesConRfcCount > 0 && (
+                    <Badge variant="destructive" className="ml-2">
+                      {sucursalesConRfcCount}
+                    </Badge>
+                  )}
+                </Button>
+                <Button onClick={() => navigate("/clientes/nuevo")}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuevo Cliente
+                </Button>
+              </div>
+            }
+          />
         )}
 
         {/* Vista selector: Lista | Mapa */}
