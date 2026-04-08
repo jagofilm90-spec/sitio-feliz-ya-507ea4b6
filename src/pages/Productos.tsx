@@ -983,7 +983,6 @@ const Productos = () => {
                 </form>
               </DialogContent>
             </Dialog>
-          </div>
 
           {/* ═══════════════════════════════════════════════════
               BÚSQUEDA Y FILTROS
