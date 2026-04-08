@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useState, useMemo, lazy, Suspense } from "react";
+import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 import { useNavigate, Link, useLocation, Navigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -446,10 +447,7 @@ const Layout = ({ children }: LayoutProps) => {
   if (loading || rolesLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Cargando...</p>
-        </div>
+        <AlmasaLoading size={56} text="Cargando ALMASA·OS..." />
       </div>
     );
   }

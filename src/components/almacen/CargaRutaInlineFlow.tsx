@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 import { CameraQrScanner } from "@/components/almacen/CameraQrScanner";
 import { CargaHojaInteractiva } from "@/components/almacen/CargaHojaInteractiva";
 import { supabase } from "@/integrations/supabase/client";

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 import { useSearchParams, useParams, useNavigate } from "react-router-dom";
 import { CameraQrScanner } from "@/components/almacen/CameraQrScanner";
 import { supabase } from "@/integrations/supabase/client";
