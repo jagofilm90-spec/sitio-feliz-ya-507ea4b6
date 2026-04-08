@@ -447,7 +447,7 @@ const Layout = ({ children }: LayoutProps) => {
   if (loading || rolesLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <AlmasaLoading size={56} text="Cargando ALMASA·OS..." />
+        <AlmasaLoading size={56} />
       </div>
     );
   }
