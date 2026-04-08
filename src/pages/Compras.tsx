@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import Layout from "@/components/Layout";
-import { Package, Truck, Calendar, BarChart3, History, AlertTriangle, CreditCard, Lightbulb } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import ProveedoresTab from "@/components/compras/ProveedoresTab";
 import OrdenesCompraTab from "@/components/compras/OrdenesCompraTab";
 import CalendarioEntregasTab from "@/components/compras/CalendarioEntregasTab";

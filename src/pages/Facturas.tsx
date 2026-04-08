@@ -15,6 +15,7 @@
 
 import { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorBoundaryModule } from "@/components/ErrorBoundaryModule";
@@ -57,6 +58,7 @@ import {
   XCircle, CheckCircle, AlertCircle, Loader2, FileDown, Package 
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 import { NuevaFacturaDirectaDialog } from "@/components/facturas/NuevaFacturaDirectaDialog";
 import { SolicitudesAlmacenTab } from "@/components/facturas/SolicitudesAlmacenTab";
 import { useSolicitudesVenta } from "@/hooks/useSolicitudesVenta";
@@ -254,45 +256,45 @@ const FacturasContent = () => {
 
   return (
     <Layout>
-      <div className="space-y-4 sm:space-y-6">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-          <div>
-            <h1 className="text-xl sm:text-3xl font-bold">Facturación CFDI 4.0</h1>
-            <p className="text-xs sm:text-sm text-muted-foreground">Timbrado, descarga y cancelación de facturas</p>
-          </div>
-          <Button onClick={() => setNuevaFacturaOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nueva Factura
-          </Button>
-        </div>
+      <div className="space-y-8">
+        <PageHeader
+          eyebrow="Finanzas"
+          title="Tu"
+          titleAccent="facturación."
+          lead="CFDI 4.0 — emisión, timbrado y seguimiento."
+          actions={
+            <Button onClick={() => setNuevaFacturaOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nueva Factura
+            </Button>
+          }
+        />
 
-        {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
-            <TabsList className="inline-flex w-max gap-1">
-              <TabsTrigger value="facturas" className="flex items-center gap-1.5 px-2 sm:px-3">
-                <FileText className="h-4 w-4" />
-                Facturas
-              </TabsTrigger>
-              <TabsTrigger value="solicitudes" className="relative flex items-center gap-1.5 px-2 sm:px-3">
-                <Package className="h-4 w-4" />
-                <span className="hidden sm:inline">Solicitudes Almacén</span>
-                <span className="sm:hidden">Solic</span>
-                {pendingCount > 0 && (
-                  <Badge 
-                    className="absolute -top-2 -right-2 h-5 min-w-5 flex items-center justify-center p-0 text-xs bg-yellow-500"
-                  >
-                    {pendingCount}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            </TabsList>
-          </div>
+          <TabsList className="bg-transparent border-b border-ink-100 rounded-none p-0 h-auto gap-6">
+            <TabsTrigger
+              value="facturas"
+              className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm"
+            >
+              Facturas
+            </TabsTrigger>
+            <TabsTrigger
+              value="solicitudes"
+              className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm"
+            >
+              Solicitudes Almacén
+              {pendingCount > 0 && (
+                <Badge className="ml-1.5 h-5 min-w-5 px-1.5 text-[10px] font-bold bg-amber-500 text-white">
+                  {pendingCount}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
 
-          <TabsContent value="facturas" className="space-y-4 mt-4">
+          <TabsContent value="facturas" className="space-y-6 mt-6">
             <div className="flex gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-400" />
                 <Input
                   placeholder="Buscar por folio, cliente o UUID..."
                   value={searchTerm}
@@ -302,26 +304,26 @@ const FacturasContent = () => {
               </div>
             </div>
 
-        <div className="border rounded-lg">
+        <div className="rounded-xl border border-ink-100 overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Folio</TableHead>
-                <TableHead>Cliente</TableHead>
-                <TableHead>RFC</TableHead>
-                <TableHead>Pedido</TableHead>
-                <TableHead>Fecha</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead>CFDI</TableHead>
-                <TableHead>Pago</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">Folio</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">Cliente</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">RFC</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">Pedido</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">Fecha</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium text-right">Total</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">CFDI</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">Pago</TableHead>
+                <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                  <TableCell colSpan={9} className="text-center py-12">
+                    <AlmasaLoading size={48} text="Cargando facturas..." />
                   </TableCell>
                 </TableRow>
               ) : filteredFacturas.length === 0 ? (
@@ -340,7 +342,7 @@ const FacturasContent = () => {
                     <TableCell>
                       {new Date(factura.fecha_emision).toLocaleDateString('es-MX')}
                     </TableCell>
-                    <TableCell className="text-right font-medium">
+                    <TableCell className="text-right font-sans font-semibold text-ink-900 tabular-nums lining-nums">
                       ${Number(factura.total).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell>{getCfdiStatusBadge(factura)}</TableCell>

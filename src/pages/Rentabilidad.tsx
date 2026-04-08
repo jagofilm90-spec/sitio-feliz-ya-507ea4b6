@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -18,8 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, TrendingUp, TrendingDown, DollarSign } from "lucide-react";
+import { Search, TrendingUp, TrendingDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { RentabilidadCardMobile } from "@/components/rentabilidad/RentabilidadCardMobile";
@@ -163,57 +166,39 @@ const Rentabilidad = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div>
-          <h1 className={`font-bold ${isMobile ? 'text-xl' : 'text-3xl'}`}>Análisis de Rentabilidad</h1>
-          <p className="text-muted-foreground text-sm">Comparación de precios de compra vs venta por producto</p>
-        </div>
+      <div className="space-y-8">
+        <PageHeader
+          eyebrow="Finanzas"
+          title="Análisis de"
+          titleAccent="rentabilidad."
+          lead="Margen por producto — compra vs. venta."
+        />
 
-        {/* Resumen Cards */}
+        {/* StatCards */}
         <div className={`grid gap-4 ${isMobile ? 'grid-cols-2' : 'md:grid-cols-4'}`}>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Productos Analizados</CardTitle>
-              <DollarSign className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{resumen.totalProductos}</div>
-              <p className="text-xs text-muted-foreground">Con precios definidos</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Margen Promedio</CardTitle>
-              <TrendingUp className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{resumen.margenPromedio.toFixed(1)}%</div>
-              <p className="text-xs text-muted-foreground">Sobre precio de compra</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Valor de Inventario</CardTitle>
-              <DollarSign className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">${resumen.valorInventarioTotal.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">A precio de compra</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Margen Bajo</CardTitle>
-              <TrendingDown className="h-4 w-4 text-red-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{resumen.productosMargenBajo}</div>
-              <p className="text-xs text-muted-foreground">Productos con &lt;10% margen</p>
-            </CardContent>
-          </Card>
+          <StatCard
+            label="Productos analizados"
+            value={resumen.totalProductos}
+            meta="Con precios definidos"
+          />
+          <StatCard
+            label="Margen promedio"
+            value={`${resumen.margenPromedio.toFixed(1)}%`}
+            meta="Sobre precio de compra"
+            trend={resumen.margenPromedio >= 20 ? "up" : "down"}
+            trendValue={`${resumen.margenPromedio.toFixed(1)}%`}
+          />
+          <StatCard
+            label="Valor de inventario"
+            value={`$${resumen.valorInventarioTotal.toLocaleString()}`}
+            meta="A precio de compra"
+          />
+          <StatCard
+            label="Margen bajo"
+            value={resumen.productosMargenBajo}
+            meta="Productos con <10% margen"
+            icon={<TrendingDown className="w-4 h-4" />}
+          />
         </div>
 
         {/* Gráfico Top 10 */}
@@ -295,26 +280,26 @@ const Rentabilidad = () => {
               </div>
             ) : (
             /* Tabla Desktop */
-            <div className="border rounded-lg">
+            <div className="rounded-xl border border-ink-100 overflow-hidden">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Producto</TableHead>
-                    <TableHead>Marca</TableHead>
-                    <TableHead className="text-right">Precio Compra</TableHead>
-                    <TableHead className="text-right">Precio Venta</TableHead>
-                    <TableHead className="text-right">Margen $</TableHead>
-                    <TableHead>Margen %</TableHead>
-                    <TableHead className="text-right">Stock</TableHead>
-                    <TableHead className="text-right">Valor Inv.</TableHead>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">Código</TableHead>
+                    <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">Producto</TableHead>
+                    <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">Marca</TableHead>
+                    <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium text-right">Precio Compra</TableHead>
+                    <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium text-right">Precio Venta</TableHead>
+                    <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium text-right">Margen $</TableHead>
+                    <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium">Margen %</TableHead>
+                    <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium text-right">Stock</TableHead>
+                    <TableHead className="text-[10px] uppercase tracking-[0.16em] text-ink-500 font-medium text-right">Valor Inv.</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center">
-                        Cargando...
+                      <TableCell colSpan={9} className="text-center py-12">
+                        <AlmasaLoading size={48} text="Cargando rentabilidad..." />
                       </TableCell>
                     </TableRow>
                   ) : filteredProductos.length === 0 ? (
@@ -329,13 +314,13 @@ const Rentabilidad = () => {
                         <TableCell className="font-medium">{producto.codigo}</TableCell>
                         <TableCell>{producto.nombre}</TableCell>
                         <TableCell>{producto.marca || "—"}</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right font-sans tabular-nums lining-nums text-ink-700">
                           ${producto.precio_compra.toFixed(2)}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right font-sans tabular-nums lining-nums text-ink-700">
                           ${producto.precio_venta.toFixed(2)}
                         </TableCell>
-                        <TableCell className="text-right font-semibold text-green-600">
+                        <TableCell className="text-right font-sans font-semibold tabular-nums lining-nums text-emerald-600">
                           ${producto.margen_pesos.toFixed(2)}
                         </TableCell>
                         <TableCell>{getMargenBadge(producto.margen_porcentaje)}</TableCell>
