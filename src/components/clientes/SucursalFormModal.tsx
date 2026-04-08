@@ -959,10 +959,10 @@ export const SucursalFormModal = ({
                 {previewLines.length > 0 && (
                   <div className="border border-amber-500/30 rounded-lg p-3 bg-amber-500/5 space-y-2">
                     <p className="text-xs font-medium text-amber-400 flex items-center gap-1.5">
-                      {formData.es_rosticeria ? "🍗" : "🥖"} Así lo verá el chofer:
+                      {grupoClienteId === GRUPO_LECAROZ_ID ? (formData.es_rosticeria ? "🍗" : "🥖") : "📦"} Así lo verá el chofer:
                     </p>
                     <div className="text-sm font-medium">
-                      #{formData.codigo_sucursal || "?"} {formData.nombre || "..."} — {formData.es_rosticeria ? "Rosticería" : "Panadería"}
+                      #{formData.codigo_sucursal || "?"} {formData.nombre || "..."}{grupoClienteId === GRUPO_LECAROZ_ID ? ` — ${formData.es_rosticeria ? "Rosticería" : "Panadería"}` : ""}
                     </div>
                     {formData.direccion && (
                       <p className="text-xs text-muted-foreground truncate">{formData.direccion}</p>
