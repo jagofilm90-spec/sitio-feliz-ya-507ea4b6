@@ -682,6 +682,11 @@ function PreviewPanel({
     <div className="rounded-xl border border-border bg-card p-6 space-y-5">
       <div>
         <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest mb-2">Vista previa</p>
+        <div className="flex items-baseline gap-2 mb-1">
+          <span className="font-mono text-sm text-primary font-semibold">
+            {nuevoCodigo || <span className="text-muted-foreground animate-pulse">Generando...</span>}
+          </span>
+        </div>
         <p className="text-lg font-semibold text-foreground leading-tight">
           {razonSocial.trim() || <span className="text-muted-foreground/50 italic">Sin razón social</span>}
         </p>
