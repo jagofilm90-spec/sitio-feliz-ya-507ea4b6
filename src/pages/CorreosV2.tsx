@@ -156,14 +156,20 @@ const CorreosV2 = () => {
   // Desktop: 4-pane layout
   return (
     <Layout>
-      <div className="correos-grid-root h-[calc(100vh-64px)] overflow-hidden grid" style={{
-        gridTemplateColumns: 'clamp(64px, 5vw, 76px) clamp(300px, 28vw, 400px) 1fr minmax(0, 360px)',
+      <div className="correos-grid-root overflow-hidden grid" style={{
+        height: 'calc(100vh - 64px)',
+        gridTemplateColumns: '72px 380px 1fr 340px',
       }}>
-        {/* Hide context panel on laptop-sized screens via CSS */}
         <style>{`
+          @media (min-width: 1536px) {
+            .correos-grid-root { grid-template-columns: 72px 380px 1fr 340px !important; }
+          }
+          @media (max-width: 1535px) and (min-width: 1280px) {
+            .correos-grid-root { grid-template-columns: 64px 340px 1fr 300px !important; }
+          }
           @media (max-width: 1279px) {
             .correos-grid-root > :nth-child(4) { display: none; }
-            .correos-grid-root { grid-template-columns: 64px 320px 1fr !important; }
+            .correos-grid-root { grid-template-columns: 60px 300px 1fr !important; }
           }
         `}</style>
         {/* Pane 1 — Rail */}
