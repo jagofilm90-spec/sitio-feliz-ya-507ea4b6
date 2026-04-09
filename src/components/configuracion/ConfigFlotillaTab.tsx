@@ -7,19 +7,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { 
-  Truck, 
-  Warehouse, 
-  Bell, 
-  Mail, 
-  Save, 
-  Loader2, 
-  Wifi, 
+import {
+  Warehouse,
+  Save,
+  Loader2,
+  Wifi,
   MapPin,
   Settings2,
-  AlertTriangle
+  Mail,
+  Bell,
 } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { ConfiguracionBodegaSheet } from "@/components/almacen/ConfiguracionBodegaSheet";
 
 interface Bodega {
@@ -138,27 +136,21 @@ export function ConfigFlotillaTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Truck className="h-5 w-5" />
-            Configuración de Flotilla
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Vehículos, bodegas y alertas de vencimientos
-          </p>
-        </div>
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Save className="h-4 w-4 mr-2" />
-          )}
-          Guardar Cambios
-        </Button>
-      </div>
-
-      <Separator />
+      <PageHeader
+        eyebrow="Configuración"
+        title="Flotilla"
+        lead="Bodegas, vehículos y alertas de vencimientos"
+        actions={
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            className="bg-crimson-500 hover:bg-crimson-600 text-white"
+          >
+            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+            Guardar cambios
+          </Button>
+        }
+      />
 
       {/* Mechanic Email */}
       <Card>
@@ -298,9 +290,9 @@ export function ConfigFlotillaTab() {
             })}
 
             {bodegas.length === 0 && (
-              <div className="text-center py-6 text-muted-foreground">
-                <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No hay bodegas activas configuradas</p>
+              <div className="text-center py-8">
+                <p className="font-serif italic text-[18px] text-ink-400">No hay bodegas activas.</p>
+                <p className="text-[11px] text-ink-500 mt-2">Crea una bodega para configurar la detección automática.</p>
               </div>
             )}
           </div>

@@ -9,14 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { 
-  CreditCard, 
-  Save, 
-  Loader2, 
-  Plus, 
+import {
+  Save,
+  Loader2,
+  Plus,
   Trash2,
-  AlertCircle 
 } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import {
   Select,
   SelectContent,
@@ -177,27 +176,21 @@ export function ConfigCreditosTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            Términos de Crédito
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Configura los plazos de pago por defecto y por tipo de producto
-          </p>
-        </div>
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Save className="h-4 w-4 mr-2" />
-          )}
-          Guardar Cambios
-        </Button>
-      </div>
-
-      <Separator />
+      <PageHeader
+        eyebrow="Configuración"
+        title="Créditos"
+        lead="Plazos de pago por defecto y por tipo de producto"
+        actions={
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            className="bg-crimson-500 hover:bg-crimson-600 text-white"
+          >
+            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+            Guardar cambios
+          </Button>
+        }
+      />
 
       {/* Default Term */}
       <Card>
@@ -309,12 +302,9 @@ export function ConfigCreditosTab() {
               </TableBody>
             </Table>
           ) : (
-            <div className="text-center py-6 text-muted-foreground">
-              <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>No hay reglas específicas configuradas</p>
-              <p className="text-xs">
-                Se usará el plazo por defecto para todos los productos
-              </p>
+            <div className="text-center py-8">
+              <p className="font-serif italic text-[18px] text-ink-400">No hay reglas específicas.</p>
+              <p className="text-[11px] text-ink-500 mt-2">Se usará el plazo por defecto para todos los productos.</p>
             </div>
           )}
         </CardContent>

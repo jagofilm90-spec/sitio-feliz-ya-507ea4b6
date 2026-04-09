@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Building2, CreditCard, Save, Loader2, Phone, Mail } from "lucide-react";
+import { Save, Loader2, Phone, Mail, CreditCard } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { COMPANY_DATA } from "@/constants/companyData";
 
 interface DatosEmpresa {
@@ -200,27 +201,21 @@ export function ConfigEmpresaTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
-            Datos de la Empresa
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Información fiscal que aparece en documentos oficiales
-          </p>
-        </div>
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Save className="h-4 w-4 mr-2" />
-          )}
-          Guardar Cambios
-        </Button>
-      </div>
-
-      <Separator />
+      <PageHeader
+        eyebrow="Configuración"
+        title="Empresa"
+        lead="Datos fiscales, bancarios y de contacto"
+        actions={
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            className="bg-crimson-500 hover:bg-crimson-600 text-white"
+          >
+            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+            Guardar cambios
+          </Button>
+        }
+      />
 
       {/* Fiscal Data */}
       <Card>

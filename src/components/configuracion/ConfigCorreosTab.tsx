@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Users, FileSignature } from "lucide-react";
+import { Users, FileSignature, Mail } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 // Reuse existing components
 import GmailPermisosManager from "@/components/correos/GmailPermisosManager";
@@ -120,15 +121,11 @@ export function ConfigCorreosTab() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold flex items-center gap-2">
-          <Mail className="h-5 w-5" />
-          Correos Corporativos
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Gestiona las cuentas Gmail integradas al ERP
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Configuración"
+        title="Correos corporativos"
+        lead="Cuentas Gmail integradas al ERP"
+      />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>

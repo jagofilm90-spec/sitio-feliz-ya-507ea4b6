@@ -1,19 +1,17 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Database, 
+import {
   Download,
   ExternalLink,
   Server,
   Calendar,
   CheckCircle2,
-  Info,
   Bell,
   AlertTriangle
 } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { useNavigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { PushNotificationDiagnostics } from "./PushNotificationDiagnostics";
@@ -54,17 +52,11 @@ export function ConfigSistemaTab() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold flex items-center gap-2">
-          <Database className="h-5 w-5" />
-          Sistema
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Información del sistema, respaldos y mantenimiento
-        </p>
-      </div>
-
-      <Separator />
+      <PageHeader
+        eyebrow="Configuración"
+        title="Sistema"
+        lead="Información del sistema, respaldos y mantenimiento"
+      />
 
       {/* Push Notifications - Only visible on native */}
       {isNative && (
