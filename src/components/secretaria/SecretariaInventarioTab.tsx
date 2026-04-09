@@ -133,7 +133,7 @@ export const SecretariaInventarioTab = () => {
   });
 
   // Products with low stock
-  const lowStockProducts = productos?.filter((p) => p.stock_actual <= p.stock_minimo) || [];
+  const lowStockProducts = productos?.filter((p) => p.stock_minimo > 0 && p.stock_actual <= p.stock_minimo) || [];
 
   // Caducidad badge from shared utility
 

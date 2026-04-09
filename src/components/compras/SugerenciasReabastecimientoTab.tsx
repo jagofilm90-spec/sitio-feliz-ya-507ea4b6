@@ -111,7 +111,7 @@ export const SugerenciasReabastecimientoTab = () => {
 
       // Filter: stock_actual <= stock_minimo (client-side for flexibility)
       const productosBajos = (productos || []).filter(
-        (p: any) => (p.stock_actual ?? 0) <= (p.stock_minimo ?? 0)
+        (p: any) => (p.stock_minimo ?? 0) > 0 && (p.stock_actual ?? 0) <= (p.stock_minimo ?? 0)
       );
 
       if (productosBajos.length === 0) return [];

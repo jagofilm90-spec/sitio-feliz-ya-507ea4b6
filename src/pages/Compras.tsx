@@ -110,7 +110,7 @@ const Compras = ({ mode = "admin" }: ComprasProps) => {
         .eq("activo", true)
         .or("solo_uso_interno.is.null,solo_uso_interno.eq.false");
       if (error) return 0;
-      return (data || []).filter(p => (p.stock_actual ?? 0) <= (p.stock_minimo ?? 0)).length;
+      return (data || []).filter(p => (p.stock_minimo ?? 0) > 0 && (p.stock_actual ?? 0) <= (p.stock_minimo ?? 0)).length;
     },
     enabled: isAdmin,
     refetchInterval: 60000,
