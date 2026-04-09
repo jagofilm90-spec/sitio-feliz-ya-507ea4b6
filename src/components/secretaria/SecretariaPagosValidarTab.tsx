@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -238,13 +239,10 @@ export function SecretariaPagosValidarTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold flex items-center gap-2">
-          <CreditCard className="h-5 w-5" />
-          Pagos por validar
-          <Badge variant="secondary">{pagos.length}</Badge>
-        </h2>
-      </div>
+      <PageHeader
+        title="Pagos."
+        lead={`Validación y conciliación · ${pagos.length} pendientes`}
+      />
 
       <ScrollArea className="h-[calc(100vh-240px)]">
         <div className="space-y-4">

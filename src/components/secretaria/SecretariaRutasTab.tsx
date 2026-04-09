@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -299,9 +300,10 @@ export const SecretariaRutasTab = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Control de Rutas y Entregas</h2>
-      </div>
+      <PageHeader
+        title="Rutas," titleAccent="hoy."
+        lead="Control de entregas en vivo"
+      />
 
       <Tabs value={subTab} onValueChange={setSubTab}>
         <TabsList className="w-full grid grid-cols-4">

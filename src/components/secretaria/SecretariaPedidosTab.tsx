@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -93,22 +94,32 @@ export const SecretariaPedidosTab = () => {
 
   return (
     <div className="space-y-4">
-      {/* Summary Cards */}
+      <PageHeader
+        title="Pedidos," titleAccent="hoy."
+        lead="Autorización, carga y entrega"
+      />
+
+      {/* Summary Cards — editorial */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {[
-          { status: "por_autorizar", label: "Por autorizar", color: "bg-amber-100 text-amber-700" },
-          { status: "pendiente", label: "Pendientes", color: "bg-blue-100 text-blue-700" },
-          { status: "en_ruta", label: "En ruta", color: "bg-violet-100 text-violet-700" },
-          { status: "entregado", label: "Entregados", color: "bg-emerald-100 text-emerald-700" },
-          { status: "cancelado", label: "Cancelados", color: "bg-rose-100 text-rose-700" },
+          { status: "por_autorizar", label: "Por autorizar" },
+          { status: "pendiente", label: "Pendientes" },
+          { status: "en_ruta", label: "En ruta" },
+          { status: "entregado", label: "Entregados" },
+          { status: "cancelado", label: "Cancelados" },
         ].map(item => (
-          <Card key={item.status} className={`cursor-pointer transition-all hover:shadow-md ${statusFilter === item.status ? "ring-2 ring-primary" : ""} ${item.color}`}
-            onClick={() => setStatusFilter(statusFilter === item.status ? "all" : item.status)}>
-            <CardContent className="p-3 text-center">
-              <p className="text-2xl font-bold">{statusCounts[item.status] || 0}</p>
-              <p className="text-xs font-medium">{item.label}</p>
-            </CardContent>
-          </Card>
+          <div
+            key={item.status}
+            onClick={() => setStatusFilter(statusFilter === item.status ? "all" : item.status)}
+            className={`cursor-pointer bg-white border rounded-xl px-4 py-3 text-center transition-colors ${statusFilter === item.status ? "border-crimson-500 ring-1 ring-crimson-500" : "border-ink-100 hover:border-ink-300"}`}
+          >
+            <p className="font-serif text-[34px] leading-tight text-ink-900 tabular-nums">
+              {statusCounts[item.status] || 0}
+            </p>
+            <p className="text-[11px] uppercase tracking-[0.08em] text-ink-500 font-medium mt-0.5">
+              {item.label}
+            </p>
+          </div>
         ))}
       </div>
 

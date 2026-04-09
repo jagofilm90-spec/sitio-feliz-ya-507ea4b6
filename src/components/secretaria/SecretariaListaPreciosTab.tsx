@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -127,20 +128,16 @@ export const SecretariaListaPreciosTab = () => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)]">
-      {/* Header */}
       <div className="pb-3 border-b bg-background sticky top-0 z-20 space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold">Lista de Precios</h2>
-          </div>
-          <div className="flex items-center gap-2">
-            <p className="text-xs text-muted-foreground">{filteredProductos.length} productos</p>
+        <PageHeader
+          title="Lista de precios."
+          lead={`${filteredProductos.length} productos activos`}
+          actions={
             <Button size="sm" variant="outline" className="h-8" onClick={() => setPdfDialogOpen(true)}>
               <Download className="h-3.5 w-3.5 mr-1" /> PDF
             </Button>
-          </div>
-        </div>
+          }
+        />
 
         <div className="flex flex-col sm:flex-row gap-2">
           <div className="relative flex-1">
@@ -263,9 +260,14 @@ export const SecretariaListaPreciosTab = () => {
               <TableBody>
                 {productosPorCategoria.map(([categoria, prods]) => (
                   <>
-                    <TableRow key={`cat-${categoria}`} className="bg-muted/60 hover:bg-muted/60">
-                      <TableCell colSpan={5} className="py-1.5 px-2 font-bold text-[11px] uppercase tracking-wider text-muted-foreground">
-                        ═══ {categoria} ({prods.length}) ═══
+                    <TableRow key={`cat-${categoria}`} className="bg-warm-50 hover:bg-warm-50">
+                      <TableCell colSpan={5} className="py-3 px-4">
+                        <span className="font-serif italic text-[16px] text-ink-600" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
+                          {categoria}
+                        </span>
+                        <span className="text-[11px] text-ink-400 ml-2">
+                          · {prods.length} productos
+                        </span>
                       </TableCell>
                     </TableRow>
                     {prods.map((producto) => (
@@ -336,9 +338,12 @@ export const SecretariaListaPreciosTab = () => {
           <div className="md:hidden flex-1 overflow-auto">
             {productosPorCategoria.map(([categoria, prods]) => (
               <div key={categoria}>
-                <div className="sticky top-0 bg-muted/90 backdrop-blur-sm py-1 px-3 border-b z-10">
-                  <span className="font-semibold text-[10px] uppercase tracking-wide text-muted-foreground">
-                    {categoria} ({prods.length})
+                <div className="sticky top-0 bg-warm-50 backdrop-blur-sm py-3 px-4 border-b z-10">
+                  <span className="font-serif italic text-[16px] text-ink-600" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
+                    {categoria}
+                  </span>
+                  <span className="text-[11px] text-ink-400 ml-2">
+                    · {prods.length} productos
                   </span>
                 </div>
                 {prods.map((producto) => (

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -209,6 +210,11 @@ export const SecretariaFacturacionTab = () => {
 
   return (
     <div className="space-y-4">
+      <PageHeader
+        title="Facturación."
+        lead="CFDI 4.0 y seguimiento"
+      />
+
       {/* Filter Tabs */}
       <div className="flex flex-wrap gap-2">
         <Button

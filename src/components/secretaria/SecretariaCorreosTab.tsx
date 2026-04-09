@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -51,15 +52,10 @@ export const SecretariaCorreosTab = () => {
   if (connectedCuentas.length === 0) {
     return (
       <div className="space-y-4">
-        <div>
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Mail className="h-5 w-5 text-crimson-500" />
-            Correos Corporativos
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Gestión de correos corporativos
-          </p>
-        </div>
+        <PageHeader
+          title="Correos," titleAccent="hoy."
+          lead="Gestión de correos corporativos"
+        />
 
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -76,16 +72,10 @@ export const SecretariaCorreosTab = () => {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-xl font-semibold flex items-center gap-2">
-          <Mail className="h-5 w-5 text-crimson-500" />
-          Correos Corporativos
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          {connectedCuentas.length} cuenta{connectedCuentas.length > 1 ? "s" : ""} disponible
-          {connectedCuentas.length > 1 ? "s" : ""}
-        </p>
-      </div>
+      <PageHeader
+        title="Correos," titleAccent="hoy."
+        lead={`Las ${connectedCuentas.length} cuentas del negocio`}
+      />
 
       <BandejaEntrada cuentas={connectedCuentas} />
     </div>

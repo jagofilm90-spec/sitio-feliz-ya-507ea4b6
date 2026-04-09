@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -158,16 +159,10 @@ export const SecretariaInventarioTab = () => {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div>
-        <h2 className="text-xl font-semibold flex items-center gap-2">
-          <Warehouse className="h-5 w-5 text-crimson-500" />
-          Inventario General
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          {productos?.length || 0} productos • {lowStockProducts.length} con stock bajo
-        </p>
-      </div>
+      <PageHeader
+        title="Inventario."
+        lead={`Stock, lotes y movimientos · ${productos?.length || 0} productos`}
+      />
 
       {/* Low stock alert */}
       {lowStockProducts.length > 0 && (

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -31,16 +32,10 @@ export const SecretariaComprasTab = () => {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div>
-        <h2 className="text-xl font-semibold flex items-center gap-2">
-          <ShoppingCart className="h-5 w-5 text-crimson-500" />
-          Módulo de Compras
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Gestión de proveedores, órdenes de compra y entregas
-        </p>
-      </div>
+      <PageHeader
+        title="Compras."
+        lead="Órdenes, recepciones y proveedores"
+      />
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>

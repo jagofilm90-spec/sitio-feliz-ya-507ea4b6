@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -329,38 +330,26 @@ export const SecretariaProductosTab = () => {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Package className="h-5 w-5 text-primary" />
-            Catálogo de Productos
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {activeCount} activos, {inactiveCount} inactivos
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => setMigracionLoteOpen(true)}
-          >
-            <Sparkles className="h-4 w-4 mr-2" />
-            Migración en Lote
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={() => setMigracionDialogOpen(true)}
-          >
-            <Sparkles className="h-4 w-4 mr-2" />
-            Uno por Uno
-          </Button>
-          <Button onClick={() => { resetForm(); setDialogOpen(true); }}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nuevo Producto
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Productos."
+        lead={`Catálogo activo · ${activeCount} productos`}
+        actions={
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setMigracionLoteOpen(true)}>
+              <Sparkles className="h-4 w-4 mr-2" />
+              Migración en Lote
+            </Button>
+            <Button variant="outline" onClick={() => setMigracionDialogOpen(true)}>
+              <Sparkles className="h-4 w-4 mr-2" />
+              Uno por Uno
+            </Button>
+            <Button className="bg-crimson-500 hover:bg-crimson-600 text-white" onClick={() => { resetForm(); setDialogOpen(true); }}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nuevo Producto
+            </Button>
+          </div>
+        }
+      />
 
       {/* Dialogs de migración */}
       <MigracionProductosDialog 

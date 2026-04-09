@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -207,25 +208,19 @@ export const SecretariaChatTab = () => {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {conversacionActiva ? (
         <div className="flex items-center gap-2">
-          {conversacionActiva && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setConversacionActiva(null)}
-              className="lg:hidden"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          )}
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <MessageCircle className="h-5 w-5 text-crimson-500" />
-            {conversacionActiva ? getNombreConversacion(conversacionActiva) : "Chat Interno"}
-          </h2>
+          <Button variant="ghost" size="icon" onClick={() => setConversacionActiva(null)} className="lg:hidden">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h2 className="font-serif text-2xl font-light text-ink-900">{getNombreConversacion(conversacionActiva)}</h2>
         </div>
-      </div>
+      ) : (
+        <PageHeader
+          title="Chat interno."
+          lead="Comunicación del equipo"
+        />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[600px]">
         {/* Conversations List */}

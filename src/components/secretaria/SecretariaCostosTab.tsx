@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -376,20 +377,10 @@ export const SecretariaCostosTab = () => {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Coins className="h-5 w-5 text-crimson-500" />
-            {isAdmin ? "Análisis Costo-Precio-Margen" : "Costos de Productos"}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {productos?.length || 0} productos • {isAdmin 
-              ? "Responde: \"¿hasta dónde puedo bajar?\"" 
-              : "Consulta de costos actualizados"}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Costos."
+        lead={`Análisis de margen · ${productos?.length || 0} productos`}
+      />
 
       {/* Search + Filters */}
       <div className="flex flex-col sm:flex-row gap-2">

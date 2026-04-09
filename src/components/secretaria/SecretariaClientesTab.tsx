@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -134,25 +135,19 @@ export const SecretariaClientesTab = () => {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Users className="h-5 w-5 text-crimson-500" />
-            Gestión de Clientes
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {clientes?.length || 0} clientes activos • {formatCurrency(totalSaldoPendiente)} pendiente
-          </p>
-        </div>
-        <Button
-          onClick={() => navigate("/clientes")}
-          className="bg-crimson-500 hover:bg-crimson-600"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Nuevo Cliente
-        </Button>
-      </div>
+      <PageHeader
+        title="Clientes."
+        lead={`Directorio activo · ${clientes?.length || 0} clientes`}
+        actions={
+          <Button
+            onClick={() => navigate("/clientes")}
+            className="bg-crimson-500 hover:bg-crimson-600 text-white"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Nuevo Cliente
+          </Button>
+        }
+      />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
