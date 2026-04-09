@@ -7,27 +7,11 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle} from "@/components/ui/dialog";
+  DialogTitle,
+  DialogDescription} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Cake,
-  ClipboardList,
-  FileText,
-  ShoppingCart,
-  Mail,
-  MessageSquare,
-  Store,
-  Package,
-  Truck,
-  TrendingUp,
-  TrendingDown,
-  Sparkles,
-  ArrowRight,
-  Sun,
-  Moon,
-  Sunset} from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -93,13 +77,10 @@ export const SecretariaBienvenidaDialog = ({
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return { text: "¡Buenos días", icon: Sun };
-    if (hour < 19) return { text: "¡Buenas tardes", icon: Sunset };
-    return { text: "¡Buenas noches", icon: Moon };
+    if (hour >= 5 && hour < 12) return "Buenos días,";
+    if (hour >= 12 && hour < 19) return "Buenas tardes,";
+    return "Buenas noches,";
   };
-
-  const greeting = getGreeting();
-  const GreetingIcon = greeting.icon;
 
   useEffect(() => {
     if (open) {
@@ -226,193 +207,132 @@ export const SecretariaBienvenidaDialog = ({
     onOpenChange(false);
   };
 
-  const TaskCard = ({
-    icon: Icon,
-    label,
-    count,
-    tab,
-    color}: {
-    icon: any;
-    label: string;
-    count: number;
-    tab: string;
-    color: string;
-  }) => (
-    <button
-      onClick={() => handleNavigate(tab)}
-      className={`flex items-center gap-3 p-3 rounded-lg border transition-all hover:shadow-md ${
-        count > 0 ? "bg-crimson-50 border-crimson-100" : "bg-muted/50 border-border"
-      }`}
-    >
-      <div className={`p-2 rounded-full ${color}`}>
-        <Icon className="h-4 w-4 text-white" />
-      </div>
-      <div className="flex-1 text-left">
-        <p className="text-sm font-medium">{label}</p>
-        <p className={`text-xs ${count > 0 ? "text-crimson-500" : "text-muted-foreground"}`}>
-          {count} pendiente{count !== 1 ? "s" : ""}
-        </p>
-      </div>
-      {count > 0 && (
-        <Badge variant="destructive" className="bg-crimson-500">
-          {count}
-        </Badge>
-      )}
-      <ArrowRight className="h-4 w-4 text-muted-foreground" />
-    </button>
-  );
-
   const totalPendientes =
     alertas.pedidosPorAutorizar +
     alertas.facturasPorTimbrar +
     alertas.ocPorEnviar +
     alertas.solicitudesMostrador;
 
+  const pendientesItems = [
+    { count: alertas.pedidosPorAutorizar, label: "Pedidos por autorizar", tab: "pedidos" },
+    { count: alertas.facturasPorTimbrar, label: "Facturas por timbrar", tab: "facturacion" },
+    { count: alertas.ocPorEnviar, label: "Órdenes por enviar", tab: "compras" },
+    { count: alertas.solicitudesMostrador, label: "Solicitudes mostrador", tab: "mostrador" },
+  ].filter(i => i.count > 0);
+
+  const novedadesItems = [
+    ...(productosNuevos.length > 0 ? [{ count: productosNuevos.length, label: `producto${productosNuevos.length !== 1 ? "s" : ""} nuevo${productosNuevos.length !== 1 ? "s" : ""}` }] : []),
+    ...(cambiosPrecios.length > 0 ? [{ count: cambiosPrecios.length, label: `cambio${cambiosPrecios.length !== 1 ? "s" : ""} de precio` }] : []),
+    ...(productosInhabilitados.length > 0 ? [{ count: productosInhabilitados.length, label: `producto${productosInhabilitados.length !== 1 ? "s" : ""} descontinuado${productosInhabilitados.length !== 1 ? "s" : ""}` }] : []),
+  ];
+
+  const firstName = secretariaNombre.split(" ")[0];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[90vh] overflow-hidden overflow-x-hidden">
-        <DialogHeader className="pb-2">
-          <DialogTitle className="flex items-center gap-2 text-xl">
-            <GreetingIcon className="h-6 w-6 text-crimson-500" />
-            <span>
-              {greeting.text}, {secretariaNombre.split(" ")[0]}!
-            </span>
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-[480px] max-h-[90vh] overflow-hidden overflow-x-hidden !p-0 !gap-0 !rounded-2xl shadow-[0_20px_60px_-20px_rgba(15,14,13,0.25)]">
+        {/* Header */}
+        <DialogHeader className="px-8 pt-8 pb-6">
+          <DialogDescription className="!text-[15px] text-ink-500 italic !mt-0">
+            {getGreeting()}
+          </DialogDescription>
+          <DialogTitle className="!font-serif !text-[32px] !font-medium text-ink-900 !leading-tight !tracking-[-0.01em]">
+            {firstName}.
           </DialogTitle>
         </DialogHeader>
 
         {loading ? (
-          <AlmasaLoading size={48} />
+          <div className="px-8 py-8">
+            <AlmasaLoading size={48} />
+          </div>
         ) : (
-          <ScrollArea className="max-h-[calc(90vh-120px)] pr-4">
-            <div className="space-y-4">
-              {/* Birthday Banner */}
+          <ScrollArea className="max-h-[calc(90vh-220px)]">
+            <div className="px-8 py-4">
+              {/* Birthday — editorial */}
               {esCumpleanos && (
-                <div className="bg-gradient-to-r from-crimson-500 to-crimson-500 text-white p-4 rounded-lg flex items-center gap-3">
-                  <Cake className="h-8 w-8" />
-                  <div>
-                    <p className="font-semibold">¡Feliz Cumpleaños! 🎂</p>
-                    <p className="text-sm opacity-90">
-                      Todo el equipo de ALMASA te desea un excelente día
-                    </p>
+                <p className="font-serif italic text-[18px] text-crimson-500 mb-6">
+                  Feliz cumpleaños, {firstName}. Todo el equipo te desea un excelente día.
+                </p>
+              )}
+
+              {/* Pendientes list */}
+              {pendientesItems.length > 0 ? (
+                <div>
+                  <p className="font-serif italic text-[15px] text-ink-500 mb-3">Resumen del día.</p>
+                  <div className="divide-y divide-ink-100">
+                    {pendientesItems.map((item) => (
+                      <button
+                        key={item.tab}
+                        onClick={() => handleNavigate(item.tab)}
+                        className="flex items-center w-full py-3 group hover:bg-ink-50/50 -mx-2 px-2 rounded transition-colors"
+                      >
+                        <span className="font-serif text-[24px] font-medium text-ink-900 tabular-nums w-10 text-left">
+                          {item.count}
+                        </span>
+                        <span className="text-[14px] text-ink-700 flex-1 text-left">
+                          {item.label}
+                        </span>
+                        <ChevronRight className="h-4 w-4 text-ink-300 group-hover:text-ink-500 transition-colors" />
+                      </button>
+                    ))}
                   </div>
+                </div>
+              ) : (
+                <div className="py-8 text-center">
+                  <p className="font-serif italic text-[18px] text-ink-400">
+                    Hoy no tienes pendientes.
+                  </p>
                 </div>
               )}
 
-              {/* Summary Banner */}
-              <div className="bg-gradient-to-r from-crimson-100 to-crimson-100 p-4 rounded-lg">
-                <div className="flex items-center gap-2 mb-1">
-                  <ClipboardList className="h-5 w-5 text-crimson-500" />
-                  <span className="font-medium text-crimson-700">
-                    Resumen del día
-                  </span>
-                </div>
-                <p className="text-sm text-crimson-600">
-                  {totalPendientes > 0
-                    ? `Tienes ${totalPendientes} tarea${totalPendientes !== 1 ? "s" : ""} pendiente${totalPendientes !== 1 ? "s" : ""}`
-                    : "¡No tienes tareas pendientes! 🎉"}
-                </p>
-              </div>
-
-              {/* Task Cards Grid */}
-              <div className="grid grid-cols-1 gap-2">
-                <TaskCard
-                  icon={ClipboardList}
-                  label="Pedidos por Autorizar"
-                  count={alertas.pedidosPorAutorizar}
-                  tab="pedidos"
-                  color="bg-amber-500"
-                />
-                <TaskCard
-                  icon={FileText}
-                  label="Facturas por Timbrar"
-                  count={alertas.facturasPorTimbrar}
-                  tab="facturacion"
-                  color="bg-blue-500"
-                />
-                <TaskCard
-                  icon={ShoppingCart}
-                  label="Órdenes por Enviar"
-                  count={alertas.ocPorEnviar}
-                  tab="compras"
-                  color="bg-purple-500"
-                />
-                <TaskCard
-                  icon={Store}
-                  label="Solicitudes Mostrador"
-                  count={alertas.solicitudesMostrador}
-                  tab="mostrador"
-                  color="bg-emerald-500"
-                />
-              </div>
-
-              {/* Deliveries Today */}
+              {/* Entregas hoy */}
               {entregasHoy.length > 0 && (
-                <div className="border rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Truck className="h-4 w-4 text-crimson-500" />
-                    <span className="font-medium text-sm">
-                      Entregas esperadas hoy ({entregasHoy.length})
-                    </span>
-                  </div>
-                  <div className="space-y-1">
+                <div className="mt-6">
+                  <p className="font-serif italic text-[15px] text-ink-500 mb-3">Entregas esperadas hoy.</p>
+                  <div className="divide-y divide-ink-100">
                     {entregasHoy.map((entrega) => (
-                      <div
-                        key={entrega.id}
-                        className="text-xs text-muted-foreground flex items-center gap-2"
-                      >
-                        <Package className="h-3 w-3" />
-                        <span className="font-medium">{entrega.proveedorNombre}</span>
-                        <span>- {entrega.cantidad} unidades</span>
+                      <div key={entrega.id} className="flex items-center py-2.5">
+                        <span className="font-serif text-[18px] font-medium text-ink-900 tabular-nums w-10 text-left">
+                          {entrega.cantidad}
+                        </span>
+                        <span className="text-[13px] text-ink-600">
+                          {entrega.proveedorNombre}
+                        </span>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Product Updates */}
-              {(productosNuevos.length > 0 ||
-                cambiosPrecios.length > 0 ||
-                productosInhabilitados.length > 0) && (
-                <div className="border rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="h-4 w-4 text-crimson-500" />
-                    <span className="font-medium text-sm">
-                      Novedades en productos (últimas 48h)
-                    </span>
-                  </div>
-                  <div className="space-y-1 text-xs">
-                    {productosNuevos.length > 0 && (
-                      <div className="flex items-center gap-2 text-emerald-600">
-                        <TrendingUp className="h-3 w-3" />
-                        <span>{productosNuevos.length} producto{productosNuevos.length !== 1 ? "s" : ""} nuevo{productosNuevos.length !== 1 ? "s" : ""}</span>
+              {/* Novedades productos */}
+              {novedadesItems.length > 0 && (
+                <div className="mt-6">
+                  <p className="font-serif italic text-[15px] text-ink-500 mb-3">Novedades en productos.</p>
+                  <div className="divide-y divide-ink-100">
+                    {novedadesItems.map((item, i) => (
+                      <div key={i} className="flex items-center py-2.5">
+                        <span className="font-serif text-[18px] font-medium text-ink-900 tabular-nums w-10 text-left">
+                          {item.count}
+                        </span>
+                        <span className="text-[13px] text-ink-600">{item.label}</span>
                       </div>
-                    )}
-                    {cambiosPrecios.length > 0 && (
-                      <div className="flex items-center gap-2 text-amber-600">
-                        <TrendingUp className="h-3 w-3" />
-                        <span>{cambiosPrecios.length} cambio{cambiosPrecios.length !== 1 ? "s" : ""} de precio</span>
-                      </div>
-                    )}
-                    {productosInhabilitados.length > 0 && (
-                      <div className="flex items-center gap-2 text-red-600">
-                        <TrendingDown className="h-3 w-3" />
-                        <span>{productosInhabilitados.length} producto{productosInhabilitados.length !== 1 ? "s" : ""} descontinuado{productosInhabilitados.length !== 1 ? "s" : ""}</span>
-                      </div>
-                    )}
+                    ))}
                   </div>
                 </div>
               )}
-
-              {/* CTA Button */}
-              <Button
-                onClick={() => onOpenChange(false)}
-                className="w-full bg-gradient-to-r from-crimson-500 to-crimson-500 hover:from-crimson-600 hover:to-crimson-600"
-              >
-                Comenzar a trabajar
-              </Button>
             </div>
           </ScrollArea>
         )}
+
+        {/* Footer */}
+        <div className="px-8 pb-8 pt-6">
+          <Button
+            onClick={() => onOpenChange(false)}
+            className="w-full bg-crimson-500 text-white hover:bg-crimson-600"
+          >
+            <span className="font-serif italic text-[15px]">Comenzar.</span>
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

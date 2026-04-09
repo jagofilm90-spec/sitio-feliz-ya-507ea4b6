@@ -5,24 +5,12 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatCurrency } from "@/lib/utils";
-import { 
-  AlertTriangle, 
-  Clock, 
-  ShoppingCart,
-  Wallet,
-  ArrowRight,
-  Cake,
-  Package,
-  TrendingUp,
-  TrendingDown,
-  Sparkles,
-  Ban
-} from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -260,16 +248,9 @@ export function VendedorBienvenidaDialog({
 
   const getSaludo = () => {
     const hora = new Date().getHours();
-    if (hora < 12) return "¡Buenos días";
-    if (hora < 18) return "¡Buenas tardes";
-    return "¡Buenas noches";
-  };
-
-  const getTitulo = () => {
-    if (esCumpleanos) {
-      return "🎉 ¡Un día muy especial!";
-    }
-    return `👋 ${getSaludo()}, ${vendedorNombre}!`;
+    if (hora >= 5 && hora < 12) return "Buenos días,";
+    if (hora >= 12 && hora < 19) return "Buenas tardes,";
+    return "Buenas noches,";
   };
 
   const calcularPorcentajeCambio = (anterior: number, nuevo: number) => {
@@ -280,309 +261,157 @@ export function VendedorBienvenidaDialog({
   const tieneAlertas = alertas.facturasVencidas > 0 || alertas.facturasPorVencer > 0 || alertas.pedidosPendientes > 0;
   const tieneNovedadesProductos = alertas.productosNuevos.length > 0 || alertas.cambiosPrecios.length > 0 || alertas.productosInhabilitados.length > 0;
 
+  const pendientesItems = [
+    ...(alertas.facturasVencidas > 0 ? [{ count: alertas.facturasVencidas, label: `factura${alertas.facturasVencidas > 1 ? "s" : ""} vencida${alertas.facturasVencidas > 1 ? "s" : ""} · ${formatCurrency(alertas.montoVencido)}`, action: () => { onIrCobranza(); onOpenChange(false); } }] : []),
+    ...(alertas.facturasPorVencer > 0 ? [{ count: alertas.facturasPorVencer, label: `factura${alertas.facturasPorVencer > 1 ? "s" : ""} por vencer · ${formatCurrency(alertas.montoPorVencer)}`, action: () => { onIrCobranza(); onOpenChange(false); } }] : []),
+    ...(alertas.pedidosPendientes > 0 ? [{ count: alertas.pedidosPendientes, label: `pedido${alertas.pedidosPendientes > 1 ? "s" : ""} pendiente${alertas.pedidosPendientes > 1 ? "s" : ""}`, action: () => { onIrPedidos(); onOpenChange(false); } }] : []),
+  ];
+
+  const novedadesItems = [
+    ...(alertas.productosNuevos.length > 0 ? [{ count: alertas.productosNuevos.length, label: `producto${alertas.productosNuevos.length > 1 ? "s" : ""} nuevo${alertas.productosNuevos.length > 1 ? "s" : ""}` }] : []),
+    ...(alertas.cambiosPrecios.length > 0 ? [{ count: alertas.cambiosPrecios.length, label: `cambio${alertas.cambiosPrecios.length > 1 ? "s" : ""} de precio` }] : []),
+    ...(alertas.productosInhabilitados.length > 0 ? [{ count: alertas.productosInhabilitados.length, label: `producto${alertas.productosInhabilitados.length > 1 ? "s" : ""} descontinuado${alertas.productosInhabilitados.length > 1 ? "s" : ""}` }] : []),
+  ];
+
+  const firstName = vendedorNombre.split(" ")[0];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[90vh] overflow-x-hidden">
-        <DialogHeader>
-          <DialogTitle className="text-xl flex items-center gap-2">
-            {getTitulo()}
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-[480px] max-h-[90vh] overflow-x-hidden !p-0 !gap-0 !rounded-2xl shadow-[0_20px_60px_-20px_rgba(15,14,13,0.25)]">
+        {/* Header */}
+        <DialogHeader className="px-8 pt-8 pb-6">
+          <DialogDescription className="!text-[15px] text-ink-500 italic !mt-0">
+            {getSaludo()}
+          </DialogDescription>
+          <DialogTitle className="!font-serif !text-[32px] !font-medium text-ink-900 !leading-tight !tracking-[-0.01em]">
+            {firstName}.
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[60vh] pr-4">
-          <div className="space-y-4 py-2">
+        <ScrollArea className="max-h-[calc(90vh-220px)]">
+          <div className="px-8 py-4">
             {loading ? (
-              <div className="text-center py-6 text-muted-foreground">
+              <div className="text-center py-6 text-ink-400 text-[14px]">
                 Cargando resumen...
               </div>
             ) : (
               <>
-                {/* Sección especial de cumpleaños */}
+                {/* Birthday — editorial */}
                 {esCumpleanos && (
-                  <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-crimson-500/20 via-purple-500/20 to-indigo-500/20 border-2 border-crimson-500/30 p-6 mb-2">
-                    {/* Efectos decorativos */}
-                    <div className="absolute -top-2 -right-2 text-4xl animate-bounce" style={{ animationDelay: "0.1s" }}>🎈</div>
-                    <div className="absolute -bottom-1 -left-1 text-3xl animate-bounce" style={{ animationDelay: "0.3s" }}>🎉</div>
-                    <div className="absolute top-1/2 -right-3 text-2xl animate-pulse">✨</div>
-                    <div className="absolute top-0 left-1/4 text-2xl animate-pulse" style={{ animationDelay: "0.5s" }}>🎊</div>
-                    
-                    <div className="text-center space-y-3 relative z-10">
-                      <div className="flex justify-center items-center gap-2">
-                        <Cake className="h-10 w-10 text-crimson-500 animate-bounce" />
-                        <span className="text-5xl animate-bounce">🎂</span>
-                        <Cake className="h-10 w-10 text-purple-500 animate-bounce" style={{ animationDelay: "0.2s" }} />
-                      </div>
-                      <h2 className="text-2xl font-bold bg-gradient-to-r from-crimson-500 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                        ¡Feliz Cumpleaños, {vendedorNombre}!
-                      </h2>
-                      <p className="text-muted-foreground text-sm">
-                        El equipo de <span className="font-semibold text-primary">ALMASA</span> te desea un día lleno de éxitos y felicidad 🎊
-                      </p>
-                      <div className="flex justify-center gap-1 pt-1">
-                        {["🌟", "💫", "⭐", "💫", "🌟"].map((emoji, i) => (
-                          <span 
-                            key={i} 
-                            className="text-lg animate-pulse" 
-                            style={{ animationDelay: `${i * 0.15}s` }}
-                          >
-                            {emoji}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Novedades de Productos */}
-                {tieneNovedadesProductos && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-primary" />
-                      <h3 className="font-semibold text-sm">Novedades en Productos (últimas 48 horas)</h3>
-                    </div>
-
-                    {/* Productos nuevos */}
-                    {alertas.productosNuevos.length > 0 && (
-                      <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Package className="h-4 w-4 text-emerald-600" />
-                          <span className="font-medium text-emerald-700 text-sm">
-                            {alertas.productosNuevos.length} producto{alertas.productosNuevos.length > 1 ? "s" : ""} nuevo{alertas.productosNuevos.length > 1 ? "s" : ""}
-                          </span>
-                        </div>
-                        <div className="space-y-1.5">
-                          {alertas.productosNuevos.slice(0, 5).map((producto) => (
-                            <div key={producto.id} className="flex items-center justify-between text-sm">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className="text-muted-foreground font-mono text-xs">{producto.codigo}</span>
-                                <span className="truncate">{producto.nombre}</span>
-                              </div>
-                              <span className="font-medium text-emerald-700 whitespace-nowrap ml-2">
-                                {formatCurrency(producto.precio_venta)}
-                              </span>
-                            </div>
-                          ))}
-                          {alertas.productosNuevos.length > 5 && (
-                            <p className="text-xs text-muted-foreground">
-                              +{alertas.productosNuevos.length - 5} más...
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Cambios de precio */}
-                    {alertas.cambiosPrecios.length > 0 && (
-                      <div className="rounded-lg bg-violet-500/10 border border-violet-500/20 p-3">
-                        <div className="flex items-center gap-2 mb-2">
-                          <TrendingUp className="h-4 w-4 text-violet-600" />
-                          <span className="font-medium text-violet-700 text-sm">
-                            {alertas.cambiosPrecios.length} cambio{alertas.cambiosPrecios.length > 1 ? "s" : ""} de precio
-                          </span>
-                        </div>
-                        <div className="space-y-2">
-                          {alertas.cambiosPrecios.slice(0, 5).map((cambio, index) => {
-                            const porcentaje = calcularPorcentajeCambio(cambio.precio_anterior, cambio.precio_nuevo);
-                            const esAumento = porcentaje > 0;
-                            return (
-                              <div key={`${cambio.producto_id}-${index}`} className="text-sm">
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <span className="text-muted-foreground font-mono text-xs">{cambio.codigo}</span>
-                                  <span className="truncate flex-1">{cambio.nombre}</span>
-                                </div>
-                                <div className="flex items-center gap-2 mt-0.5 pl-4">
-                                  <span className="text-muted-foreground line-through text-xs">
-                                    {formatCurrency(cambio.precio_anterior)}
-                                  </span>
-                                  <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                                  <span className="font-medium">
-                                    {formatCurrency(cambio.precio_nuevo)}
-                                  </span>
-                                  <Badge 
-                                    variant="secondary" 
-                                    className={`text-xs px-1.5 py-0 ${
-                                      esAumento 
-                                        ? "bg-red-100 text-red-700" 
-                                        : "bg-green-100 text-green-700"
-                                    }`}
-                                  >
-                                    {esAumento ? (
-                                      <TrendingUp className="h-3 w-3 mr-0.5" />
-                                    ) : (
-                                      <TrendingDown className="h-3 w-3 mr-0.5" />
-                                    )}
-                                    {porcentaje > 0 ? "+" : ""}{porcentaje.toFixed(1)}%
-                                  </Badge>
-                                </div>
-                              </div>
-                            );
-                          })}
-                          {alertas.cambiosPrecios.length > 5 && (
-                            <p className="text-xs text-muted-foreground">
-                              +{alertas.cambiosPrecios.length - 5} más...
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Productos inhabilitados */}
-                    {alertas.productosInhabilitados.length > 0 && (
-                      <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Ban className="h-4 w-4 text-red-600" />
-                          <span className="font-medium text-red-700 text-sm">
-                            {alertas.productosInhabilitados.length} producto{alertas.productosInhabilitados.length > 1 ? "s" : ""} descontinuado{alertas.productosInhabilitados.length > 1 ? "s" : ""}
-                          </span>
-                        </div>
-                        <div className="space-y-1.5">
-                          {alertas.productosInhabilitados.slice(0, 5).map((producto) => (
-                            <div key={producto.producto_id} className="flex items-center gap-2 text-sm">
-                              <span className="text-muted-foreground font-mono text-xs">{producto.codigo}</span>
-                              <span className="truncate line-through text-muted-foreground">{producto.nombre}</span>
-                            </div>
-                          ))}
-                          {alertas.productosInhabilitados.length > 5 && (
-                            <p className="text-xs text-muted-foreground">
-                              +{alertas.productosInhabilitados.length - 5} más...
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Separador si hay novedades y alertas */}
-                {tieneNovedadesProductos && tieneAlertas && (
-                  <div className="border-t pt-3">
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {esCumpleanos ? "Y sobre tus pendientes:" : "Pendientes importantes:"}
-                    </p>
-                  </div>
-                )}
-
-                {/* Mensaje inicial si no hay novedades */}
-                {!tieneNovedadesProductos && (
-                  <p className="text-muted-foreground">
-                    {esCumpleanos 
-                      ? (tieneAlertas ? "Pero antes, aquí tienes un resumen de pendientes:" : "¡Y además, no tienes pendientes urgentes hoy!")
-                      : (tieneAlertas ? "Aquí tienes un resumen de pendientes importantes:" : "¡Excelente! No tienes pendientes urgentes hoy.")}
+                  <p className="font-serif italic text-[18px] text-crimson-500 mb-6">
+                    Feliz cumpleaños, {firstName}. Todo el equipo te desea un excelente día.
                   </p>
                 )}
 
-                <div className="space-y-3">
-                  {/* Facturas vencidas */}
-                  {alertas.facturasVencidas > 0 && (
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-                      <div className="h-10 w-10 rounded-full bg-destructive/20 flex items-center justify-center shrink-0">
-                        <AlertTriangle className="h-5 w-5 text-destructive" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-destructive">
-                          {alertas.facturasVencidas} factura{alertas.facturasVencidas > 1 ? "s" : ""} vencida{alertas.facturasVencidas > 1 ? "s" : ""}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Total: {formatCurrency(alertas.montoVencido)}
-                        </p>
-                      </div>
-                      <Badge variant="destructive">{alertas.facturasVencidas}</Badge>
+                {/* Novedades productos — editorial list */}
+                {tieneNovedadesProductos && (
+                  <div className="mb-6">
+                    <p className="font-serif italic text-[15px] text-ink-500 mb-3">Novedades en productos.</p>
+                    <div className="divide-y divide-ink-100">
+                      {novedadesItems.map((item, i) => (
+                        <div key={i} className="flex items-center py-2.5">
+                          <span className="font-serif text-[18px] font-medium text-ink-900 tabular-nums w-10 text-left">
+                            {item.count}
+                          </span>
+                          <span className="text-[13px] text-ink-600">{item.label}</span>
+                        </div>
+                      ))}
                     </div>
-                  )}
 
-                  {/* Facturas por vencer */}
-                  {alertas.facturasPorVencer > 0 && (
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                      <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
-                        <Clock className="h-5 w-5 text-amber-600" />
+                    {/* Detalle productos nuevos */}
+                    {alertas.productosNuevos.length > 0 && (
+                      <div className="mt-3 pl-10">
+                        {alertas.productosNuevos.slice(0, 5).map((p) => (
+                          <div key={p.id} className="flex items-center justify-between py-1 text-[12px]">
+                            <span className="text-ink-500 font-mono">{p.codigo}</span>
+                            <span className="text-ink-600 flex-1 truncate mx-2">{p.nombre}</span>
+                            <span className="text-ink-900 font-medium tabular-nums">{formatCurrency(p.precio_venta)}</span>
+                          </div>
+                        ))}
+                        {alertas.productosNuevos.length > 5 && (
+                          <p className="text-[11px] text-ink-400 mt-1">+{alertas.productosNuevos.length - 5} más</p>
+                        )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-amber-700">
-                          {alertas.facturasPorVencer} factura{alertas.facturasPorVencer > 1 ? "s" : ""} por vencer
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Próximos 7 días: {formatCurrency(alertas.montoPorVencer)}
-                        </p>
-                      </div>
-                      <Badge className="bg-amber-100 text-amber-800">
-                        {alertas.facturasPorVencer}
-                      </Badge>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Pedidos pendientes */}
-                  {alertas.pedidosPendientes > 0 && (
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                      <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0">
-                        <ShoppingCart className="h-5 w-5 text-blue-600" />
+                    {/* Detalle cambios de precio */}
+                    {alertas.cambiosPrecios.length > 0 && (
+                      <div className="mt-3 pl-10">
+                        {alertas.cambiosPrecios.slice(0, 5).map((c, i) => {
+                          const pct = calcularPorcentajeCambio(c.precio_anterior, c.precio_nuevo);
+                          return (
+                            <div key={`${c.producto_id}-${i}`} className="flex items-center justify-between py-1 text-[12px]">
+                              <span className="text-ink-500 font-mono">{c.codigo}</span>
+                              <span className="text-ink-600 flex-1 truncate mx-2">{c.nombre}</span>
+                              <span className="text-ink-400 line-through tabular-nums">{formatCurrency(c.precio_anterior)}</span>
+                              <span className="text-ink-900 font-medium tabular-nums ml-2">{formatCurrency(c.precio_nuevo)}</span>
+                              <span className={`text-[10px] ml-1.5 ${pct > 0 ? "text-crimson-500" : "text-emerald-600"}`}>
+                                {pct > 0 ? "+" : ""}{pct.toFixed(1)}%
+                              </span>
+                            </div>
+                          );
+                        })}
+                        {alertas.cambiosPrecios.length > 5 && (
+                          <p className="text-[11px] text-ink-400 mt-1">+{alertas.cambiosPrecios.length - 5} más</p>
+                        )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-blue-700">
-                          {alertas.pedidosPendientes} pedido{alertas.pedidosPendientes > 1 ? "s" : ""} pendiente{alertas.pedidosPendientes > 1 ? "s" : ""}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          En proceso de entrega
-                        </p>
-                      </div>
-                      <Badge className="bg-blue-100 text-blue-800">
-                        {alertas.pedidosPendientes}
-                      </Badge>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Sin alertas */}
-                  {!tieneAlertas && !tieneNovedadesProductos && (
-                    <div className="flex items-center gap-3 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-                      <div className="h-10 w-10 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
-                        <Wallet className="h-5 w-5 text-green-600" />
+                    {/* Detalle inhabilitados */}
+                    {alertas.productosInhabilitados.length > 0 && (
+                      <div className="mt-3 pl-10">
+                        {alertas.productosInhabilitados.slice(0, 5).map((p) => (
+                          <div key={p.producto_id} className="flex items-center py-1 text-[12px]">
+                            <span className="text-ink-400 font-mono">{p.codigo}</span>
+                            <span className="text-ink-400 line-through flex-1 truncate mx-2">{p.nombre}</span>
+                          </div>
+                        ))}
                       </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-green-700">
-                          Todo al corriente
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          No hay facturas vencidas ni pedidos pendientes
-                        </p>
-                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Pendientes — editorial list */}
+                {pendientesItems.length > 0 ? (
+                  <div>
+                    <p className="font-serif italic text-[15px] text-ink-500 mb-3">Pendientes.</p>
+                    <div className="divide-y divide-ink-100">
+                      {pendientesItems.map((item, i) => (
+                        <button
+                          key={i}
+                          onClick={item.action}
+                          className="flex items-center w-full py-3 group hover:bg-ink-50/50 -mx-2 px-2 rounded transition-colors"
+                        >
+                          <span className="font-serif text-[24px] font-medium text-ink-900 tabular-nums w-10 text-left">
+                            {item.count}
+                          </span>
+                          <span className="text-[14px] text-ink-700 flex-1 text-left">
+                            {item.label}
+                          </span>
+                          <ChevronRight className="h-4 w-4 text-ink-300 group-hover:text-ink-500 transition-colors" />
+                        </button>
+                      ))}
                     </div>
-                  )}
-                </div>
+                  </div>
+                ) : !tieneNovedadesProductos ? (
+                  <div className="py-8 text-center">
+                    <p className="font-serif italic text-[18px] text-ink-400">
+                      Hoy no tienes pendientes.
+                    </p>
+                  </div>
+                ) : null}
               </>
             )}
           </div>
         </ScrollArea>
 
-        {/* Actions */}
-        <div className="flex flex-col gap-2 pt-2">
-          {alertas.facturasVencidas > 0 || alertas.facturasPorVencer > 0 ? (
-            <Button 
-              onClick={() => { onIrCobranza(); onOpenChange(false); }}
-              className="w-full"
-            >
-              <Wallet className="h-4 w-4 mr-2" />
-              Ir a Cobranza
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          ) : null}
-          
-          {alertas.pedidosPendientes > 0 ? (
-            <Button 
-              variant="outline"
-              onClick={() => { onIrPedidos(); onOpenChange(false); }}
-              className="w-full"
-            >
-              <ShoppingCart className="h-4 w-4 mr-2" />
-              Ver Pedidos
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          ) : null}
-
-          <Button 
-            variant="ghost" 
+        {/* Footer */}
+        <div className="px-8 pb-8 pt-6">
+          <Button
             onClick={() => onOpenChange(false)}
-            className="w-full"
+            className="w-full bg-crimson-500 text-white hover:bg-crimson-600"
           >
-            Continuar al panel
+            <span className="font-serif italic text-[15px]">Comenzar.</span>
           </Button>
         </div>
       </DialogContent>
