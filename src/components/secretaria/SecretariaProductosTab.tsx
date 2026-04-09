@@ -80,6 +80,7 @@ export const SecretariaProductosTab = () => {
   const [originalFormData, setOriginalFormData] = useState<string>("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { data: categoriasCanon } = useCategorias();
 
   const [formData, setFormData] = useState({
     codigo: "",
