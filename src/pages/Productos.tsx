@@ -440,7 +440,7 @@ const Productos = () => {
 
       let matchesStock = true;
       if (filterStock === "con_stock") matchesStock = (p.stock_actual || 0) > 0;
-      else if (filterStock === "stock_bajo") matchesStock = (p.stock_actual || 0) > 0 && (p.stock_actual || 0) <= (p.stock_minimo || 0);
+      else if (filterStock === "stock_bajo") matchesStock = (p.stock_minimo || 0) > 0 && (p.stock_actual || 0) <= (p.stock_minimo || 0);
       else if (filterStock === "sin_stock") matchesStock = (p.stock_actual || 0) <= 0;
 
       return matchesSearch && matchesActiveFilter && matchesMarca && matchesCategoria && matchesTipoPrecio && matchesStock;
@@ -1113,7 +1113,7 @@ const Productos = () => {
                           filteredProductos.map(p => {
                             const details = [p.marca, p.especificaciones].filter(Boolean).join(' · ');
                             const stock = p.stock_actual ?? 0;
-                            const stockBajo = stock <= (p.stock_minimo || 0);
+                            const stockBajo = (p.stock_minimo || 0) > 0 && stock <= (p.stock_minimo || 0);
                             const sinStock = stock <= 0;
 
                             return (
