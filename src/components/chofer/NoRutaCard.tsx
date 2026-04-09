@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Truck, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -31,21 +30,24 @@ export function NoRutaCard({ onRefresh }: NoRutaCardProps) {
   };
 
   return (
-    <Card className="border-dashed max-w-lg mx-auto md:mt-8 animate-fade-in">
-      <CardContent className="flex flex-col items-center justify-center py-12 text-center space-y-4">
-        <div className="rounded-full bg-primary/10 p-5">
-          <Truck className="h-12 w-12 text-primary" />
-        </div>
-        <h2 className="text-xl font-semibold">Sin ruta asignada</h2>
-        <p className="text-muted-foreground">{getMensaje(now.getHours())}</p>
-        <p className="text-sm text-muted-foreground/70">
-          {format(now, "EEEE d 'de' MMMM, yyyy · HH:mm", { locale: es })}
-        </p>
-        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
-          <RefreshCw className={`h-4 w-4 mr-1 ${refreshing ? "animate-spin" : ""}`} />
-          Verificar rutas
-        </Button>
-      </CardContent>
-    </Card>
+    <div className="flex flex-col items-center justify-center text-center pt-32 md:pt-40 animate-fade-in">
+      <h2 className="font-serif text-[28px] font-medium italic text-ink-400">
+        Sin ruta asignada.
+      </h2>
+      <p className="text-[14px] text-ink-500 mt-2">{getMensaje(now.getHours())}</p>
+      <p className="text-[11px] text-ink-400 italic mt-3">
+        {format(now, "EEEE d 'de' MMMM, yyyy · HH:mm", { locale: es })}
+      </p>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleRefresh}
+        disabled={refreshing}
+        className="mt-6 text-ink-600 border-ink-200 hover:bg-ink-50"
+      >
+        <RefreshCw className={`h-4 w-4 mr-1 ${refreshing ? "animate-spin" : ""}`} />
+        Verificar rutas
+      </Button>
+    </div>
   );
 }

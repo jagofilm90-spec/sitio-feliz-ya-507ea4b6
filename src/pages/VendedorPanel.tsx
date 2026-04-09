@@ -24,7 +24,7 @@ import { VendedorAnalisisClientesTab } from "@/components/vendedor/VendedorAnali
 import { VendedorCobranzaTab } from "@/components/vendedor/VendedorCobranzaTab";
 import { VendedorSidebar } from "@/components/vendedor/VendedorSidebar";
 import { VendedorBienvenidaDialog } from "@/components/vendedor/VendedorBienvenidaDialog";
-import logoBlanco from "@/assets/logos/logo-blanco.png";
+import { AlmasaLogo } from "@/components/brand/AlmasaLogo";
 import { COMPANY_DATA } from "@/constants/companyData";
 
 export default function VendedorPanel() {
@@ -332,7 +332,7 @@ export default function VendedorPanel() {
         <header className="md:hidden sticky top-0 z-50 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground px-4 py-3 shadow-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src={logoBlanco} alt="ALMASA" className="h-9 object-contain" />
+              <AlmasaLogo size={32} color="white" />
               <div className="border-l border-primary-foreground/30 pl-3">
                 <p className="text-sm font-medium opacity-95 truncate max-w-[150px]">{vendedorNombre}</p>
                 <p className="text-[10px] opacity-70 font-medium">Ejecutivo de Ventas</p>

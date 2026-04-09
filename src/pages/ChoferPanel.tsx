@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Truck, MapPin, Package, User, LogOut, Navigation, RefreshCw } from "lucide-react";
+import { AlmasaLogo } from "@/components/brand/AlmasaLogo";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -168,23 +169,24 @@ export default function ChoferPanel() {
   return (
     <div className="min-h-screen bg-background">
       {/* PushNotificationSetup removed - handled by PushNotificationsGate */}
-      <header className="sticky top-0 z-50 bg-primary text-primary-foreground p-4 shadow-lg">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-          <div className="flex items-center justify-between">
+      <header className="sticky top-0 z-50 bg-white border-b border-ink-100 px-4 py-3" style={{ borderBottomWidth: '0.5px' }}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
-              <Truck className="h-7 w-7 md:h-8 md:w-8" />
-              <div>
-                <h1 className="text-base md:text-lg font-bold">Panel del Chofer</h1>
-                <p className="text-xs md:text-sm opacity-90">{format(new Date(), "EEEE d 'de' MMMM", { locale: es })}</p>
-                <p className="text-[10px] opacity-70 italic hidden md:block">"{COMPANY_DATA.slogan}"</p>
+              <AlmasaLogo size={32} />
+              <div style={{ lineHeight: 1 }}>
+                <div className="font-serif text-[20px] font-semibold text-crimson-500 tracking-wide" style={{ lineHeight: 1, letterSpacing: '0.03em' }}>ALMASA</div>
+                <div className="text-[9px] uppercase tracking-[0.18em] text-ink-500 mt-1 font-medium">Sistema · 1904</div>
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => setShowLogoutDialog(true)} className="md:hidden text-primary-foreground hover:bg-primary-foreground/20">
-              <LogOut className="h-5 w-5" />
-            </Button>
+            <div className="h-10 w-px bg-ink-100" />
+            <div>
+              <h1 className="font-serif text-[20px] font-medium text-ink-900" style={{ lineHeight: 1.1 }}>Panel del Chofer</h1>
+              <p className="text-[12px] text-ink-500">{format(new Date(), "EEEE d 'de' MMMM", { locale: es })}</p>
+            </div>
           </div>
-          
-          <div className="flex items-center gap-3 md:gap-4">
+
+          <div className="flex items-center gap-3">
             {choferNombre && (
               <div className="flex items-center gap-2">
                 <AvatarEmpleadoPopover
@@ -195,14 +197,14 @@ export default function ChoferPanel() {
                   fotoUrl={choferFotoUrl}
                   onFotoUpdated={(newUrl) => setChoferFotoUrl(newUrl)}
                 />
-                <span className="text-sm hidden md:inline">{choferNombre}</span>
+                <span className="text-sm text-ink-700 hidden md:inline">{choferNombre}</span>
               </div>
             )}
             {isRutaActiva && (
               <GpsTrackingIndicator isTracking={isTracking} accuracy={accuracy} error={gpsError} />
             )}
-            <LiveIndicator label="En vivo" className="text-primary-foreground/90" />
-            <Button variant="ghost" size="icon" onClick={() => setShowLogoutDialog(true)} className="hidden md:flex text-primary-foreground hover:bg-primary-foreground/20">
+            <LiveIndicator label="En vivo" className="text-ink-500" />
+            <Button variant="ghost" size="icon" onClick={() => setShowLogoutDialog(true)} className="text-ink-500 hover:bg-ink-50">
               <LogOut className="h-5 w-5" />
             </Button>
           </div>

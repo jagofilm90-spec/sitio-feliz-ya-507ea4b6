@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfiguracionFlotillaDialog } from "./ConfiguracionFlotillaDialog";
 import { AvatarEmpleadoPopover } from "./AvatarEmpleadoPopover";
-import logoAlmasa from "@/assets/logo-almasa.png";
+import { AlmasaLogo } from "@/components/brand/AlmasaLogo";
 import { LiveIndicator } from "@/components/ui/live-indicator";
 
 interface NavItem {
@@ -109,9 +109,13 @@ export const AlmacenSidebar = ({
   return (
     <>
       <aside className="w-56 lg:w-64 min-h-[calc(100vh)] border-r bg-card flex flex-col shrink-0">
-        {/* Logo */}
-        <div className="p-4 border-b">
-          <img src={logoAlmasa} alt="ALMASA" className="h-8" />
+        {/* Logo La Huella v8 */}
+        <div className="flex items-center gap-3 px-4 py-4 border-b border-ink-100" style={{ borderBottomWidth: '0.5px' }}>
+          <AlmasaLogo size={30} />
+          <div style={{ lineHeight: 1 }}>
+            <div className="font-serif text-[18px] font-semibold text-crimson-500 tracking-wide" style={{ lineHeight: 1, letterSpacing: '0.03em' }}>ALMASA</div>
+            <div className="text-[8px] uppercase tracking-[0.18em] text-ink-500 mt-1 font-medium">Sistema · 1904</div>
+          </div>
         </div>
 
         {/* User */}

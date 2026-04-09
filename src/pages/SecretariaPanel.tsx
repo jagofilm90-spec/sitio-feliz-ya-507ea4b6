@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { buttonVariants } from "@/components/ui/button";
 import { es } from "date-fns/locale";
-import logoAlmasa from "@/assets/logo-almasa.png";
+import { AlmasaLogo } from "@/components/brand/AlmasaLogo";
 import { COMPANY_DATA } from "@/constants/companyData";
 
 // Sidebar & Navigation
@@ -225,7 +225,7 @@ const SecretariaPanel = () => {
         <header className="md:hidden sticky top-0 z-50 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground px-4 py-3 shadow-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src={logoAlmasa} alt="ALMASA" className="h-8 brightness-0 invert" />
+              <AlmasaLogo size={32} color="white" />
               <div className="border-l border-primary-foreground/30 pl-3">
                 <p className="text-sm font-medium truncate max-w-[120px]">{userName}</p>
                 <p className="text-[10px] opacity-70">Secretaria</p>
