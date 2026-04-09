@@ -159,17 +159,17 @@ const CorreosV2 = () => {
     <Layout>
       {/* -mx/-my counteract Layout <main> padding so correos fills the entire content area */}
       <div className="-mx-6 sm:-mx-8 lg:-mx-12 -my-8 lg:-my-10 h-[calc(100%+4rem)] lg:h-[calc(100%+5rem)] overflow-hidden grid correos-grid-root" style={{
-        gridTemplateColumns: '72px 380px 1fr 340px',
+        gridTemplateColumns: '60px minmax(0,320px) minmax(0,1fr) minmax(0,280px)',
       }}>
         <style>{`
           @media (min-width: 1536px) {
-            .correos-grid-root { grid-template-columns: 72px 380px 1fr 340px !important; }
+            .correos-grid-root { grid-template-columns: 68px minmax(0,380px) minmax(0,1fr) minmax(0,320px) !important; }
           }
           @media (max-width: 1535px) and (min-width: 1280px) {
-            .correos-grid-root { grid-template-columns: 64px 340px 1fr 300px !important; }
+            .correos-grid-root { grid-template-columns: 64px minmax(0,340px) minmax(0,1fr) minmax(0,280px) !important; }
           }
           @media (max-width: 1279px) {
-            .correos-grid-root { grid-template-columns: 60px 300px 1fr !important; }
+            .correos-grid-root { grid-template-columns: 56px minmax(0,280px) minmax(0,1fr) !important; }
           }
         `}</style>
         {/* Pane 1 — Rail */}
@@ -199,7 +199,7 @@ const CorreosV2 = () => {
         />
 
         {/* Pane 4 — Context (hidden <1280px, replaced by sheet) */}
-        <div className="hidden 2xl:block xl:block min-h-0">
+        <div className="hidden 2xl:block xl:block min-h-0 overflow-hidden">
           <ContextPanel
             email={selectedEmail}
             accountType={activeAccount.type}
