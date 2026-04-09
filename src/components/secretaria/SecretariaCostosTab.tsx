@@ -720,34 +720,36 @@ export const SecretariaCostosTab = () => {
       {/* Dialog: Editar Costo - Solo Admin */}
       {isAdmin && (
         <Dialog open={editDialog} onOpenChange={setEditDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Editar Costo</DialogTitle>
-              <DialogDescription>
-                {editingProducto?.codigo} - {editingProducto?.nombre}
+          <DialogContent className="sm:max-w-[560px] !p-0 !gap-0 !rounded-2xl shadow-[0_20px_60px_-20px_rgba(15,14,13,0.25)]">
+            <DialogHeader className="px-8 pt-8 pb-6">
+              <DialogTitle className="!font-serif !text-[28px] !font-medium text-ink-900 !tracking-[-0.01em] !leading-tight">
+                Editar costo.
+              </DialogTitle>
+              <DialogDescription className="!text-[13px] text-ink-500 italic">
+                {editingProducto?.nombre}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="px-8 py-4 space-y-5">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Último Costo</Label>
-                  <p className="text-lg font-bold text-muted-foreground">
+                  <Label className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500">Último Costo</Label>
+                  <p className="text-lg font-bold text-ink-500">
                     {formatCurrency(editingProducto?.ultimo_costo_compra || 0)}
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Costo Promedio</Label>
-                  <p className="text-lg font-bold text-muted-foreground">
-                    {editingProducto?.costo_promedio_ponderado 
-                      ? formatCurrency(editingProducto.costo_promedio_ponderado) 
+                  <Label className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500">Costo Promedio</Label>
+                  <p className="text-lg font-bold text-ink-500">
+                    {editingProducto?.costo_promedio_ponderado
+                      ? formatCurrency(editingProducto.costo_promedio_ponderado)
                       : "—"}
                   </p>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="nuevoCosto">Nuevo Costo *</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="nuevoCosto" className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500">Nuevo Costo <span className="text-crimson-500">*</span></Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 text-ink-400">
                     $
                   </span>
                   <Input
@@ -755,37 +757,40 @@ export const SecretariaCostosTab = () => {
                     type="number"
                     step="0.01"
                     min="0"
-                    className="pl-7"
+                    className="rounded-none bg-transparent border-x-0 border-t-0 px-0 pl-4 h-auto text-[15px] focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:bg-transparent focus-visible:border-b-[1.5px]"
                     value={nuevoCosto}
                     onChange={(e) => setNuevoCosto(e.target.value)}
                     placeholder="0.00"
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="notas">Notas (opcional)</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="notas" className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500">Notas (opcional)</Label>
                 <Textarea
                   id="notas"
                   value={notas}
                   onChange={(e) => setNotas(e.target.value)}
                   placeholder="Ej: Cotización telefónica con proveedor"
                   rows={2}
+                  className="rounded-none bg-transparent border-x-0 border-t-0 px-0 text-[15px] focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-b-[1.5px] focus-visible:border-crimson-500"
                 />
               </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={() => setEditDialog(false)}>
-                  Cancelar
-                </Button>
-                <Button 
-                  onClick={handleSaveCosto}
-                  disabled={editCostoMutation.isPending}
-                >
-                  {editCostoMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : null}
-                  Guardar
-                </Button>
-              </div>
+            </div>
+            <div className="px-8 pb-8 pt-6 flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setEditDialog(false)}
+                className="text-ink-600 border-ink-200 hover:bg-ink-50">
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleSaveCosto}
+                disabled={editCostoMutation.isPending}
+                className="bg-crimson-500 text-white hover:bg-crimson-600"
+              >
+                {editCostoMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : null}
+                Guardar cambios
+              </Button>
             </div>
           </DialogContent>
         </Dialog>

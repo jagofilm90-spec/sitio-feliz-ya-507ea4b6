@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Search, Package, ChevronLeft, ChevronRight, Sparkles, Edit, Save, Check } from "lucide-react";
+import { Loader2, Plus, Search, Package, ChevronLeft, ChevronRight, Sparkles, Edit, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -328,6 +328,11 @@ export const SecretariaProductosTab = () => {
   const activeCount = productos?.filter((p) => p.activo).length || 0;
   const inactiveCount = productos?.filter((p) => !p.activo).length || 0;
 
+  // — Editorial modal tokens —
+  const eInput = "rounded-none bg-transparent border-x-0 border-t-0 px-0 h-auto text-[15px] focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:bg-transparent focus-visible:border-b-[1.5px]";
+  const eSelect = "rounded-none bg-transparent border-x-0 border-t-0 px-0 h-auto text-[15px] focus:ring-0 focus:ring-offset-0";
+  const eLabel = "text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500";
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -467,10 +472,10 @@ export const SecretariaProductosTab = () => {
         setDialogOpen(open); 
         if (!open) resetForm(); 
       }}>
-        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-[720px] max-h-[90vh] overflow-y-auto overflow-x-hidden !p-0 !gap-0 !rounded-2xl shadow-[0_20px_60px_-20px_rgba(15,14,13,0.25)]">
           {/* Navigation between products */}
           {editingProduct && filteredProductos && filteredProductos.length > 1 && (
-            <div className="flex items-center justify-between border-b pb-3 -mt-2 mb-2">
+            <div className="flex items-center justify-between px-8 pt-5 pb-2">
               <Button
                 type="button"
                 variant="ghost"
@@ -499,38 +504,39 @@ export const SecretariaProductosTab = () => {
             </div>
           )}
 
-          <DialogHeader>
-            <DialogTitle>
-              {editingProduct ? "Editar Producto" : "Nuevo Producto"}
+          <DialogHeader className={cn("px-8 pb-6", editingProduct ? "pt-4" : "pt-8")}>
+            <DialogTitle className="!font-serif !text-[28px] !font-medium text-ink-900 !tracking-[-0.01em] !leading-tight">
+              {editingProduct ? "Editar producto." : "Nuevo producto."}
             </DialogTitle>
-            <DialogDescription>
-              Completa la información del producto
+            <DialogDescription className="!text-[13px] text-ink-500 italic">
+              {editingProduct ? editingProduct.nombre : "Completa la información del catálogo"}
             </DialogDescription>
           </DialogHeader>
           
-          <form onSubmit={handleSave} className="space-y-6">
+          <form onSubmit={handleSave} className="px-8 py-4 space-y-5">
             {/* Sección 1: Identificación */}
             <div className="space-y-4">
-              <h3 className="font-medium text-sm text-muted-foreground border-b pb-2">
+              <h3 className="font-serif italic text-[15px] text-ink-500 mt-8 mb-3">
                 Identificación
               </h3>
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="codigo">Código *</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="codigo" className={eLabel}>Código <span className="text-crimson-500">*</span></Label>
                   <Input
                     id="codigo"
                     value={formData.codigo}
                     onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
                     required
+                    className={eInput}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="unidad">Unidad *</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="unidad" className={eLabel}>Unidad <span className="text-crimson-500">*</span></Label>
                   <Select
                     value={formData.unidad}
                     onValueChange={(v) => setFormData({ ...formData, unidad: v as any })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className={eSelect}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -544,58 +550,62 @@ export const SecretariaProductosTab = () => {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="nombre">Nombre *</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="nombre" className={eLabel}>Nombre <span className="text-crimson-500">*</span></Label>
                 <Input
                   id="nombre"
                   value={formData.nombre}
                   onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                   required
+                  className={eInput}
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="marca">Marca</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="marca" className={eLabel}>Marca</Label>
                 <Input
                   id="marca"
                   value={formData.marca}
                   onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
+                  className={eInput}
                 />
               </div>
             </div>
 
             {/* Sección 2: Empaque */}
             <div className="space-y-4">
-              <h3 className="font-medium text-sm text-muted-foreground border-b pb-2">
-                Empaque y Presentación
+              <h3 className="font-serif italic text-[15px] text-ink-500 mt-8 mb-3">
+                Empaque y presentación
               </h3>
-              <div className="space-y-2">
-                <Label htmlFor="especificaciones">Variantes / Calibre</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="especificaciones" className={eLabel}>Variantes / Calibre</Label>
                 <Input
                   id="especificaciones"
                   value={formData.especificaciones}
                   onChange={(e) => setFormData({ ...formData, especificaciones: e.target.value })}
                   placeholder="Ej: 30/40, Jumbo 22/64, 14 rodajas"
+                  className={eInput}
                 />
                 <p className="text-xs text-muted-foreground">
                   Calibre, conteo o variante del producto
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="contenido_empaque">Contenido por empaque</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="contenido_empaque" className={eLabel}>Contenido por empaque</Label>
                   <Input
                     id="contenido_empaque"
                     value={formData.contenido_empaque}
                     onChange={(e) => setFormData({ ...formData, contenido_empaque: e.target.value })}
                     placeholder="Ej: 25 kg, 24×800g, 10 kg"
+                    className={eInput}
                   />
                   <p className="text-xs text-muted-foreground">
                     Peso o contenido por unidad de venta
                   </p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="peso_kg">Peso numérico (kg)</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="peso_kg" className={eLabel}>Peso numérico (kg)</Label>
                   <div className="relative">
                     <Input
                       id="peso_kg"
@@ -605,7 +615,7 @@ export const SecretariaProductosTab = () => {
                       value={formData.peso_kg}
                       onChange={(e) => setFormData({ ...formData, peso_kg: e.target.value })}
                       placeholder="25.00"
-                      className="pr-10"
+                      className={cn(eInput, "pr-10")}
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">kg</span>
                   </div>
@@ -615,13 +625,13 @@ export const SecretariaProductosTab = () => {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="unidad_sat">Unidad SAT</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="unidad_sat" className={eLabel}>Unidad SAT</Label>
                   <Select
                     value={formData.unidad_sat}
                     onValueChange={(v) => setFormData({ ...formData, unidad_sat: v })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className={eSelect}>
                       <SelectValue placeholder="Seleccionar..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -667,7 +677,7 @@ export const SecretariaProductosTab = () => {
 
             {/* Sección 3: Impuestos */}
             <div className="space-y-4">
-              <h3 className="font-medium text-sm text-muted-foreground border-b pb-2">
+              <h3 className="font-serif italic text-[15px] text-ink-500 mt-8 mb-3">
                 Impuestos
               </h3>
               <div className="flex flex-wrap gap-6">
@@ -692,17 +702,18 @@ export const SecretariaProductosTab = () => {
 
             {/* Sección 4: Control de Inventario */}
             <div className="space-y-4">
-              <h3 className="font-medium text-sm text-muted-foreground border-b pb-2">
-                Control de Inventario
+              <h3 className="font-serif italic text-[15px] text-ink-500 mt-8 mb-3">
+                Inventario inicial
               </h3>
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="stock_minimo">Stock Mínimo</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="stock_minimo" className={eLabel}>Stock Mínimo</Label>
                   <Input
                     id="stock_minimo"
                     type="number"
                     value={formData.stock_minimo}
                     onChange={(e) => setFormData({ ...formData, stock_minimo: e.target.value })}
+                    className={eInput}
                   />
                 </div>
                 <div className="flex items-center gap-2 pt-6">
@@ -753,12 +764,13 @@ export const SecretariaProductosTab = () => {
                 </div>
                 {formData.requiere_fumigacion && (
                   <div className="space-y-2 ml-6">
-                    <Label htmlFor="fecha_ultima_fumigacion">Fecha de última fumigación (opcional)</Label>
+                    <Label htmlFor="fecha_ultima_fumigacion" className={eLabel}>Fecha de última fumigación (opcional)</Label>
                     <Input
                       id="fecha_ultima_fumigacion"
                       type="date"
                       value={formData.fecha_ultima_fumigacion}
                       onChange={(e) => setFormData({ ...formData, fecha_ultima_fumigacion: e.target.value })}
+                      className={eInput}
                     />
                     <p className="text-xs text-muted-foreground">
                       Si no se conoce, se registrará al recibir el producto en inventario
@@ -768,17 +780,19 @@ export const SecretariaProductosTab = () => {
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                {editingProduct ? "Cerrar" : "Cancelar"}
+            <div className="px-8 pb-8 pt-6 flex justify-end gap-3">
+              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}
+                className="text-ink-600 border-ink-200 hover:bg-ink-50">
+                Cancelar
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={saveMutation.isPending}
-                variant={((isSaved || showSuccessAnimation) && editingProduct) ? "outline" : "default"}
                 className={cn(
                   "transition-all duration-300 ease-out min-w-[140px]",
-                  (isSaved || showSuccessAnimation) && editingProduct && "border-green-500 text-green-600 hover:bg-green-50",
+                  (isSaved || showSuccessAnimation) && editingProduct
+                    ? "border-green-500 text-green-600 hover:bg-green-50 bg-transparent"
+                    : "bg-crimson-500 text-white hover:bg-crimson-600",
                   showSuccessAnimation && editingProduct && "animate-success-pulse bg-green-50"
                 )}
               >
@@ -790,15 +804,13 @@ export const SecretariaProductosTab = () => {
                       "h-4 w-4 mr-2 text-green-500",
                       showSuccessAnimation && "animate-check-bounce"
                     )} />
-                  ) : (
-                    <Save className="h-4 w-4 mr-2" />
-                  )}
+                  ) : null}
                   <span className="transition-opacity duration-200">
-                    {saveMutation.isPending 
-                      ? "Guardando..." 
-                      : editingProduct 
-                        ? ((isSaved || showSuccessAnimation) ? "Guardado" : "Guardar Cambios")
-                        : "Crear Producto"
+                    {saveMutation.isPending
+                      ? "Guardando..."
+                      : editingProduct
+                        ? ((isSaved || showSuccessAnimation) ? "Guardado" : "Guardar cambios")
+                        : "+ Guardar producto"
                     }
                   </span>
                 </span>

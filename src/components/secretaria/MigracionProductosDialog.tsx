@@ -244,19 +244,18 @@ export const MigracionProductosDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-crimson-500" />
-            Normalizar Productos con IA
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-[720px] max-h-[90vh] overflow-y-auto overflow-x-hidden !p-0 !gap-0 !rounded-2xl shadow-[0_20px_60px_-20px_rgba(15,14,13,0.25)]">
+        <DialogHeader className="px-8 pt-8 pb-6">
+          <DialogTitle className="!font-serif !text-[28px] !font-medium text-ink-900 !tracking-[-0.01em] !leading-tight">
+            Normalizar con IA.
           </DialogTitle>
-          <DialogDescription>
-            La IA analiza cada producto y sugiere cómo separar nombre, especificaciones, marca, contenido y unidad SAT.
+          <DialogDescription className="!text-[13px] text-ink-500 italic">
+            Limpieza inteligente del catálogo
           </DialogDescription>
         </DialogHeader>
 
         {/* Progreso */}
-        <div className="space-y-2">
+        <div className="px-8 space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">
               Progreso: {normalizados.length + skipped.length} de {productos.length}
@@ -272,7 +271,7 @@ export const MigracionProductosDialog = ({
         </div>
 
         {isComplete ? (
-          <Card className="border-green-200 bg-green-50">
+          <Card className="border-green-200 bg-green-50 mx-8 mb-8">
             <CardContent className="pt-6 text-center space-y-4">
               <CheckCircle2 className="h-12 w-12 text-green-600 mx-auto" />
               <div>
@@ -285,7 +284,7 @@ export const MigracionProductosDialog = ({
             </CardContent>
           </Card>
         ) : currentProduct ? (
-          <div className="space-y-4">
+          <div className="px-8 pb-8 space-y-4">
             {/* Producto actual */}
             <Card>
               <CardContent className="pt-4 space-y-4">
@@ -575,7 +574,7 @@ export const MigracionProductosDialog = ({
                 <Button
                   onClick={handleApply}
                   disabled={isAnalyzing || isSaving || !sugerencia}
-                  className="bg-crimson-500 hover:bg-crimson-600"
+                  className="bg-crimson-500 text-white hover:bg-crimson-600"
                 >
                   {isSaving ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -588,7 +587,7 @@ export const MigracionProductosDialog = ({
             </div>
           </div>
         ) : (
-          <div className="text-center py-8 text-muted-foreground">
+          <div className="text-center py-8 px-8 text-muted-foreground">
             <CheckCircle2 className="h-12 w-12 mx-auto mb-4 text-green-600" />
             <p>No hay productos pendientes de normalizar.</p>
           </div>

@@ -19,7 +19,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, Pencil, Search, History, ChevronLeft, ChevronRight, DollarSign,
-  TrendingUp, TrendingDown, Minus, Save, Check, Package, Calculator, Percent,
+  TrendingUp, TrendingDown, Minus, Check, Package, Calculator, Percent,
   Download, FileText, AlertTriangle, ChevronDown, ChevronUp, Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -387,10 +387,10 @@ export const SecretariaListaPreciosTab = () => {
 
       {/* Edit Price Dialog */}
       <Dialog open={editor.editDialogOpen} onOpenChange={editor.setEditDialogOpen}>
-        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md overflow-x-hidden">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-[560px] overflow-x-hidden !p-0 !gap-0 !rounded-2xl shadow-[0_20px_60px_-20px_rgba(15,14,13,0.25)]">
           {/* Navigation */}
           {editor.editingProduct && filteredProductos.length > 1 && (
-            <div className="flex items-center justify-between border-b pb-3 -mt-2 mb-2">
+            <div className="flex items-center justify-between px-8 pt-5 pb-2">
               <Button type="button" variant="ghost" size="sm" onClick={() => editor.handleNavigate('prev')}
                 disabled={editor.currentIndex <= 0 || editor.isPending}>
                 <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
@@ -405,18 +405,16 @@ export const SecretariaListaPreciosTab = () => {
             </div>
           )}
 
-          <DialogHeader>
-            <DialogTitle>Editar Precio</DialogTitle>
-            <DialogDescription>
-              {editor.editingProduct && (
-                <span className="font-medium text-foreground">
-                  {editor.editingProduct.codigo} - {getProductDisplayName(editor.editingProduct)}
-                </span>
-              )}
+          <DialogHeader className={cn("px-8 pb-6", editor.editingProduct && filteredProductos.length > 1 ? "pt-4" : "pt-8")}>
+            <DialogTitle className="!font-serif !text-[28px] !font-medium text-ink-900 !tracking-[-0.01em] !leading-tight">
+              Editar precio.
+            </DialogTitle>
+            <DialogDescription className="!text-[13px] text-ink-500 italic">
+              {editor.editingProduct && getProductDisplayName(editor.editingProduct)}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="px-8 py-4 space-y-5">
             {/* Calculator toggle */}
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
               <div className="flex items-center gap-2">
@@ -470,7 +468,7 @@ export const SecretariaListaPreciosTab = () => {
                     <div className="space-y-2 pt-2 border-t">
                       <Label htmlFor="margen" className="text-xs">Margen de Utilidad (%)</Label>
                       <div className="relative">
-                        <Input id="margen" type="number" step="0.1" min="0" max="100" className="pr-8"
+                        <Input id="margen" type="number" step="0.1" min="0" max="100" className="rounded-none bg-transparent border-x-0 border-t-0 px-0 pr-8 h-auto text-[15px] focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:bg-transparent focus-visible:border-b-[1.5px]"
                           value={editor.margenPorcentaje}
                           onChange={(e) => {
                             const margen = e.target.value;
@@ -520,15 +518,15 @@ export const SecretariaListaPreciosTab = () => {
             )}
 
             {/* Price input */}
-            <div className="space-y-2">
-              <Label htmlFor="precio_venta">
-                Precio de Venta *
-                {editor.modoCalculadora && editor.margenPorcentaje && <span className="text-xs text-muted-foreground ml-2">(calculado)</span>}
+            <div className="space-y-1.5">
+              <Label htmlFor="precio_venta" className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500">
+                Precio de Venta <span className="text-crimson-500">*</span>
+                {editor.modoCalculadora && editor.margenPorcentaje && <span className="text-ink-300 normal-case ml-2">(calculado)</span>}
               </Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 text-ink-400">$</span>
                 <Input id="precio_venta" type="number" step="0.01" min="0"
-                  className={cn("pl-7 text-lg font-mono", editor.modoCalculadora && editor.margenPorcentaje && "bg-muted/50")}
+                  className={cn("rounded-none bg-transparent border-x-0 border-t-0 px-0 pl-4 h-auto text-[15px] font-mono focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:bg-transparent focus-visible:border-b-[1.5px]", editor.modoCalculadora && editor.margenPorcentaje && "text-ink-500")}
                   value={editor.precioVenta}
                   onChange={(e) => { editor.setPrecioVenta(e.target.value); if (editor.modoCalculadora) editor.setMargenPorcentaje(""); }}
                   placeholder="0.00"
@@ -538,11 +536,11 @@ export const SecretariaListaPreciosTab = () => {
             </div>
 
             {/* Discount input */}
-            <div className="space-y-2">
-              <Label htmlFor="descuento_maximo">Descuento Máximo Autorizado ($)</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="descuento_maximo" className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500">Descuento Máximo Autorizado ($)</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                <Input id="descuento_maximo" type="number" step="0.01" min="0" className="pl-7"
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 text-ink-400">$</span>
+                <Input id="descuento_maximo" type="number" step="0.01" min="0" className="rounded-none bg-transparent border-x-0 border-t-0 px-0 pl-4 h-auto text-[15px] focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:bg-transparent focus-visible:border-b-[1.5px]"
                   value={editor.descuentoMaximo}
                   onChange={(e) => {
                     editor.setDescuentoMaximo(e.target.value);
@@ -573,23 +571,25 @@ export const SecretariaListaPreciosTab = () => {
             )}
           </div>
 
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={editor.closeEditor}>Cerrar</Button>
+          <div className="px-8 pb-8 pt-6 flex justify-end gap-3">
+            <Button variant="outline" onClick={editor.closeEditor}
+              className="text-ink-600 border-ink-200 hover:bg-ink-50">Cancelar</Button>
             <Button
               onClick={() => editor.handleSave()}
               disabled={editor.isPending}
-              variant={(editor.isSaved || editor.showSuccessAnimation) ? "outline" : "default"}
               className={cn(
                 "transition-all duration-300 ease-out min-w-[140px]",
-                (editor.isSaved || editor.showSuccessAnimation) && "border-green-500 text-green-600 hover:bg-green-50",
+                (editor.isSaved || editor.showSuccessAnimation)
+                  ? "border-green-500 text-green-600 hover:bg-green-50 bg-transparent"
+                  : "bg-crimson-500 text-white hover:bg-crimson-600",
                 editor.showSuccessAnimation && "animate-success-pulse bg-green-50"
               )}
             >
               <span className="flex items-center justify-center">
                 {editor.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> :
                   (editor.isSaved || editor.showSuccessAnimation) ? <Check className={cn("h-4 w-4 mr-2 text-green-500", editor.showSuccessAnimation && "animate-check-bounce")} /> :
-                    <Save className="h-4 w-4 mr-2" />}
-                <span>{editor.isPending ? "Guardando..." : (editor.isSaved || editor.showSuccessAnimation) ? "Guardado" : "Guardar Cambios"}</span>
+                    null}
+                <span>{editor.isPending ? "Guardando..." : (editor.isSaved || editor.showSuccessAnimation) ? "Guardado" : "Guardar cambios"}</span>
               </span>
             </Button>
           </div>

@@ -293,20 +293,19 @@ export const MigracionLoteDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-5xl max-h-[90vh] overflow-x-hidden">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-crimson-500" />
-            Migración en Lote con IA
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-[720px] max-h-[90vh] overflow-x-hidden !p-0 !gap-0 !rounded-2xl shadow-[0_20px_60px_-20px_rgba(15,14,13,0.25)]">
+        <DialogHeader className="px-8 pt-8 pb-6">
+          <DialogTitle className="!font-serif !text-[28px] !font-medium text-ink-900 !tracking-[-0.01em] !leading-tight">
+            Migración en lote.
           </DialogTitle>
-          <DialogDescription>
-            Analiza y normaliza múltiples productos automáticamente.
+          <DialogDescription className="!text-[13px] text-ink-500 italic">
+            Procesa productos en bloque con IA
           </DialogDescription>
         </DialogHeader>
 
         {/* Fase: Inicio */}
         {fase === 'inicio' && (
-          <div className="space-y-6 py-4">
+          <div className="px-8 pb-8 space-y-6 py-4">
             <Card>
               <CardContent className="pt-6 text-center space-y-4">
                 <Sparkles className="h-12 w-12 text-crimson-500 mx-auto" />
@@ -324,7 +323,7 @@ export const MigracionLoteDialog = ({
                   <Badge variant="outline">Sin especificaciones: ~80%</Badge>
                   <Badge variant="outline" className="text-red-600 border-red-200">Sin unidad SAT: ~99%</Badge>
                 </div>
-                <Button onClick={startAnalysis} className="bg-crimson-500 hover:bg-crimson-600">
+                <Button onClick={startAnalysis} className="bg-crimson-500 text-white hover:bg-crimson-600">
                   <Play className="h-4 w-4 mr-2" />
                   Iniciar Análisis
                 </Button>
@@ -335,7 +334,7 @@ export const MigracionLoteDialog = ({
 
         {/* Fase: Analizando */}
         {fase === 'analizando' && (
-          <div className="space-y-4 py-4">
+          <div className="px-8 pb-8 space-y-4 py-4">
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Analizando productos con IA...</span>
@@ -376,7 +375,7 @@ export const MigracionLoteDialog = ({
 
         {/* Fase: Revisión */}
         {(fase === 'revision' || fase === 'completado') && (
-          <div className="space-y-4">
+          <div className="px-8 pb-8 space-y-4">
             {/* Stats */}
             <div className="flex gap-4 flex-wrap">
               <Badge variant="secondary" className="bg-green-100 text-green-700">
@@ -505,7 +504,7 @@ export const MigracionLoteDialog = ({
                     <Button
                       onClick={applySelected}
                       disabled={seleccionados.size === 0}
-                      className="bg-crimson-500 hover:bg-crimson-600"
+                      className="bg-crimson-500 text-white hover:bg-crimson-600"
                     >
                       <Check className="h-4 w-4 mr-2" />
                       Aplicar {seleccionados.size} seleccionados
@@ -528,7 +527,7 @@ export const MigracionLoteDialog = ({
 
         {/* Fase: Aplicando */}
         {fase === 'aplicando' && (
-          <div className="space-y-4 py-8">
+          <div className="px-8 pb-8 space-y-4 py-8">
             <div className="text-center">
               <AlmasaLoading size={48} />
               <p>Aplicando cambios...</p>
