@@ -101,9 +101,9 @@ export function PushNotificationDiagnostics() {
 
   const getLogClass = (type: string) => {
     switch (type) {
-      case 'success': return 'text-green-600 dark:text-green-400';
+      case 'success': return 'text-green-600';
       case 'error': return 'text-destructive';
-      case 'warning': return 'text-yellow-600 dark:text-yellow-400';
+      case 'warning': return 'text-yellow-600';
       default: return 'text-foreground';
     }
   };
@@ -282,7 +282,7 @@ export function PushNotificationDiagnostics() {
           </div>
           
           {!platformInfo.isNative && (
-            <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-md text-sm text-yellow-800 dark:text-yellow-200">
+            <div className="p-3 bg-yellow-50 rounded-md text-sm text-yellow-800">
               <AlertTriangle className="h-4 w-4 inline mr-2" />
               <strong>Modo Web detectado.</strong> El diagnóstico intentará ejecutarse, pero las notificaciones push 
               solo funcionarán completamente en plataformas nativas (iOS/Android). 

@@ -29,11 +29,11 @@ interface PedidoCardMobileProps {
 }
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: any; bgClass: string }> = {
-  por_autorizar: { label: "Por autorizar", variant: "secondary", icon: Clock, bgClass: "bg-amber-50 dark:bg-amber-950/20 border-amber-200" },
-  pendiente: { label: "Pendiente", variant: "default", icon: Package, bgClass: "bg-blue-50 dark:bg-blue-950/20 border-blue-200" },
-  en_ruta: { label: "En ruta", variant: "outline", icon: Truck, bgClass: "bg-violet-50 dark:bg-violet-950/20 border-violet-200" },
-  entregado: { label: "Entregado", variant: "default", icon: CheckCircle2, bgClass: "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200" },
-  cancelado: { label: "Cancelado", variant: "destructive", icon: XCircle, bgClass: "bg-rose-50 dark:bg-rose-950/20 border-rose-200" },
+  por_autorizar: { label: "Por autorizar", variant: "secondary", icon: Clock, bgClass: "bg-amber-50 border-amber-200" },
+  pendiente: { label: "Pendiente", variant: "default", icon: Package, bgClass: "bg-blue-50 border-blue-200" },
+  en_ruta: { label: "En ruta", variant: "outline", icon: Truck, bgClass: "bg-violet-50 border-violet-200" },
+  entregado: { label: "Entregado", variant: "default", icon: CheckCircle2, bgClass: "bg-emerald-50 border-emerald-200" },
+  cancelado: { label: "Cancelado", variant: "destructive", icon: XCircle, bgClass: "bg-rose-50 border-rose-200" },
 };
 
 export function PedidoCardMobile({

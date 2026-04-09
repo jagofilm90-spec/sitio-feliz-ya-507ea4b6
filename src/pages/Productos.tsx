@@ -602,8 +602,8 @@ const Productos = () => {
                         ))}
                       </datalist>
                       {similarNameSuggestion && (
-                        <div className="flex items-center justify-between text-xs bg-amber-50 dark:bg-amber-950/30 p-2 rounded border border-amber-200 dark:border-amber-800">
-                          <span className="text-amber-700 dark:text-amber-400">
+                        <div className="flex items-center justify-between text-xs bg-amber-50 p-2 rounded border border-amber-200">
+                          <span className="text-amber-700">
                             ¿Quisiste decir "<strong>{similarNameSuggestion.suggestedName}</strong>"? ({similarNameSuggestion.codigo})
                           </span>
                           <div className="flex gap-2 ml-2">
@@ -639,7 +639,7 @@ const Productos = () => {
                           required autoComplete="off" placeholder="Ej: AZU-001"
                         />
                         {codigoGapWarning && !editingProduct && (
-                          <p className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 p-2 rounded border border-amber-200 dark:border-amber-800">
+                          <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
                             ⚠️ {codigoGapWarning}
                           </p>
                         )}
@@ -770,7 +770,7 @@ const Productos = () => {
                           />
                         </div>
                         {formData.precio_por_kilo && precioVenta > 0 && pesoKg > 0 && (
-                          <p className="text-xs text-blue-600 dark:text-blue-400">
+                          <p className="text-xs text-blue-600">
                             = {formatCurrency(precioVenta * pesoKg)} por {formData.unidad}
                           </p>
                         )}
@@ -830,17 +830,17 @@ const Productos = () => {
                     {canSeeCosts && precioVenta > 0 && precioCompra > 0 && (
                       <div className={`text-xs p-2 rounded border flex items-center justify-between ${
                         ((precioVenta - precioCompra) / precioVenta * 100) >= 10
-                          ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800"
+                          ? "bg-green-50 text-green-700 border-green-200"
                           : ((precioVenta - precioCompra) / precioVenta * 100) >= 5
-                            ? "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/30 dark:text-yellow-400 dark:border-yellow-800"
-                            : "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-800"
+                            ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+                            : "bg-red-50 text-red-700 border-red-200"
                       }`}>
                         <span>Margen: {((precioVenta - precioCompra) / precioVenta * 100).toFixed(1)}%</span>
                         <span>Ganancia: {formatCurrency(precioVenta - precioCompra)}{formData.precio_por_kilo ? "/kg" : `/${formData.unidad}`}</span>
                       </div>
                     )}
                     {kiloPesoError && <p className="text-xs text-destructive bg-destructive/10 p-2 rounded border border-destructive/20">Ingresa el peso para productos vendidos por kilo</p>}
-                    {margenNegativo && canSeeCosts && <p className="text-xs p-2 rounded bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400 border border-red-200 dark:border-red-800">El precio de venta es menor al costo. El margen es negativo.</p>}
+                    {margenNegativo && canSeeCosts && <p className="text-xs p-2 rounded bg-red-50 text-red-700 border border-red-200">El precio de venta es menor al costo. El margen es negativo.</p>}
                     {descuentoExcesivo && <p className="text-xs text-destructive bg-destructive/10 p-2 rounded border border-destructive/20">El descuento no puede ser mayor al precio</p>}
                   </div>
 
@@ -935,7 +935,7 @@ const Productos = () => {
                           {(editingProduct.stock_actual || 0) <= (editingProduct.stock_minimo || 0) ? (
                             <Badge variant="destructive" className="ml-2 text-[10px]">Bajo mínimo</Badge>
                           ) : (
-                            <Badge className="ml-2 text-[10px] bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400">OK</Badge>
+                            <Badge className="ml-2 text-[10px] bg-green-100 text-green-700">OK</Badge>
                           )}
                         </span>
                       </div>
@@ -1122,9 +1122,9 @@ const Productos = () => {
                                     {details && <p className="text-xs text-muted-foreground truncate">{details}</p>}
                                     <div className="flex items-center gap-1 mt-0.5 flex-wrap">
                                       {p.bloqueado_venta && <Badge variant="destructive" className="text-[9px] px-1 py-0 h-3.5">🔒 Bloqueado</Badge>}
-                                      {p.es_promocion && <Badge className="text-[9px] px-1 py-0 h-3.5 bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-400 dark:border-orange-800">🎁 Promo</Badge>}
+                                      {p.es_promocion && <Badge className="text-[9px] px-1 py-0 h-3.5 bg-orange-100 text-orange-700 border-orange-200">🎁 Promo</Badge>}
                                       {p.solo_uso_interno && <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5">🔬 Interno</Badge>}
-                                      {p.maneja_caducidad && <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800">📅 Caduca</Badge>}
+                                      {p.maneja_caducidad && <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 bg-blue-50 text-blue-700 border-blue-200">📅 Caduca</Badge>}
                                     </div>
                                   </div>
                                 </TableCell>
@@ -1135,7 +1135,7 @@ const Productos = () => {
                                 {/* 4. Tipo */}
                                 <TableCell className="px-2 py-1.5">
                                   {p.precio_por_kilo ? (
-                                    <Badge className="text-[10px] px-1.5 py-0 h-4 bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-400 dark:border-blue-800">/kilo</Badge>
+                                    <Badge className="text-[10px] px-1.5 py-0 h-4 bg-blue-100 text-blue-700 border-blue-200">/kilo</Badge>
                                   ) : (
                                     <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">/unidad</Badge>
                                   )}
@@ -1165,10 +1165,10 @@ const Productos = () => {
                                   return (
                                     <TableCell className="px-2 py-1.5 text-center">
                                       <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-4 ${
-                                        margen >= 10 ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800"
-                                        : margen >= 5 ? "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-400 dark:border-yellow-800"
-                                        : margen >= 0 ? "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-400 dark:border-orange-800"
-                                        : "bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-800"
+                                        margen >= 10 ? "bg-green-50 text-green-700 border-green-200"
+                                        : margen >= 5 ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+                                        : margen >= 0 ? "bg-orange-50 text-orange-700 border-orange-200"
+                                        : "bg-red-50 text-red-700 border-red-200"
                                       }`}>{margen.toFixed(1)}%</Badge>
                                     </TableCell>
                                   );
@@ -1179,15 +1179,15 @@ const Productos = () => {
                                   {sinStock ? (
                                     <Badge variant="destructive" className="text-[10px]">Sin stock</Badge>
                                   ) : (
-                                    <span className={`font-medium text-sm ${stockBajo ? "text-destructive" : "text-green-600 dark:text-green-400"}`}>{stock}</span>
+                                    <span className={`font-medium text-sm ${stockBajo ? "text-destructive" : "text-green-600"}`}>{stock}</span>
                                   )}
                                 </TableCell>
 
                                 {/* 7. IVA/IEPS */}
                                 <TableCell className="px-2 py-1.5 text-center">
                                   <div className="flex items-center justify-center gap-0.5">
-                                    {p.aplica_iva && <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800">IVA</Badge>}
-                                    {p.aplica_ieps && <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800">IEPS</Badge>}
+                                    {p.aplica_iva && <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 bg-blue-50 text-blue-700 border-blue-200">IVA</Badge>}
+                                    {p.aplica_ieps && <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 bg-amber-50 text-amber-700 border-amber-200">IEPS</Badge>}
                                     {!p.aplica_iva && !p.aplica_ieps && <span className="text-muted-foreground text-xs">-</span>}
                                   </div>
                                 </TableCell>

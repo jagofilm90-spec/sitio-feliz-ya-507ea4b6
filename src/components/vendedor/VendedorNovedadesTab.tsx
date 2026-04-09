@@ -184,8 +184,8 @@ export function VendedorNovedadesTab() {
       {totalNovedades === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-4">
-              <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
+            <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
+              <CheckCircle2 className="h-8 w-8 text-green-600" />
             </div>
             <h3 className="font-medium text-lg mb-1">Todo al corriente</h3>
             <p className="text-muted-foreground text-sm">
@@ -200,8 +200,8 @@ export function VendedorNovedadesTab() {
             <Card className="border-emerald-500/30 bg-emerald-500/5">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Package className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                  <span className="text-emerald-700 dark:text-emerald-400">
+                  <Package className="h-5 w-5 text-emerald-600" />
+                  <span className="text-emerald-700">
                     Productos Nuevos ({productosNuevos.length})
                   </span>
                 </CardTitle>
@@ -225,7 +225,7 @@ export function VendedorNovedadesTab() {
                         <p className="font-medium truncate">{producto.nombre}</p>
                       </div>
                       <div className="text-right ml-4">
-                        <p className="font-semibold text-emerald-700 dark:text-emerald-400">
+                        <p className="font-semibold text-emerald-700">
                           {formatCurrency(producto.precio_venta)}
                         </p>
                         <p className="text-xs text-muted-foreground">por kg</p>
@@ -242,8 +242,8 @@ export function VendedorNovedadesTab() {
             <Card className="border-violet-500/30 bg-violet-500/5">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-violet-600 dark:text-violet-400" />
-                  <span className="text-violet-700 dark:text-violet-400">
+                  <TrendingUp className="h-5 w-5 text-violet-600" />
+                  <span className="text-violet-700">
                     Cambios de Precio ({cambiosPrecios.length})
                   </span>
                 </CardTitle>
@@ -279,8 +279,8 @@ export function VendedorNovedadesTab() {
                             variant="secondary" 
                             className={`${
                               esAumento 
-                                ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" 
-                                : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                ? "bg-red-100 text-red-700" 
+                                : "bg-green-100 text-green-700"
                             }`}
                           >
                             {esAumento ? (
@@ -304,8 +304,8 @@ export function VendedorNovedadesTab() {
             <Card className="border-red-500/30 bg-red-500/5">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Ban className="h-5 w-5 text-red-600 dark:text-red-400" />
-                  <span className="text-red-700 dark:text-red-400">
+                  <Ban className="h-5 w-5 text-red-600" />
+                  <span className="text-red-700">
                     Productos Descontinuados ({productosInhabilitados.length})
                   </span>
                 </CardTitle>

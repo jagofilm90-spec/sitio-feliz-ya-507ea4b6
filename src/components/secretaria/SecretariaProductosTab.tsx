@@ -747,7 +747,7 @@ export const SecretariaProductosTab = () => {
                 </div>
               </div>
               {formData.puede_tener_promocion && (
-                <p className="text-xs text-muted-foreground bg-amber-50 dark:bg-amber-950/30 p-2 rounded border border-amber-200 dark:border-amber-800">
+                <p className="text-xs text-muted-foreground bg-amber-50 p-2 rounded border border-amber-200">
                   💡 Al crear una OC, el sistema preguntará si este producto viene con promoción del proveedor
                 </p>
               )}
@@ -789,8 +789,8 @@ export const SecretariaProductosTab = () => {
                 variant={((isSaved || showSuccessAnimation) && editingProduct) ? "outline" : "default"}
                 className={cn(
                   "transition-all duration-300 ease-out min-w-[140px]",
-                  (isSaved || showSuccessAnimation) && editingProduct && "border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/20",
-                  showSuccessAnimation && editingProduct && "animate-success-pulse bg-green-50 dark:bg-green-950/30"
+                  (isSaved || showSuccessAnimation) && editingProduct && "border-green-500 text-green-600 hover:bg-green-50",
+                  showSuccessAnimation && editingProduct && "animate-success-pulse bg-green-50"
                 )}
               >
                 <span className="flex items-center justify-center">

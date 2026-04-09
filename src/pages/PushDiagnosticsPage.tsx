@@ -66,12 +66,12 @@ export default function PushDiagnosticsPage() {
             </div>
             
             {!isNative && (
-              <div className="mt-4 p-3 rounded-md bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 text-sm">
+              <div className="mt-4 p-3 rounded-md bg-yellow-50 text-yellow-800 text-sm">
                 <AlertTriangle className="h-4 w-4 inline mr-2" />
                 <strong>Capacitor no detecta plataforma nativa.</strong> Esto puede significar:
                 <ul className="list-disc ml-6 mt-2 space-y-1">
                   <li>La app se está ejecutando en un navegador web, no en el WebView nativo</li>
-                  <li>El build de Capacitor no se sincronizó correctamente (ejecutar <code className="bg-yellow-100 dark:bg-yellow-800 px-1 rounded">npx cap sync</code>)</li>
+                  <li>El build de Capacitor no se sincronizó correctamente (ejecutar <code className="bg-yellow-100 px-1 rounded">npx cap sync</code>)</li>
                   <li>El proyecto iOS no tiene el plugin de Capacitor correctamente instalado</li>
                 </ul>
               </div>

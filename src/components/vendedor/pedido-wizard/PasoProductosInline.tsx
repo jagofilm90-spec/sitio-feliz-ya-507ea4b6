@@ -131,11 +131,11 @@ function FilaProducto({
 
   let rowBg = "";
   if (linea?.autorizacionStatus === 'aprobado') {
-    rowBg = "bg-green-50 dark:bg-green-950/20";
+    rowBg = "bg-green-50";
   } else if (excedeLimite && linea?.autorizacionStatus === 'pendiente') {
-    rowBg = "bg-amber-50 dark:bg-amber-950/20";
+    rowBg = "bg-amber-50";
   } else if (excedeLimite) {
-    rowBg = "bg-red-50 dark:bg-red-950/20";
+    rowBg = "bg-red-50";
   } else if (enCarrito) {
     rowBg = "bg-primary/5";
   }
@@ -302,7 +302,7 @@ function FilaProducto({
           value={enCarrito ? (precioActual || "") : ""}
           className={cn(
             "h-8 w-full text-center text-sm font-medium px-1",
-            excedeLimite && "border-red-400 text-red-600 bg-red-50 dark:bg-red-950/20"
+            excedeLimite && "border-red-400 text-red-600 bg-red-50"
           )}
           disabled={!enCarrito}
           onChange={(e) => {

@@ -272,7 +272,7 @@ export const MigracionProductosDialog = ({
         </div>
 
         {isComplete ? (
-          <Card className="border-green-200 bg-green-50 dark:bg-green-950/20">
+          <Card className="border-green-200 bg-green-50">
             <CardContent className="pt-6 text-center space-y-4">
               <CheckCircle2 className="h-12 w-12 text-green-600 mx-auto" />
               <div>
@@ -373,7 +373,7 @@ export const MigracionProductosDialog = ({
                     </div>
 
                     {editMode && editedSugerencia ? (
-                      <div className="grid gap-3 bg-pink-50 dark:bg-pink-950/20 p-3 rounded-md border border-pink-200">
+                      <div className="grid gap-3 bg-pink-50 p-3 rounded-md border border-pink-200">
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1">
                             <Label className="text-xs">Nombre</Label>
@@ -469,23 +469,23 @@ export const MigracionProductosDialog = ({
                         </div>
                       </div>
                     ) : (
-                      <div className="grid gap-2 text-sm bg-pink-50 dark:bg-pink-950/20 p-3 rounded-md border border-pink-200">
+                      <div className="grid gap-2 text-sm bg-pink-50 p-3 rounded-md border border-pink-200">
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           <div>
                             <span className="text-muted-foreground text-xs">Nombre:</span>
-                            <p className="font-medium text-pink-700 dark:text-pink-400">
+                            <p className="font-medium text-pink-700">
                               {sugerencia.nombre_sugerido}
                             </p>
                           </div>
                           <div>
                             <span className="text-muted-foreground text-xs">Especificaciones:</span>
-                            <p className="font-medium text-pink-700 dark:text-pink-400">
+                            <p className="font-medium text-pink-700">
                               {sugerencia.especificaciones_sugerida || "(vacío)"}
                             </p>
                           </div>
                           <div>
                             <span className="text-muted-foreground text-xs">Marca:</span>
-                            <p className="font-medium text-pink-700 dark:text-pink-400">
+                            <p className="font-medium text-pink-700">
                               {sugerencia.marca_sugerida || "(sin marca)"}
                             </p>
                           </div>
@@ -493,19 +493,19 @@ export const MigracionProductosDialog = ({
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           <div>
                             <span className="text-muted-foreground text-xs">Contenido:</span>
-                            <p className="font-medium text-pink-700 dark:text-pink-400">
+                            <p className="font-medium text-pink-700">
                               {sugerencia.contenido_empaque_sugerido || "—"}
                             </p>
                           </div>
                           <div>
                             <span className="text-muted-foreground text-xs">Peso (kg):</span>
-                            <p className="font-medium text-pink-700 dark:text-pink-400">
+                            <p className="font-medium text-pink-700">
                               {sugerencia.peso_kg_sugerido ?? "—"}
                             </p>
                           </div>
                           <div>
                             <span className="text-muted-foreground text-xs">Unidad SAT:</span>
-                            <p className="font-medium text-pink-700 dark:text-pink-400">
+                            <p className="font-medium text-pink-700">
                               {sugerencia.unidad_sat_sugerida ? (
                                 <Badge variant="outline" className="text-xs">
                                   {sugerencia.unidad_sat_sugerida}
@@ -519,9 +519,9 @@ export const MigracionProductosDialog = ({
 
                     {/* Explicación */}
                     {sugerencia.explicacion && (
-                      <div className="flex items-start gap-2 text-sm bg-blue-50 dark:bg-blue-950/20 p-3 rounded-md">
+                      <div className="flex items-start gap-2 text-sm bg-blue-50 p-3 rounded-md">
                         <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
-                        <span className="text-blue-700 dark:text-blue-400">
+                        <span className="text-blue-700">
                           {sugerencia.explicacion}
                         </span>
                       </div>
@@ -545,7 +545,7 @@ export const MigracionProductosDialog = ({
                           })}
                         </span>
                         <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <span className="font-medium text-green-700 dark:text-green-400">
+                        <span className="font-medium text-green-700">
                           {getDisplayName({
                             nombre: editedSugerencia?.nombre_sugerido || sugerencia.nombre_sugerido,
                             marca: editedSugerencia?.marca_sugerida || sugerencia.marca_sugerida,

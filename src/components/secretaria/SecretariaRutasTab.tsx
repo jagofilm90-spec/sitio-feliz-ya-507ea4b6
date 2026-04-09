@@ -252,16 +252,16 @@ export const SecretariaRutasTab = () => {
               <p className="text-lg font-bold">{entregasTotal}</p>
               <p className="text-[10px] text-muted-foreground">Total</p>
             </div>
-            <div className="bg-emerald-50 dark:bg-emerald-950/20 rounded-lg p-2 text-center">
+            <div className="bg-emerald-50 rounded-lg p-2 text-center">
               <p className="text-lg font-bold text-emerald-600">{entregasCompletadas}</p>
               <p className="text-[10px] text-muted-foreground">Entregadas</p>
             </div>
-            <div className="bg-rose-50 dark:bg-rose-950/20 rounded-lg p-2 text-center">
+            <div className="bg-rose-50 rounded-lg p-2 text-center">
               <p className="text-lg font-bold text-rose-600">{entregasRechazadas}</p>
               <p className="text-[10px] text-muted-foreground">Rechazadas</p>
             </div>
             {showConciliacion && (
-              <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-2 text-center">
+              <div className="bg-blue-50 rounded-lg p-2 text-center">
                 <p className="text-lg font-bold text-blue-600">
                   {papelesRecibidos}/{entregasCompletadas}
                 </p>
@@ -410,8 +410,8 @@ function EntregaRow({
       <div
         className={cn(
           "border rounded-lg p-3 text-sm",
-          entrega.papeles_recibidos && "border-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/10",
-          !entrega.papeles_recibidos && esEntregado && showConciliacion && "border-amber-300 bg-amber-50/50 dark:bg-amber-950/10"
+          entrega.papeles_recibidos && "border-emerald-300 bg-emerald-50/50",
+          !entrega.papeles_recibidos && esEntregado && showConciliacion && "border-amber-300 bg-amber-50/50"
         )}
       >
         <div className="flex items-center justify-between gap-2 flex-wrap">

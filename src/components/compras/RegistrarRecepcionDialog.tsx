@@ -609,8 +609,8 @@ const RegistrarRecepcionDialog = ({ open, onOpenChange, orden }: RegistrarRecepc
 
         <ScrollArea className="max-h-[60vh] pr-4">
           {/* Control Data Section - NEW */}
-          <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 mb-4">
-            <h4 className="font-medium mb-3 flex items-center gap-2 text-blue-700 dark:text-blue-300">
+          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 mb-4">
+            <h4 className="font-medium mb-3 flex items-center gap-2 text-blue-700">
               <Lock className="h-4 w-4" />
               Datos de Control de Recepción
             </h4>
@@ -647,8 +647,8 @@ const RegistrarRecepcionDialog = ({ open, onOpenChange, orden }: RegistrarRecepc
           </div>
 
           {/* Photo Evidence Section */}
-          <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg border border-emerald-200 mb-4">
-            <h4 className="font-medium mb-3 flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
+          <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200 mb-4">
+            <h4 className="font-medium mb-3 flex items-center gap-2 text-emerald-700">
               <Camera className="h-4 w-4" />
               Evidencias Fotográficas
               <Badge variant="outline" className="ml-auto text-xs">
@@ -714,7 +714,7 @@ const RegistrarRecepcionDialog = ({ open, onOpenChange, orden }: RegistrarRecepc
                   key={producto.detalle_id} 
                   className={`p-4 rounded-lg border ${
                     producto.cantidad_pendiente === 0 
-                      ? 'bg-green-50 dark:bg-green-950/20 border-green-200' 
+                      ? 'bg-green-50 border-green-200' 
                       : 'bg-muted/30 border-border'
                   }`}
                 >
@@ -868,7 +868,7 @@ const RegistrarRecepcionDialog = ({ open, onOpenChange, orden }: RegistrarRecepc
           {quedaPendiente && totalRecibidoAhora > 0 && (
             <>
               <Separator className="my-4" />
-              <div className="p-4 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200">
+              <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
                 <h4 className="font-medium mb-3 flex items-center gap-2 text-amber-700">
                   <Calendar className="h-4 w-4" />
                   Programar entrega del restante

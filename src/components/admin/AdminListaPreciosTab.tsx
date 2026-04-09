@@ -288,12 +288,12 @@ export const AdminListaPreciosTab = () => {
     if (revisionesPendientes.length === 0) return null;
     return (
       <Collapsible open={reviewPanelOpen} onOpenChange={setReviewPanelOpen}>
-        <div className="mb-4 border border-orange-300 dark:border-orange-700 rounded-lg overflow-hidden">
+        <div className="mb-4 border border-orange-300 rounded-lg overflow-hidden">
           <CollapsibleTrigger asChild>
-            <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-950/30 cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-950/50">
+            <div className="flex items-center justify-between p-3 bg-orange-50 cursor-pointer hover:bg-orange-100">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-orange-600" />
-                <span className="text-sm font-semibold text-orange-800 dark:text-orange-300">
+                <span className="text-sm font-semibold text-orange-800">
                   {revisionesPendientes.length} producto(s) con ajuste de precio pendiente
                 </span>
               </div>
@@ -459,9 +459,9 @@ export const AdminListaPreciosTab = () => {
                 </div>
                 {simulacionResult && (
                   <div className={cn("p-4 rounded-lg border-2",
-                    simulacionResult.es_perdida && "border-red-500 bg-red-50 dark:bg-red-950/20",
-                    !simulacionResult.es_perdida && simulacionResult.margen_porcentaje < 5 && "border-orange-500 bg-orange-50 dark:bg-orange-950/20",
-                    simulacionResult.margen_porcentaje >= 5 && "border-green-500 bg-green-50 dark:bg-green-950/20"
+                    simulacionResult.es_perdida && "border-red-500 bg-red-50",
+                    !simulacionResult.es_perdida && simulacionResult.margen_porcentaje < 5 && "border-orange-500 bg-orange-50",
+                    simulacionResult.margen_porcentaje >= 5 && "border-green-500 bg-green-50"
                   )}>
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div><div className="text-muted-foreground text-xs">Margen $</div><div className={cn("font-bold", simulacionResult.es_perdida ? "text-red-600" : "text-green-600")}>{formatCurrency(simulacionResult.margen_pesos)}</div></div>
@@ -473,7 +473,7 @@ export const AdminListaPreciosTab = () => {
                       )}
                     </div>
                     {simulacionResult.es_perdida && (
-                      <div className="mt-3 p-2 bg-red-100 dark:bg-red-900/30 rounded text-xs text-red-700 dark:text-red-300 flex items-center gap-2">
+                      <div className="mt-3 p-2 bg-red-100 rounded text-xs text-red-700 flex items-center gap-2">
                         <AlertTriangle className="h-4 w-4" /> Este precio genera pérdida
                       </div>
                     )}
@@ -565,24 +565,24 @@ export const AdminListaPreciosTab = () => {
           <ScrollArea className="w-full whitespace-nowrap">
             <div className="flex gap-2 pb-2">
               {stats.sinPrecio > 0 && (
-                <Badge variant="outline" className={cn("text-xs cursor-pointer shrink-0", estadoFilter === 'sin_precio' && "bg-gray-100 dark:bg-gray-900/30")}
+                <Badge variant="outline" className={cn("text-xs cursor-pointer shrink-0", estadoFilter === 'sin_precio' && "bg-gray-100")}
                   onClick={() => setEstadoFilter(estadoFilter === 'sin_precio' ? 'all' : 'sin_precio')}>
                   Sin precio: {stats.sinPrecio}
                 </Badge>
               )}
-              <Badge variant="outline" className={cn("text-xs cursor-pointer shrink-0", estadoFilter === 'perdida' && "bg-red-100 dark:bg-red-900/30")}
+              <Badge variant="outline" className={cn("text-xs cursor-pointer shrink-0", estadoFilter === 'perdida' && "bg-red-100")}
                 onClick={() => setEstadoFilter(estadoFilter === 'perdida' ? 'all' : 'perdida')}>
                 <XCircle className="h-3 w-3 mr-1 text-red-500" /> Pérdida: {stats.perdida}
               </Badge>
-              <Badge variant="outline" className={cn("text-xs cursor-pointer shrink-0", estadoFilter === 'critico' && "bg-orange-100 dark:bg-orange-900/30")}
+              <Badge variant="outline" className={cn("text-xs cursor-pointer shrink-0", estadoFilter === 'critico' && "bg-orange-100")}
                 onClick={() => setEstadoFilter(estadoFilter === 'critico' ? 'all' : 'critico')}>
                 <AlertTriangle className="h-3 w-3 mr-1 text-orange-500" /> Crítico: {stats.critico}
               </Badge>
-              <Badge variant="outline" className={cn("text-xs cursor-pointer shrink-0", estadoFilter === 'bajo' && "bg-amber-100 dark:bg-amber-900/30")}
+              <Badge variant="outline" className={cn("text-xs cursor-pointer shrink-0", estadoFilter === 'bajo' && "bg-amber-100")}
                 onClick={() => setEstadoFilter(estadoFilter === 'bajo' ? 'all' : 'bajo')}>
                 <TrendingDown className="h-3 w-3 mr-1 text-amber-500" /> Bajo: {stats.bajo}
               </Badge>
-              <Badge variant="outline" className={cn("text-xs cursor-pointer shrink-0", estadoFilter === 'saludable' && "bg-green-100 dark:bg-green-900/30")}
+              <Badge variant="outline" className={cn("text-xs cursor-pointer shrink-0", estadoFilter === 'saludable' && "bg-green-100")}
                 onClick={() => setEstadoFilter(estadoFilter === 'saludable' ? 'all' : 'saludable')}>
                 <CheckCircle2 className="h-3 w-3 mr-1 text-green-500" /> OK: {stats.saludable}
               </Badge>
@@ -592,9 +592,9 @@ export const AdminListaPreciosTab = () => {
             <Input placeholder="Buscar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-8 h-9" /></div>
         </div>
         {stats.perdida > 0 && estadoFilter !== 'perdida' && (
-          <div className="flex items-center justify-between p-2.5 mb-2 rounded-lg bg-red-100 dark:bg-red-950/40 border border-red-300 dark:border-red-800">
-            <div className="flex items-center gap-1.5"><AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 animate-pulse" />
-              <span className="text-xs font-semibold text-red-800 dark:text-red-300">{stats.perdida} a pérdida</span></div>
+          <div className="flex items-center justify-between p-2.5 mb-2 rounded-lg bg-red-100 border border-red-300">
+            <div className="flex items-center gap-1.5"><AlertTriangle className="h-4 w-4 text-red-600 animate-pulse" />
+              <span className="text-xs font-semibold text-red-800">{stats.perdida} a pérdida</span></div>
             <Button size="sm" variant="destructive" className="h-6 text-[10px] px-2" onClick={() => setEstadoFilter('perdida')}>Ver pérdidas</Button>
           </div>
         )}
@@ -627,24 +627,24 @@ export const AdminListaPreciosTab = () => {
         <div className="flex flex-wrap gap-2">
           <Badge variant="outline" className="text-xs">Total: {stats.total}</Badge>
           {stats.sinPrecio > 0 && (
-            <Badge variant="outline" className={cn("text-xs cursor-pointer", estadoFilter === 'sin_precio' && "bg-gray-100 dark:bg-gray-900/30")}
+            <Badge variant="outline" className={cn("text-xs cursor-pointer", estadoFilter === 'sin_precio' && "bg-gray-100")}
               onClick={() => setEstadoFilter(estadoFilter === 'sin_precio' ? 'all' : 'sin_precio')}>
               Sin precio: {stats.sinPrecio}
             </Badge>
           )}
-          <Badge variant="outline" className={cn("text-xs cursor-pointer", estadoFilter === 'perdida' && "bg-red-100 dark:bg-red-900/30")}
+          <Badge variant="outline" className={cn("text-xs cursor-pointer", estadoFilter === 'perdida' && "bg-red-100")}
             onClick={() => setEstadoFilter(estadoFilter === 'perdida' ? 'all' : 'perdida')}>
             <XCircle className="h-3 w-3 mr-1 text-red-500" /> Pérdida: {stats.perdida}
           </Badge>
-          <Badge variant="outline" className={cn("text-xs cursor-pointer", estadoFilter === 'critico' && "bg-orange-100 dark:bg-orange-900/30")}
+          <Badge variant="outline" className={cn("text-xs cursor-pointer", estadoFilter === 'critico' && "bg-orange-100")}
             onClick={() => setEstadoFilter(estadoFilter === 'critico' ? 'all' : 'critico')}>
             <AlertTriangle className="h-3 w-3 mr-1 text-orange-500" /> Crítico: {stats.critico}
           </Badge>
-          <Badge variant="outline" className={cn("text-xs cursor-pointer", estadoFilter === 'bajo' && "bg-amber-100 dark:bg-amber-900/30")}
+          <Badge variant="outline" className={cn("text-xs cursor-pointer", estadoFilter === 'bajo' && "bg-amber-100")}
             onClick={() => setEstadoFilter(estadoFilter === 'bajo' ? 'all' : 'bajo')}>
             <TrendingDown className="h-3 w-3 mr-1 text-amber-500" /> Bajo: {stats.bajo}
           </Badge>
-          <Badge variant="outline" className={cn("text-xs cursor-pointer", estadoFilter === 'saludable' && "bg-green-100 dark:bg-green-900/30")}
+          <Badge variant="outline" className={cn("text-xs cursor-pointer", estadoFilter === 'saludable' && "bg-green-100")}
             onClick={() => setEstadoFilter(estadoFilter === 'saludable' ? 'all' : 'saludable')}>
             <CheckCircle2 className="h-3 w-3 mr-1 text-green-500" /> OK: {stats.saludable}
           </Badge>
@@ -660,9 +660,9 @@ export const AdminListaPreciosTab = () => {
       </div>
 
       {stats.perdida > 0 && estadoFilter !== 'perdida' && (
-        <div className="flex items-center justify-between p-3 mb-2 rounded-lg bg-red-100 dark:bg-red-950/40 border border-red-300 dark:border-red-800">
-          <div className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 animate-pulse" />
-            <span className="text-sm font-semibold text-red-800 dark:text-red-300">{stats.perdida} producto{stats.perdida > 1 ? 's' : ''} vendiendo a pérdida</span></div>
+        <div className="flex items-center justify-between p-3 mb-2 rounded-lg bg-red-100 border border-red-300">
+          <div className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-red-600 animate-pulse" />
+            <span className="text-sm font-semibold text-red-800">{stats.perdida} producto{stats.perdida > 1 ? 's' : ''} vendiendo a pérdida</span></div>
           <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={() => setEstadoFilter('perdida')}>Ver solo pérdidas</Button>
         </div>
       )}
@@ -703,22 +703,22 @@ export const AdminListaPreciosTab = () => {
                 {prods.map((producto) => {
                   const { analisis } = producto;
                   const rowClass = cn("h-8",
-                    analisis.estado_margen === 'perdida' && "bg-red-100/80 dark:bg-red-950/40 border-l-2 border-l-red-500",
-                    analisis.estado_margen === 'critico' && "bg-orange-100/60 dark:bg-orange-950/30 border-l-2 border-l-orange-500");
+                    analisis.estado_margen === 'perdida' && "bg-red-100/80 border-l-2 border-l-red-500",
+                    analisis.estado_margen === 'critico' && "bg-orange-100/60 border-l-2 border-l-orange-500");
                   return (
                     <TableRow key={producto.id} className={rowClass}>
                       <TableCell className="py-1 px-1.5 text-[10px] font-mono text-muted-foreground">{producto.codigo}</TableCell>
                       <TableCell className="py-1 px-1.5">
                         <div className="flex items-center gap-1 flex-wrap">
                           <span className="text-xs">{getProductDisplayName(producto)}</span>
-                          {producto.es_promocion && <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 shrink-0">PROMO</Badge>}
-                          {producto.bloqueado_venta && <span className="text-[8px] text-red-600 dark:text-red-400 shrink-0" title="Requiere autorización">🔒</span>}
+                          {producto.es_promocion && <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 shrink-0">PROMO</Badge>}
+                          {producto.bloqueado_venta && <span className="text-[8px] text-red-600 shrink-0" title="Requiere autorización">🔒</span>}
                         </div>
                       </TableCell>
                       <TableCell className="py-1 px-1.5 text-center">
                         <div className="flex items-center justify-center gap-0.5">
-                          {producto.aplica_iva && <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-blue-300 text-blue-600 dark:border-blue-700 dark:text-blue-400">IVA</Badge>}
-                          {producto.aplica_ieps && <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-orange-300 text-orange-600 dark:border-orange-700 dark:text-orange-400">IEPS</Badge>}
+                          {producto.aplica_iva && <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-blue-300 text-blue-600">IVA</Badge>}
+                          {producto.aplica_ieps && <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-orange-300 text-orange-600">IEPS</Badge>}
                           {!producto.aplica_iva && !producto.aplica_ieps && <span className="text-[9px] text-muted-foreground">—</span>}
                         </div>
                       </TableCell>

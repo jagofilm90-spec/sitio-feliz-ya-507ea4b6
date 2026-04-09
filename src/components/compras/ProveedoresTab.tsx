@@ -90,22 +90,22 @@ const DIAS_VISITA = [
 ];
 
 const CATEGORIA_COLORS: Record<string, string> = {
-  "Azúcares": "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
-  "Granos y semillas": "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
-  "Lácteos": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
-  "Aceites": "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
-  "Abarrotes secos": "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300",
-  "Botanas": "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
-  "Bebidas": "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300",
-  "Limpieza": "bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300",
-  "Mascotas": "bg-pink-100 text-pink-800 dark:bg-pink-900/40 dark:text-pink-300",
+  "Azúcares": "bg-blue-100 text-blue-800",
+  "Granos y semillas": "bg-green-100 text-green-800",
+  "Lácteos": "bg-yellow-100 text-yellow-800",
+  "Aceites": "bg-amber-100 text-amber-800",
+  "Abarrotes secos": "bg-orange-100 text-orange-800",
+  "Botanas": "bg-purple-100 text-purple-800",
+  "Bebidas": "bg-cyan-100 text-cyan-800",
+  "Limpieza": "bg-teal-100 text-teal-800",
+  "Mascotas": "bg-pink-100 text-pink-800",
 };
 
 const getTerminoPagoBadge = (termino: string | null | undefined) => {
-  if (!termino || termino === "contado") return <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 border-0 text-xs">Contado</Badge>;
-  if (termino === "anticipado") return <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 border-0 text-xs">Anticipado</Badge>;
+  if (!termino || termino === "contado") return <Badge variant="outline" className="bg-green-100 text-green-800 border-0 text-xs">Contado</Badge>;
+  if (termino === "anticipado") return <Badge variant="outline" className="bg-red-100 text-red-800 border-0 text-xs">Anticipado</Badge>;
   const label = TERMINOS_PAGO.find(t => t.value === termino)?.label || termino;
-  return <Badge variant="outline" className="bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border-0 text-xs">{label}</Badge>;
+  return <Badge variant="outline" className="bg-blue-100 text-blue-800 border-0 text-xs">{label}</Badge>;
 };
 
 const getCategoriaBadge = (cat: string | null | undefined) => {
@@ -1500,7 +1500,7 @@ const ProveedoresTab = () => {
                     />
                   )}
                   {nuevoContacto.nombre.trim() && (
-                    <p className="text-xs text-yellow-600 dark:text-yellow-500">
+                    <p className="text-xs text-yellow-600">
                       ⚠️ Tienes un contacto pendiente. Se agregará automáticamente al guardar.
                     </p>
                   )}
@@ -1793,7 +1793,7 @@ const ProveedoresTab = () => {
                       />
                     )}
                     {editContacto.nombre.trim() && (
-                      <p className="text-xs text-yellow-600 dark:text-yellow-500">
+                      <p className="text-xs text-yellow-600">
                         ⚠️ Tienes un contacto pendiente. Se agregará automáticamente al guardar.
                       </p>
                     )}

@@ -963,7 +963,7 @@ export const RutaCargaSheet = ({
           <ScrollArea className="flex-1">
             <div className="p-4 space-y-3">
               {/* ═══════ HEADER TIPO DOCUMENTO ═══════ */}
-              <div className="bg-white dark:bg-card border rounded-lg overflow-hidden shadow-sm">
+              <div className="bg-white border rounded-lg overflow-hidden shadow-sm">
                 {/* Logo + Título */}
                 <div className="text-center border-b border-border/60 px-4 py-3">
                   <div className="flex items-center justify-center gap-3 mb-1">
@@ -1028,7 +1028,7 @@ export const RutaCargaSheet = ({
               </div>
 
               {/* ═══════ BARRA RESUMEN: Productos + Peso + Timer ═══════ */}
-              <div className="grid grid-cols-3 border rounded-lg overflow-hidden text-xs bg-white dark:bg-card shadow-sm">
+              <div className="grid grid-cols-3 border rounded-lg overflow-hidden text-xs bg-white shadow-sm">
                 <div className="border-r border-border/40 px-3 py-2">
                   <span className="text-[10px] font-bold text-muted-foreground uppercase block">Productos</span>
                   <span className="font-bold text-foreground">{productosCargados}/{totalProductos}</span>
@@ -1090,9 +1090,9 @@ export const RutaCargaSheet = ({
                     const todosProductosCargadosEntrega = entrega.productos.every(p => p.cargado);
                     
                     return (
-                      <div key={entrega.id} className={`border rounded-lg overflow-hidden bg-white dark:bg-card shadow-sm ${entrega.carga_confirmada ? 'ring-2 ring-green-500' : ''}`}>
+                      <div key={entrega.id} className={`border rounded-lg overflow-hidden bg-white shadow-sm ${entrega.carga_confirmada ? 'ring-2 ring-green-500' : ''}`}>
                         {/* Header entrega estilo documento */}
-                        <div className="bg-gray-800 dark:bg-gray-900 text-white px-3 py-2 flex items-center justify-between">
+                        <div className="bg-gray-800 text-white px-3 py-2 flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="bg-white/20 rounded px-1.5 py-0.5 text-[10px] font-bold">#{entrega.orden_entrega}</span>
                             <span className="font-bold text-sm">{cliente.nombre}</span>
@@ -1143,8 +1143,8 @@ export const RutaCargaSheet = ({
 
                         {/* Notas importantes */}
                         {(sucursal?.notas || entrega.pedido.notas) && (
-                          <div className="mx-3 mt-2 p-2 bg-amber-100 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 rounded text-xs">
-                            <div className="flex items-start gap-1.5 text-amber-800 dark:text-amber-200">
+                          <div className="mx-3 mt-2 p-2 bg-amber-100 border border-amber-300 rounded text-xs">
+                            <div className="flex items-start gap-1.5 text-amber-800">
                               <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                               <span>{sucursal?.notas || entrega.pedido.notas}</span>
                             </div>
@@ -1164,10 +1164,10 @@ export const RutaCargaSheet = ({
                           )}
                           
                           {cortesias.length > 0 && (
-                            <div className="mt-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                            <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
                               <div className="flex items-center gap-2 mb-2">
                                 <Gift className="h-4 w-4 text-amber-600" />
-                                <span className="font-bold text-xs text-amber-800 dark:text-amber-200 uppercase">Cortesías</span>
+                                <span className="font-bold text-xs text-amber-800 uppercase">Cortesías</span>
                                 <Badge className="bg-amber-500 text-white text-[10px] h-4">Sin Cargo</Badge>
                               </div>
                               <CargaProductosChecklist
@@ -1228,8 +1228,8 @@ export const RutaCargaSheet = ({
 
                   {/* ═══════ FIRMA DEL CHOFER ═══════ */}
                   {cargaIniciada && todasEntregasConfirmadas && !ruta.carga_completada && (
-                    <div className="border rounded-lg overflow-hidden bg-white dark:bg-card shadow-sm">
-                      <div className="bg-gray-800 dark:bg-gray-900 text-white px-3 py-2">
+                    <div className="border rounded-lg overflow-hidden bg-white shadow-sm">
+                      <div className="bg-gray-800 text-white px-3 py-2">
                         <span className="font-bold text-xs uppercase">Firma del Chofer</span>
                       </div>
                       <div className="p-3">

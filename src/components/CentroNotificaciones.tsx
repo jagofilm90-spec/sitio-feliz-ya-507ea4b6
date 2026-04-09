@@ -161,7 +161,7 @@ export const CentroNotificaciones = () => {
                   {autorizacionesOC.map((notif) => (
                     <div
                       key={notif.id}
-                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 mb-2"
+                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer bg-amber-50 border border-amber-200 mb-2"
                       onClick={() => handleAutorizacionClick(notif.orden_compra_id, notif.id)}
                     >
                       <FileCheck className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
@@ -199,7 +199,7 @@ export const CentroNotificaciones = () => {
                   {autorizacionesCotizacion.map((notif) => (
                     <div
                       key={notif.id}
-                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 mb-2"
+                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer bg-purple-50 border border-purple-200 mb-2"
                       onClick={() => handleAutorizacionCotizacionClick(notif.cotizacion_id, notif.id)}
                     >
                       <FileText className="h-5 w-5 text-purple-600 mt-0.5 flex-shrink-0" />
@@ -237,7 +237,7 @@ export const CentroNotificaciones = () => {
                   {notificacionesRechazo.map((notif) => (
                     <div
                       key={notif.id}
-                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 mb-2"
+                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer bg-red-50 border border-red-200 mb-2"
                       onClick={() => {
                         marcarComoLeida(notif.id);
                         navigate('/compras?tab=devoluciones-faltantes');
@@ -276,7 +276,7 @@ export const CentroNotificaciones = () => {
                   {visibleConfirmaciones.map((conf) => (
                     <div
                       key={conf.id}
-                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 mb-2 group"
+                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer bg-green-50 border border-green-200 mb-2 group"
                       onClick={() => navigate(`/compras?orden=${conf.orden_compra_id}`)}
                     >
                       <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
@@ -327,7 +327,7 @@ export const CentroNotificaciones = () => {
                   {notificacionesPrecios.map((notif) => (
                     <div
                       key={notif.id}
-                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 mb-2"
+                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer bg-orange-50 border border-orange-200 mb-2"
                       onClick={() => {
                         marcarComoLeida(notif.id);
                         navigate('/precios');
@@ -402,7 +402,7 @@ export const CentroNotificaciones = () => {
                   {notificacionesPreciosVendedor.map((notif) => (
                     <div
                       key={notif.id}
-                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 mb-2"
+                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer bg-blue-50 border border-blue-200 mb-2"
                       onClick={() => {
                         marcarComoLeida(notif.id);
                         navigate('/precios');
@@ -423,7 +423,7 @@ export const CentroNotificaciones = () => {
                           })}
                         </p>
                       </div>
-                      <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700">
+                      <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
                         Precio
                       </Badge>
                     </div>
@@ -441,7 +441,7 @@ export const CentroNotificaciones = () => {
                   {notificacionesProductoNuevo.map((notif) => (
                     <div
                       key={notif.id}
-                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 mb-2"
+                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer bg-green-50 border border-green-200 mb-2"
                       onClick={() => {
                         marcarComoLeida(notif.id);
                         navigate('/productos');
@@ -462,7 +462,7 @@ export const CentroNotificaciones = () => {
                           })}
                         </p>
                       </div>
-                      <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700">
+                      <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">
                         Nuevo
                       </Badge>
                     </div>
@@ -482,8 +482,8 @@ export const CentroNotificaciones = () => {
                       key={notif.id}
                       className={`flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer mb-2 border ${
                         notif.tipo === 'caducidad_vencida' 
-                          ? 'bg-destructive/10 dark:bg-destructive/20 border-destructive/30' 
-                          : 'bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800'
+                          ? 'bg-destructive/10 border-destructive/30' 
+                          : 'bg-orange-50 border-orange-200'
                       }`}
                       onClick={() => {
                         marcarComoLeida(notif.id);
@@ -518,8 +518,8 @@ export const CentroNotificaciones = () => {
                       key={notif.id}
                       className={`flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer mb-2 border ${
                         notif.tipo === 'fumigacion_vencida' 
-                          ? 'bg-destructive/10 dark:bg-destructive/20 border-destructive/30' 
-                          : 'bg-yellow-50 dark:bg-yellow-950/20 border-yellow-200 dark:border-yellow-800'
+                          ? 'bg-destructive/10 border-destructive/30' 
+                          : 'bg-yellow-50 border-yellow-200'
                       }`}
                       onClick={() => {
                         marcarComoLeida(notif.id);

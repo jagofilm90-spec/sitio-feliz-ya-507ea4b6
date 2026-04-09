@@ -268,11 +268,11 @@ export const ProximasEntregasTab = ({ onEntregaReprogramada }: ProximasEntregasT
                   return (
                     <tr 
                       key={entrega.id} 
-                      className={`border-b transition-colors hover:bg-muted/30 ${esMañana ? 'bg-amber-50/60 dark:bg-amber-950/20' : ''}`}
+                      className={`border-b transition-colors hover:bg-muted/30 ${esMañana ? 'bg-amber-50/60' : ''}`}
                     >
                       <td className="px-3 py-2.5 whitespace-nowrap">
                         {idx === 0 ? (
-                          <span className={`capitalize font-medium ${esMañana ? 'text-amber-700 dark:text-amber-400' : ''}`}>
+                          <span className={`capitalize font-medium ${esMañana ? 'text-amber-700' : ''}`}>
                             {esMañana ? '🔶 Mañana' : fechaCorta}
                           </span>
                         ) : null}

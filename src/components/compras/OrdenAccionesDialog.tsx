@@ -1669,9 +1669,9 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
 
         {/* Alert for pending advance payment */}
         {orden?.status === 'pendiente_pago' && (
-          <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700">
-            <DollarSign className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-            <AlertDescription className="text-amber-800 dark:text-amber-200">
+          <Alert className="border-amber-300 bg-amber-50">
+            <DollarSign className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-800">
               <strong>Pago Anticipado Pendiente</strong>
               <br />
               Las entregas están bloqueadas para el almacén y el proveedor no recibirá notificaciones hasta que se registre el pago.
@@ -1719,21 +1719,21 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
                 
                 {/* Dashboard visual con contadores */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  <div className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-center">
-                    <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{entregasResumen.sinFecha}</p>
-                    <p className="text-[10px] text-amber-700 dark:text-amber-300 font-medium">Sin Fecha</p>
+                  <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-center">
+                    <p className="text-xl font-bold text-amber-600">{entregasResumen.sinFecha}</p>
+                    <p className="text-[10px] text-amber-700 font-medium">Sin Fecha</p>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-center">
-                    <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{entregasResumen.programadas}</p>
-                    <p className="text-[10px] text-blue-700 dark:text-blue-300 font-medium">Programadas</p>
+                  <div className="p-2.5 rounded-lg bg-blue-50 border border-blue-200 text-center">
+                    <p className="text-xl font-bold text-blue-600">{entregasResumen.programadas}</p>
+                    <p className="text-[10px] text-blue-700 font-medium">Programadas</p>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 text-center">
-                    <p className="text-xl font-bold text-orange-600 dark:text-orange-400">{entregasResumen.enProceso}</p>
-                    <p className="text-[10px] text-orange-700 dark:text-orange-300 font-medium">En Descarga</p>
+                  <div className="p-2.5 rounded-lg bg-orange-50 border border-orange-200 text-center">
+                    <p className="text-xl font-bold text-orange-600">{entregasResumen.enProceso}</p>
+                    <p className="text-[10px] text-orange-700 font-medium">En Descarga</p>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-center">
-                    <p className="text-xl font-bold text-green-600 dark:text-green-400">{entregasResumen.completadas}</p>
-                    <p className="text-[10px] text-green-700 dark:text-green-300 font-medium">Recibidas</p>
+                  <div className="p-2.5 rounded-lg bg-green-50 border border-green-200 text-center">
+                    <p className="text-xl font-bold text-green-600">{entregasResumen.completadas}</p>
+                    <p className="text-[10px] text-green-700 font-medium">Recibidas</p>
                   </div>
                 </div>
                 
@@ -1821,18 +1821,18 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
                   <div className="text-xs text-muted-foreground">Total OC</div>
                   <div className="font-bold text-sm">{formatCurrency(totalOC)}</div>
                 </div>
-                <div className="text-center p-2 rounded bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
-                  <div className="text-xs text-green-600 dark:text-green-400">Pagado</div>
-                  <div className="font-bold text-sm text-green-700 dark:text-green-300">{formatCurrency(montoPagado)}</div>
+                <div className="text-center p-2 rounded bg-green-50 border border-green-200">
+                  <div className="text-xs text-green-600">Pagado</div>
+                  <div className="font-bold text-sm text-green-700">{formatCurrency(montoPagado)}</div>
                 </div>
-                <div className="text-center p-2 rounded bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
-                  <div className="text-xs text-blue-600 dark:text-blue-400">Mercancía recibida</div>
-                  <div className="font-bold text-sm text-blue-700 dark:text-blue-300">{formatCurrency(totalRecibido)}</div>
+                <div className="text-center p-2 rounded bg-blue-50 border border-blue-200">
+                  <div className="text-xs text-blue-600">Mercancía recibida</div>
+                  <div className="font-bold text-sm text-blue-700">{formatCurrency(totalRecibido)}</div>
                 </div>
                 <div className={cn(
                   "text-center p-2 rounded border",
-                  saldoAFavor > 0 && "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800",
-                  saldoAFavor < 0 && "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800",
+                  saldoAFavor > 0 && "bg-amber-50 border-amber-200",
+                  saldoAFavor < 0 && "bg-red-50 border-red-200",
                   saldoAFavor === 0 && "bg-muted border"
                 )}>
                   <div className="text-xs text-muted-foreground">
@@ -1840,8 +1840,8 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
                   </div>
                   <div className={cn(
                     "font-bold text-sm",
-                    saldoAFavor > 0 && "text-amber-700 dark:text-amber-300",
-                    saldoAFavor < 0 && "text-red-700 dark:text-red-300",
+                    saldoAFavor > 0 && "text-amber-700",
+                    saldoAFavor < 0 && "text-red-700",
                     saldoAFavor === 0 && "text-muted-foreground"
                   )}>
                     {saldoAFavor !== 0 ? formatCurrency(Math.abs(saldoAFavor)) : '✓ Al corriente'}
@@ -1849,7 +1849,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
                 </div>
               </div>
               {saldoAFavor > 0 && (
-                <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+                <p className="text-xs text-amber-600 text-center">
                   ⚠️ Tienes {formatCurrency(saldoAFavor)} a tu favor pendiente de reposición o reembolso
                 </p>
               )}
@@ -1869,7 +1869,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
               {/* Enviar / Reenviar al Proveedor */}
               {(canSendToSupplier || canResend) && (
                 <button
-                  className="w-full flex items-center gap-3 p-4 rounded-lg border border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-950/30 text-left transition-colors"
+                  className="w-full flex items-center gap-3 p-4 rounded-lg border border-green-200 hover:bg-green-50 text-left transition-colors"
                   onClick={proveedorTieneEmail ? () => setAccion(canSendToSupplier ? "enviar_email" : "reenviar_email") : handleMarcarComoEnviada}
                   disabled={enviandoEmail}
                 >
@@ -1916,7 +1916,7 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
               {/* Comprobante de Recepción */}
               {entregasResumen?.comprobantes && entregasResumen.comprobantes.length > 0 && (
                 <button
-                  className="w-full flex items-center gap-3 p-4 rounded-lg border border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-950/30 text-left transition-colors"
+                  className="w-full flex items-center gap-3 p-4 rounded-lg border border-green-200 hover:bg-green-50 text-left transition-colors"
                   onClick={() => {
                     entregasResumen.comprobantes.forEach((c: any) => 
                       openStorageFile("recepciones-evidencias", c.url)
@@ -2047,8 +2047,8 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
           <div className="space-y-4">
             {/* Caso 1: OC recibida que NO es de prueba - mostrar bloqueo */}
             {(orden?.status === 'completada' || orden?.status === 'recibida') && !esOCPrueba ? (
-              <div className="bg-amber-50 dark:bg-amber-950/20 p-4 rounded-lg space-y-2">
-                <p className="font-medium text-amber-700 dark:text-amber-400 flex items-center gap-2">
+              <div className="bg-amber-50 p-4 rounded-lg space-y-2">
+                <p className="font-medium text-amber-700 flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5" />
                   No se puede eliminar esta orden
                 </p>
@@ -2115,8 +2115,8 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
               </div>
             ) : (orden?.status === 'completada' || orden?.status === 'recibida') && esOCPrueba && !isAdmin ? (
               /* Caso 3: OC recibida de PRUEBA pero usuario NO es admin */
-              <div className="bg-amber-50 dark:bg-amber-950/20 p-4 rounded-lg space-y-2">
-                <p className="font-medium text-amber-700 dark:text-amber-400 flex items-center gap-2">
+              <div className="bg-amber-50 p-4 rounded-lg space-y-2">
+                <p className="font-medium text-amber-700 flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5" />
                   Requiere permisos de administrador
                 </p>

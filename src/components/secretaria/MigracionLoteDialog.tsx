@@ -419,8 +419,8 @@ export const MigracionLoteDialog = ({
                   {sugerencias.map((sug) => (
                     <TableRow 
                       key={sug.producto_id}
-                      className={sug.estado === 'error' ? 'bg-red-50 dark:bg-red-950/20' : 
-                                sug.estado === 'aprobado' ? 'bg-green-50 dark:bg-green-950/20' : ''}
+                      className={sug.estado === 'error' ? 'bg-red-50' : 
+                                sug.estado === 'aprobado' ? 'bg-green-50' : ''}
                     >
                       <TableCell>
                         <Checkbox
@@ -437,7 +437,7 @@ export const MigracionLoteDialog = ({
                             {sug.cambios_detectados && (
                               <>
                                 <span className="text-muted-foreground">→</span>
-                                <span className="font-medium text-pink-700 dark:text-pink-400">
+                                <span className="font-medium text-pink-700">
                                   {sug.nombre_sugerido}
                                   {sug.especificaciones_sugerida && ` ${sug.especificaciones_sugerida}`}
                                 </span>

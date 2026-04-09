@@ -34,13 +34,13 @@ const MODULE_LABELS: Record<string, string> = {
 
 const ROLE_COLORS: Record<string, string> = {
   admin: "bg-destructive/10 text-destructive",
-  gerente_almacen: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
-  almacen: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  chofer: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-  vendedor: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-  secretaria: "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400",
-  contabilidad: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-  cliente: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400",
+  gerente_almacen: "bg-orange-100 text-orange-700",
+  almacen: "bg-blue-100 text-blue-700",
+  chofer: "bg-green-100 text-green-700",
+  vendedor: "bg-purple-100 text-purple-700",
+  secretaria: "bg-pink-100 text-pink-700",
+  contabilidad: "bg-yellow-100 text-yellow-700",
+  cliente: "bg-cyan-100 text-cyan-700",
 };
 
 const ROLE_LABELS: Record<string, string> = {

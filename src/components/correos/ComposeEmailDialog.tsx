@@ -470,7 +470,7 @@ const ComposeEmailDialog = ({
                 {attachments.map((att, i) => {
                   const FileIcon = att.isDriveLink ? Cloud : getFileIcon(att.mimeType);
                   return (
-                    <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-md border ${att.isDriveLink ? 'bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800' : 'bg-background'}`}>
+                    <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-md border ${att.isDriveLink ? 'bg-blue-50 border-blue-200' : 'bg-background'}`}>
                       <FileIcon className={`h-4 w-4 ${att.isDriveLink ? 'text-blue-600' : 'text-muted-foreground'}`} />
                       <div className="flex flex-col">
                         <span className="text-xs font-medium truncate max-w-[150px]">{att.filename}</span>

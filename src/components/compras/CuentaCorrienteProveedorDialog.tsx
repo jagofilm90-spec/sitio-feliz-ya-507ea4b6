@@ -35,12 +35,12 @@ const formatCurrency = (v: number) =>
 const getStatusBadge = (status: string) => {
   const config: Record<string, { label: string; variant: any; className?: string }> = {
     pendiente: { label: "Pendiente", variant: "secondary" },
-    pendiente_pago: { label: "Pend. Pago", variant: "outline", className: "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800" },
+    pendiente_pago: { label: "Pend. Pago", variant: "outline", className: "bg-amber-100 text-amber-700 border-amber-300" },
     autorizada: { label: "Autorizada", variant: "default" },
     enviada: { label: "Enviada", variant: "default" },
     parcial: { label: "Parcial", variant: "secondary" },
     recibida: { label: "Recibida", variant: "default" },
-    completada: { label: "Completada", variant: "default", className: "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400" },
+    completada: { label: "Completada", variant: "default", className: "bg-green-100 text-green-700" },
     cancelada: { label: "Cancelada", variant: "destructive" },
   };
   const c = config[status] || { label: status, variant: "secondary" };
@@ -48,9 +48,9 @@ const getStatusBadge = (status: string) => {
 };
 
 const getPagoBadge = (tipo: string, statusPago: string) => {
-  if (statusPago === "pagado") return <Badge className="text-[10px] bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400 border-0">Pagado</Badge>;
-  if (statusPago === "parcial") return <Badge className="text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-0">Parcial</Badge>;
-  if (tipo === "anticipado") return <Badge className="text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 border-0">Anticipado</Badge>;
+  if (statusPago === "pagado") return <Badge className="text-[10px] bg-green-100 text-green-700 border-0">Pagado</Badge>;
+  if (statusPago === "parcial") return <Badge className="text-[10px] bg-amber-100 text-amber-700 border-0">Parcial</Badge>;
+  if (tipo === "anticipado") return <Badge className="text-[10px] bg-blue-100 text-blue-700 border-0">Anticipado</Badge>;
   return <Badge variant="outline" className="text-[10px]">Contra entrega</Badge>;
 };
 
@@ -142,31 +142,31 @@ export function CuentaCorrienteProveedorDialog({ open, onOpenChange, proveedor }
 
         {/* KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="p-3 rounded-lg border bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+          <div className="p-3 rounded-lg border bg-blue-50 border-blue-200">
             <div className="flex items-center gap-1.5 mb-1">
               <ShoppingCart className="h-3.5 w-3.5 text-blue-600" />
-              <span className="text-[11px] text-blue-700 dark:text-blue-400">OCs Activas</span>
+              <span className="text-[11px] text-blue-700">OCs Activas</span>
             </div>
-            <p className="text-xl font-bold text-blue-800 dark:text-blue-300">{loadingOCs ? "..." : ocsActivas.length}</p>
+            <p className="text-xl font-bold text-blue-800">{loadingOCs ? "..." : ocsActivas.length}</p>
           </div>
-          <div className="p-3 rounded-lg border bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800">
+          <div className="p-3 rounded-lg border bg-red-50 border-red-200">
             <div className="flex items-center gap-1.5 mb-1">
               <DollarSign className="h-3.5 w-3.5 text-red-600" />
-              <span className="text-[11px] text-red-700 dark:text-red-400">Total Adeudado</span>
+              <span className="text-[11px] text-red-700">Total Adeudado</span>
             </div>
-            <p className="text-xl font-bold text-red-800 dark:text-red-300">{loadingOCs ? "..." : formatCurrency(totalAdeudado)}</p>
+            <p className="text-xl font-bold text-red-800">{loadingOCs ? "..." : formatCurrency(totalAdeudado)}</p>
           </div>
-          <div className="p-3 rounded-lg border bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+          <div className="p-3 rounded-lg border bg-green-50 border-green-200">
             <div className="flex items-center gap-1.5 mb-1">
               <CreditCard className="h-3.5 w-3.5 text-green-600" />
-              <span className="text-[11px] text-green-700 dark:text-green-400">Créditos a favor</span>
+              <span className="text-[11px] text-green-700">Créditos a favor</span>
             </div>
-            <p className="text-xl font-bold text-green-800 dark:text-green-300">{loadingCreditos ? "..." : formatCurrency(totalCreditos)}</p>
+            <p className="text-xl font-bold text-green-800">{loadingCreditos ? "..." : formatCurrency(totalCreditos)}</p>
           </div>
           <div className={cn(
             "p-3 rounded-lg border",
-            saldoNeto > 0 && "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800",
-            saldoNeto <= 0 && "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800",
+            saldoNeto > 0 && "bg-amber-50 border-amber-200",
+            saldoNeto <= 0 && "bg-green-50 border-green-200",
           )}>
             <div className="flex items-center gap-1.5 mb-1">
               <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
@@ -174,8 +174,8 @@ export function CuentaCorrienteProveedorDialog({ open, onOpenChange, proveedor }
             </div>
             <p className={cn(
               "text-xl font-bold",
-              saldoNeto > 0 && "text-amber-800 dark:text-amber-300",
-              saldoNeto <= 0 && "text-green-800 dark:text-green-300",
+              saldoNeto > 0 && "text-amber-800",
+              saldoNeto <= 0 && "text-green-800",
             )}>
               {loadingOCs || loadingCreditos ? "..." : saldoNeto === 0 ? "✓ Al corriente" : formatCurrency(Math.abs(saldoNeto))}
             </p>
@@ -210,7 +210,7 @@ export function CuentaCorrienteProveedorDialog({ open, onOpenChange, proveedor }
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Total: <strong>{formatCurrency(oc.total)}</strong></span>
-                      <span>Pagado: <strong className="text-green-600 dark:text-green-400">{formatCurrency(oc.monto_pagado || 0)}</strong></span>
+                      <span>Pagado: <strong className="text-green-600">{formatCurrency(oc.monto_pagado || 0)}</strong></span>
                     </div>
                     <div className="w-full bg-muted rounded-full h-1.5">
                       <div className={cn("h-1.5 rounded-full", pctRecibido === 100 ? "bg-green-500" : "bg-primary")} style={{ width: `${pctRecibido}%` }} />
@@ -273,7 +273,7 @@ export function CuentaCorrienteProveedorDialog({ open, onOpenChange, proveedor }
                 <div key={c.id} className="border rounded-lg p-3 space-y-1">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">{c.producto_nombre}</span>
-                    <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-0 text-xs">{formatCurrency(c.monto_total)}</Badge>
+                    <Badge className="bg-green-100 text-green-700 border-0 text-xs">{formatCurrency(c.monto_total)}</Badge>
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {c.motivo} · {format(new Date(c.created_at), "dd/MM/yyyy")} · Cant: {c.cantidad}
@@ -298,7 +298,7 @@ export function CuentaCorrienteProveedorDialog({ open, onOpenChange, proveedor }
                     <TableRow key={c.id} className="text-xs">
                       <TableCell className="py-1.5">{c.producto_nombre}</TableCell>
                       <TableCell className="py-1.5 text-right">{c.cantidad}</TableCell>
-                      <TableCell className="py-1.5 text-right font-medium text-green-600 dark:text-green-400">{formatCurrency(c.monto_total)}</TableCell>
+                      <TableCell className="py-1.5 text-right font-medium text-green-600">{formatCurrency(c.monto_total)}</TableCell>
                       <TableCell className="py-1.5"><Badge variant="outline" className="text-[10px]">{c.motivo}</Badge></TableCell>
                       <TableCell className="py-1.5">{format(new Date(c.created_at), "dd/MM/yy")}</TableCell>
                     </TableRow>

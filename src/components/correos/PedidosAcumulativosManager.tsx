@@ -895,12 +895,12 @@ export function PedidosAcumulativosManager() {
 
       {/* Alerta de verificación obligatoria */}
       {pedidosConVerificacionCount > 0 && (
-        <Alert variant="destructive" className="border-red-500 bg-red-50 dark:bg-red-950/30">
+        <Alert variant="destructive" className="border-red-500 bg-red-50">
           <Lock className="h-4 w-4" />
-          <AlertTitle className="text-red-800 dark:text-red-200">
+          <AlertTitle className="text-red-800">
             🔒 {pedidosConVerificacionCount} pedido{pedidosConVerificacionCount > 1 ? 's' : ''} BLOQUEADO{pedidosConVerificacionCount > 1 ? 'S' : ''}
           </AlertTitle>
-          <AlertDescription className="text-red-700 dark:text-red-300">
+          <AlertDescription className="text-red-700">
             <strong>No puedes generar remisiones</strong> hasta que verifiques manualmente: Piloncillo, Canela Molida, Anís y/o Bicarbonato.
             <br />
             Haz clic en "Editar" para ajustar cajas/bolsas y kilos de cada producto.
@@ -1096,8 +1096,8 @@ export function PedidosAcumulativosManager() {
                       <div className={`p-3 rounded-lg ${
                         requiereVerificacion 
                           ? estaVerificado 
-                            ? 'bg-green-50 dark:bg-green-950/30 border border-green-300' 
-                            : 'bg-red-50 dark:bg-red-950/30 border border-red-400 border-2'
+                            ? 'bg-green-50 border border-green-300' 
+                            : 'bg-red-50 border border-red-400 border-2'
                           : 'bg-muted/50'
                       }`}>
                         <div className="flex justify-between items-start">
@@ -1121,7 +1121,7 @@ export function PedidosAcumulativosManager() {
                             </div>
                             
                             {isEditing ? (
-                              <div className="mt-3 p-4 bg-amber-100/80 dark:bg-amber-900/40 rounded-lg border border-amber-300">
+                              <div className="mt-3 p-4 bg-amber-100/80 rounded-lg border border-amber-300">
                                 <div className="grid grid-cols-2 gap-4">
                                   <div>
                                     <Label className="text-sm font-medium">

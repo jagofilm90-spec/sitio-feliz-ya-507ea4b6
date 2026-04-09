@@ -379,8 +379,8 @@ export default function VendedorPanel() {
               <Card className="hover:shadow-md transition-shadow">
                 <CardContent className="p-3 lg:p-4">
                   <div className="flex items-center gap-2 lg:gap-3">
-                    <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-                      <Users className="h-5 w-5 lg:h-6 lg:w-6 text-blue-600 dark:text-blue-400" />
+                    <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                      <Users className="h-5 w-5 lg:h-6 lg:w-6 text-blue-600" />
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs lg:text-sm text-muted-foreground truncate">Clientes</p>
@@ -393,8 +393,8 @@ export default function VendedorPanel() {
               <Card className="hover:shadow-md transition-shadow">
                 <CardContent className="p-3 lg:p-4">
                   <div className="flex items-center gap-2 lg:gap-3">
-                    <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
-                      <Calendar className="h-5 w-5 lg:h-6 lg:w-6 text-green-600 dark:text-green-400" />
+                    <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
+                      <Calendar className="h-5 w-5 lg:h-6 lg:w-6 text-green-600" />
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs lg:text-sm text-muted-foreground truncate">Ventas Mes</p>
@@ -421,8 +421,8 @@ export default function VendedorPanel() {
               <Card className="hover:shadow-md transition-shadow">
                 <CardContent className="p-3 lg:p-4">
                   <div className="flex items-center gap-2 lg:gap-3">
-                    <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
-                      <CreditCard className="h-5 w-5 lg:h-6 lg:w-6 text-amber-600 dark:text-amber-400" />
+                    <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+                      <CreditCard className="h-5 w-5 lg:h-6 lg:w-6 text-amber-600" />
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs lg:text-sm text-muted-foreground truncate">Por Cobrar</p>
@@ -435,8 +435,8 @@ export default function VendedorPanel() {
               <Card className="hover:shadow-md transition-shadow col-span-2 lg:col-span-1">
                 <CardContent className="p-3 lg:p-4">
                   <div className="flex items-center gap-2 lg:gap-3">
-                    <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
-                      <CreditCard className="h-5 w-5 lg:h-6 lg:w-6 text-red-600 dark:text-red-400" />
+                    <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
+                      <CreditCard className="h-5 w-5 lg:h-6 lg:w-6 text-red-600" />
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs lg:text-sm text-muted-foreground truncate">Vencido</p>

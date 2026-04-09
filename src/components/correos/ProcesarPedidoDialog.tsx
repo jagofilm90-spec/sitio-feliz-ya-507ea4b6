@@ -1473,8 +1473,8 @@ export default function ProcesarPedidoDialog({
 
           {/* Monthly quotation banner for Lecaroz */}
           {isLecarozEmail && cotizacionesMesActual.length > 0 && (
-            <div className="p-4 bg-green-50 dark:bg-green-950/30 border border-green-500/30 rounded-lg space-y-2">
-              <div className="flex items-center gap-2 text-green-700 dark:text-green-400 font-semibold">
+            <div className="p-4 bg-green-50 border border-green-500/30 rounded-lg space-y-2">
+              <div className="flex items-center gap-2 text-green-700 font-semibold">
                 <CheckCircle2 className="h-5 w-5" />
                 <span>Cotización(es) del mes detectada(s)</span>
               </div>
@@ -1496,7 +1496,7 @@ export default function ProcesarPedidoDialog({
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-green-600 dark:text-green-400">
+              <p className="text-xs text-green-600">
                 ✓ Los precios se tomarán automáticamente de estas cotizaciones
               </p>
             </div>
@@ -1504,8 +1504,8 @@ export default function ProcesarPedidoDialog({
 
           {/* Warning if Lecaroz but no monthly quotations */}
           {isLecarozEmail && cotizacionesMesActual.length === 0 && cotizacionesRecientes && cotizacionesRecientes.length > 0 && (
-            <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-500/30 rounded-lg">
-              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-sm">
+            <div className="p-3 bg-amber-50 border border-amber-500/30 rounded-lg">
+              <div className="flex items-center gap-2 text-amber-700 text-sm">
                 <AlertCircle className="h-4 w-4" />
                 <span>No se encontraron cotizaciones del mes actual. Se usarán cotizaciones anteriores.</span>
               </div>
@@ -1514,15 +1514,15 @@ export default function ProcesarPedidoDialog({
 
           {/* Excel attachment indicator */}
           {hasExcelAttachment && excelAttachment && (
-            <div className="p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-500/30 rounded-lg">
-              <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400 font-semibold">
+            <div className="p-4 bg-blue-50 border border-blue-500/30 rounded-lg">
+              <div className="flex items-center gap-2 text-blue-700 font-semibold">
                 <FileSpreadsheet className="h-5 w-5" />
                 <span>Pedido detectado en archivo Excel</span>
               </div>
-              <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+              <p className="text-sm text-blue-600 mt-1">
                 📎 {excelAttachment.filename}
               </p>
-              <p className="text-xs text-blue-500 dark:text-blue-400 mt-1">
+              <p className="text-xs text-blue-500 mt-1">
                 El sistema descargará y parseará el archivo Excel automáticamente
               </p>
             </div>
@@ -1530,15 +1530,15 @@ export default function ProcesarPedidoDialog({
 
           {/* Rosticería detected indicator */}
           {parsedOrder && (parsedOrder as any).esRosticeria && (
-            <div className="p-4 bg-orange-50 dark:bg-orange-950/30 border border-orange-500/30 rounded-lg">
-              <div className="flex items-center gap-2 text-orange-700 dark:text-orange-400 font-semibold">
+            <div className="p-4 bg-orange-50 border border-orange-500/30 rounded-lg">
+              <div className="flex items-center gap-2 text-orange-700 font-semibold">
                 <span className="text-xl">🍗</span>
                 <span>Pedido Rosticería detectado</span>
-                <Badge className="bg-orange-500/20 text-orange-700 dark:text-orange-400">
+                <Badge className="bg-orange-500/20 text-orange-700">
                   {parsedOrder.sucursales.length} sucursales
                 </Badge>
               </div>
-              <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">
+              <p className="text-sm text-orange-600 mt-1">
                 Se detectaron {parsedOrder.sucursales.length} sucursales de Rosticería en el Excel
               </p>
             </div>
@@ -1546,28 +1546,28 @@ export default function ProcesarPedidoDialog({
 
           {/* Alerta de sucursales NO registradas */}
           {parsedOrder && hasUnmatchedSucursales && (
-            <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-500 rounded-lg space-y-3">
-              <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300 font-semibold">
+            <div className="p-4 bg-amber-50 border-2 border-amber-500 rounded-lg space-y-3">
+              <div className="flex items-center gap-2 text-amber-800 font-semibold">
                 <AlertTriangle className="h-5 w-5" />
                 <span>⚠️ {unmatchedSucursales} sucursal(es) NO están registradas</span>
               </div>
               
-              <p className="text-sm text-amber-700 dark:text-amber-400">
+              <p className="text-sm text-amber-700">
                 Las siguientes sucursales no existen en tu catálogo. Puedes vincularlas manualmente abajo o ir a <strong>Clientes → Sucursales</strong> para agregarlas permanentemente.
               </p>
               
               <Collapsible>
                 <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30">
+                  <Button variant="ghost" size="sm" className="text-amber-700 hover:bg-amber-100">
                     <ChevronDown className="h-4 w-4 mr-2" />
                     Ver lista de sucursales ({unmatchedSucursales})
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <div className="max-h-[150px] overflow-y-auto bg-amber-100/50 dark:bg-amber-900/20 rounded p-2 mt-2">
+                  <div className="max-h-[150px] overflow-y-auto bg-amber-100/50 rounded p-2 mt-2">
                     <ul className="text-xs space-y-1">
                       {unmatchedSucursalNames.map((name, idx) => (
-                        <li key={idx} className="text-amber-800 dark:text-amber-300">
+                        <li key={idx} className="text-amber-800">
                           • {name}
                         </li>
                       ))}
@@ -1663,7 +1663,7 @@ export default function ProcesarPedidoDialog({
                       </Badge>
                     )}
                     {unmatchedSucursales > 0 && (
-                      <Badge variant="outline" className="border-amber-500 text-amber-700 dark:text-amber-400">
+                      <Badge variant="outline" className="border-amber-500 text-amber-700">
                         <Building2 className="h-3 w-3 mr-1" />
                         {unmatchedSucursales} sucursales sin registrar
                       </Badge>

@@ -225,9 +225,9 @@ export const ModificarProductosOCDialog = ({
         </DialogHeader>
 
         {ocYaEnviada && (
-          <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/30">
+          <Alert className="border-amber-300 bg-amber-50">
             <Mail className="h-4 w-4 text-amber-600" />
-            <AlertDescription className="text-amber-700 dark:text-amber-400">
+            <AlertDescription className="text-amber-700">
               Esta orden ya fue enviada al proveedor. Al eliminar productos, se le 
               {proveedorTieneEmail ? " notificará automáticamente" : " deberás notificar manualmente (sin correo registrado)"}.
             </AlertDescription>
@@ -265,7 +265,7 @@ export const ModificarProductosOCDialog = ({
                   return (
                     <TableRow
                       key={producto.id}
-                      className={estaSeleccionado ? "bg-red-50 dark:bg-red-950/20" : esEliminable ? "" : "opacity-50"}
+                      className={estaSeleccionado ? "bg-red-50" : esEliminable ? "" : "opacity-50"}
                     >
                       <TableCell>
                         {esEliminable ? (
@@ -312,11 +312,11 @@ export const ModificarProductosOCDialog = ({
         {productosSeleccionados.size > 0 && (
           <div className="space-y-3 border-t pt-3">
             {/* Summary of changes */}
-            <div className="p-3 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200 dark:border-red-800">
-              <p className="text-sm font-medium text-red-700 dark:text-red-300 mb-2">
+            <div className="p-3 bg-red-50 rounded-lg border border-red-200">
+              <p className="text-sm font-medium text-red-700 mb-2">
                 Se eliminarán {productosSeleccionados.size} producto(s):
               </p>
-              <ul className="text-sm text-red-600 dark:text-red-400 list-disc ml-4">
+              <ul className="text-sm text-red-600 list-disc ml-4">
                 {productosAEliminar.map(p => (
                   <li key={p.id}>{p.cantidad_ordenada} x {p.nombre}</li>
                 ))}

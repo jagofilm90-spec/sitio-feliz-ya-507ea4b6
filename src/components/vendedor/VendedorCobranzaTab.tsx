@@ -222,8 +222,8 @@ export function VendedorCobranzaTab() {
         <Card className="hover:shadow-md transition-shadow">
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <CreditCard className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                <CreditCard className="h-6 w-6 text-blue-600" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Por cobrar</p>
@@ -236,8 +236,8 @@ export function VendedorCobranzaTab() {
         <Card className="border-destructive/50 hover:shadow-md transition-shadow">
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
+              <div className="h-12 w-12 rounded-lg bg-red-100 flex items-center justify-center">
+                <AlertTriangle className="h-6 w-6 text-red-600" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Vencido</p>
@@ -250,8 +250,8 @@ export function VendedorCobranzaTab() {
         <Card className="border-amber-500/50 hover:shadow-md transition-shadow">
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                <Clock className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+              <div className="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center">
+                <Clock className="h-6 w-6 text-amber-600" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Por vencer</p>
@@ -264,8 +264,8 @@ export function VendedorCobranzaTab() {
         <Card className="border-orange-500/50 hover:shadow-md transition-shadow">
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                <Truck className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+              <div className="h-12 w-12 rounded-lg bg-orange-100 flex items-center justify-center">
+                <Truck className="h-6 w-6 text-orange-600" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Sin entregar</p>
@@ -278,8 +278,8 @@ export function VendedorCobranzaTab() {
         <Card className="border-green-500/50 hover:shadow-md transition-shadow">
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+              <div className="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center">
+                <CheckCircle className="h-6 w-6 text-green-600" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Al corriente</p>
@@ -290,15 +290,15 @@ export function VendedorCobranzaTab() {
         </Card>
 
         {/* Cobros de hoy KPI */}
-        <Card className="border-emerald-500/50 hover:shadow-md transition-shadow bg-emerald-50/50 dark:bg-emerald-950/20">
+        <Card className="border-emerald-500/50 hover:shadow-md transition-shadow bg-emerald-50/50">
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                <DollarSign className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+              <div className="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center">
+                <DollarSign className="h-6 w-6 text-emerald-600" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Cobros hoy</p>
-                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(cobrosHoy)}</p>
+                <p className="text-2xl font-bold text-emerald-600">{formatCurrency(cobrosHoy)}</p>
               </div>
             </div>
           </CardContent>

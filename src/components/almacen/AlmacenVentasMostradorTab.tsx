@@ -538,7 +538,7 @@ export const AlmacenVentasMostradorTab = ({ empleadoId, onStatsUpdate }: Almacen
                   autoFocus
                 />
                 {parseFloat(efectivoRecibido) > 0 && (
-                  <div className={cn("text-center p-3 rounded-lg text-lg font-bold", cambio >= 0 ? "bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400" : "bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-400")}>
+                  <div className={cn("text-center p-3 rounded-lg text-lg font-bold", cambio >= 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")}>
                     {cambio >= 0 ? `Cambio: ${formatCurrency(cambio)}` : `Faltan: ${formatCurrency(Math.abs(cambio))}`}
                   </div>
                 )}

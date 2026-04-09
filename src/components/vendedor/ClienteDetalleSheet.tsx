@@ -719,7 +719,7 @@ export function ClienteDetalleSheet({
                       <Card>
                         <CardContent className="p-3 text-center">
                           <p className="text-xs text-muted-foreground">Total pagado</p>
-                          <p className="font-bold text-lg text-emerald-600 dark:text-emerald-400">
+                          <p className="font-bold text-lg text-emerald-600">
                             {formatCurrency(pagos.filter(p => p.status === 'validado').reduce((s, p) => s + p.monto_total, 0))}
                           </p>
                         </CardContent>
@@ -748,7 +748,7 @@ export function ClienteDetalleSheet({
                                    pago.status === "rechazado" ? "Rechazado" : "Pendiente"}
                                 </Badge>
                               </div>
-                              <p className="font-semibold text-emerald-600 dark:text-emerald-400">
+                              <p className="font-semibold text-emerald-600">
                                 +{formatCurrency(pago.monto_total)}
                               </p>
                             </div>

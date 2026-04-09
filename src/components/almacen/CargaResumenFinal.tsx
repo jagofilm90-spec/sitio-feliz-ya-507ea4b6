@@ -43,7 +43,7 @@ export const CargaResumenFinal = ({
   const hayDiferenciaPeso = Math.abs(diferenciaPeso) > 0.1;
 
   return (
-    <Card className="border-2 border-green-500/50 bg-green-50/30 dark:bg-green-950/10">
+    <Card className="border-2 border-green-500/50 bg-green-50/30">
       <CardContent className="p-5 space-y-5">
         {/* Header */}
         <div className="flex items-center gap-3">

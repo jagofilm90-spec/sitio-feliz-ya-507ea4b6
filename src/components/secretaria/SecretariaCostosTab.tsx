@@ -481,9 +481,9 @@ export const SecretariaCostosTab = () => {
                             // Color de fila solo para admin
                             const rowClass = isAdmin && analisis 
                               ? analisis.estado_margen === 'perdida' 
-                                ? 'bg-red-50 dark:bg-red-950/20' 
+                                ? 'bg-red-50' 
                                 : analisis.estado_margen === 'critico'
-                                ? 'bg-orange-50 dark:bg-orange-950/20'
+                                ? 'bg-orange-50'
                                 : ''
                               : '';
 
@@ -611,11 +611,11 @@ export const SecretariaCostosTab = () => {
           {isAdmin && (
             <div className="flex flex-wrap gap-4 text-xs text-muted-foreground mt-2">
               <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded bg-red-200 dark:bg-red-900" />
+                <div className="w-3 h-3 rounded bg-red-200" />
                 <span>Margen &lt; 0% (Pérdida)</span>
               </div>
               <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded bg-orange-200 dark:bg-orange-900" />
+                <div className="w-3 h-3 rounded bg-orange-200" />
                 <span>Margen 0-5% (Crítico)</span>
               </div>
               <div className="flex items-center gap-1">
@@ -865,10 +865,10 @@ export const SecretariaCostosTab = () => {
                 {simulacion && (
                   <div className={`p-4 rounded-lg border-2 ${
                     simulacion.es_perdida 
-                      ? 'border-red-500 bg-red-50 dark:bg-red-950/30' 
+                      ? 'border-red-500 bg-red-50' 
                       : simulacion.requiere_autorizacion
-                      ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/30'
-                      : 'border-green-500 bg-green-50 dark:bg-green-950/30'
+                      ? 'border-orange-500 bg-orange-50'
+                      : 'border-green-500 bg-green-50'
                   }`}>
                     <div className="grid grid-cols-2 gap-3">
                       <div>

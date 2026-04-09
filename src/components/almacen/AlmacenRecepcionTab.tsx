@@ -638,8 +638,8 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
                   <>
                     {/* Entregas en descarga (prioritarias) */}
                     {entregasEnDescarga.length > 0 && (
-                      <div className="p-3 bg-amber-50 dark:bg-amber-950/20">
-                        <div className="text-sm font-medium text-amber-700 dark:text-amber-400 flex items-center gap-2 mb-2">
+                      <div className="p-3 bg-amber-50">
+                        <div className="text-sm font-medium text-amber-700 flex items-center gap-2 mb-2">
                           <Clock className="w-4 h-4" />
                           🟢 En descarga ({entregasEnDescarga.length})
                         </div>
@@ -686,7 +686,7 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
                         ============================ */}
                     {entregasManana.length > 0 && (
                       <div className="p-3">
-                        <div className="text-sm font-medium text-blue-600 dark:text-blue-400 flex items-center gap-2 mb-3">
+                        <div className="text-sm font-medium text-blue-600 flex items-center gap-2 mb-3">
                           📋 Mañana — Prepararse ({entregasManana.length})
                         </div>
                         <div className="space-y-2">
@@ -734,7 +734,7 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
                         <Collapsible open={completadasExpandido} onOpenChange={setCompletadasExpandido}>
                           <CollapsibleTrigger className="w-full text-left">
                             <div className="flex items-center justify-between">
-                              <div className="text-sm font-medium text-green-600 dark:text-green-400 flex items-center gap-2">
+                              <div className="text-sm font-medium text-green-600 flex items-center gap-2">
                                 ✅ Completadas hoy ({entregasCompletadas.length})
                               </div>
                               {completadasExpandido ? (
@@ -755,11 +755,11 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
                                   : "";
                                 const comprobanteUrl = (entrega as any).comprobante_recepcion_url;
                                 return (
-                                  <div key={entrega.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-green-50/50 dark:bg-green-950/10">
+                                  <div key={entrega.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-green-50/50">
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-center gap-2">
                                         <span className="font-medium truncate">{provNombre}</span>
-                                        <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 gap-1 flex-shrink-0">
+                                        <Badge variant="secondary" className="bg-green-100 text-green-700 gap-1 flex-shrink-0">
                                           <CheckCircle2 className="w-3 h-3" />
                                           Completada
                                         </Badge>
@@ -915,7 +915,7 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
                   <div className="space-y-3">
                     {hojaEntrega.origen_faltante && hojaEntrega.productos_faltantes?.length ? (
                       hojaEntrega.productos_faltantes.map((prod, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                        <div key={idx} className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200">
                           <div>
                             <p className="font-medium">{prod.nombre}</p>
                             {prod.codigo && (
@@ -983,7 +983,7 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
 // Componente timer en tiempo real para descargas
 const TimerDescarga = ({ inicioDescarga }: { inicioDescarga: string }) => {
   const [tiempoTranscurrido, setTiempoTranscurrido] = useState("");
-  const [colorClase, setColorClase] = useState("text-green-600 dark:text-green-400");
+  const [colorClase, setColorClase] = useState("text-green-600");
 
   useEffect(() => {
     const calcularTiempo = () => {
@@ -1006,13 +1006,13 @@ const TimerDescarga = ({ inicioDescarga }: { inicioDescarga: string }) => {
       
       // Código de colores según urgencia
       if (horas >= 2) {
-        setColorClase("text-red-600 dark:text-red-400"); // Crítico: +2 horas
+        setColorClase("text-red-600"); // Crítico: +2 horas
       } else if (horas >= 1) {
-        setColorClase("text-orange-600 dark:text-orange-400"); // Advertencia: +1 hora
+        setColorClase("text-orange-600"); // Advertencia: +1 hora
       } else if (minutos >= 30) {
-        setColorClase("text-amber-600 dark:text-amber-400"); // Atención: +30 min
+        setColorClase("text-amber-600"); // Atención: +30 min
       } else {
-        setColorClase("text-green-600 dark:text-green-400"); // Normal: <30 min
+        setColorClase("text-green-600"); // Normal: <30 min
       }
     };
 
@@ -1047,14 +1047,14 @@ const ProductosEntregaList = ({ productos, origen_faltante, productos_faltantes 
 
     return (
       <div className="mt-2 space-y-1">
-        <span className="text-xs font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1">
+        <span className="text-xs font-medium text-amber-600 flex items-center gap-1">
           <Box className="w-3 h-3" />
           Faltantes ({productos_faltantes.length}):
         </span>
         <div className="pl-4 space-y-0.5">
           {productosVisibles.map((prod, index) => (
             <div key={prod.producto_id || index} className="text-sm flex items-center gap-2">
-              <span className="text-amber-600 dark:text-amber-400">•</span>
+              <span className="text-amber-600">•</span>
               <span className="truncate flex-1">
                 {prod.codigo ? `${prod.codigo} - ` : ""}{prod.nombre}
               </span>
@@ -1211,14 +1211,14 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
               )}
               {/* Badge de mañana */}
               {esMañana && (
-                <Badge variant="outline" className="gap-1 border-blue-500 text-blue-600 dark:text-blue-400 flex-shrink-0">
+                <Badge variant="outline" className="gap-1 border-blue-500 text-blue-600 flex-shrink-0">
                   <Calendar className="w-3 h-3" />
                   Mañana
                 </Badge>
               )}
               {/* Badge de llegada anticipada */}
               {esLlegadaAnticipada && (
-                <Badge variant="outline" className="gap-1 border-amber-500 text-amber-600 dark:text-amber-400 flex-shrink-0">
+                <Badge variant="outline" className="gap-1 border-amber-500 text-amber-600 flex-shrink-0">
                   <Clock className="w-3 h-3" />
                   Anticipada
                 </Badge>
@@ -1260,7 +1260,7 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
           {/* Info de descarga en curso con timer en tiempo real */}
           {esEnDescarga && entrega.llegada_registrada_en && (
             <div className="flex items-center gap-2 text-sm flex-wrap">
-              <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <Clock className="w-4 h-4 text-amber-600" />
               <span className="text-muted-foreground">Tiempo de descarga:</span>
               <TimerDescarga inicioDescarga={entrega.llegada_registrada_en} />
               {entrega.nombre_chofer_proveedor && (
@@ -1273,12 +1273,12 @@ const EntregaCard = ({ entrega, currentUserId, onRegistrarLlegada, onCompletarRe
           {entrega.trabajando_por && (
             <div className="flex items-center gap-2">
               {yoEstoyTrabajando ? (
-                <Badge variant="secondary" className="gap-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                <Badge variant="secondary" className="gap-1 bg-green-100 text-green-700">
                   <UserCheck className="w-3 h-3" />
                   Tú estás trabajando
                 </Badge>
               ) : (
-                <Badge variant="secondary" className="gap-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                <Badge variant="secondary" className="gap-1 bg-blue-100 text-blue-700">
                   <User className="w-3 h-3" />
                   {entrega.trabajando_por_profile?.full_name || "Otro almacenista"}
                   {entrega.trabajando_desde && (

@@ -169,12 +169,12 @@ export const SecretariaListaPreciosTab = () => {
       {/* Review Panel */}
       {revisionesPendientes.length > 0 && (
         <Collapsible open={reviewPanelOpen} onOpenChange={setReviewPanelOpen}>
-          <div className="my-2 border border-orange-300 dark:border-orange-700 rounded-lg overflow-hidden">
+          <div className="my-2 border border-orange-300 rounded-lg overflow-hidden">
             <CollapsibleTrigger asChild>
-              <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-950/30 cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-950/50">
+              <div className="flex items-center justify-between p-3 bg-orange-50 cursor-pointer hover:bg-orange-100">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 text-orange-600" />
-                  <span className="text-sm font-semibold text-orange-800 dark:text-orange-300">
+                  <span className="text-sm font-semibold text-orange-800">
                     {revisionesPendientes.length} producto(s) con ajuste de precio pendiente
                   </span>
                 </div>
@@ -277,12 +277,12 @@ export const SecretariaListaPreciosTab = () => {
                           <div className="flex items-center gap-1 flex-wrap">
                             <span className="text-xs">{getProductDisplayName(producto)}</span>
                             {producto.es_promocion && (
-                              <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 shrink-0">
+                              <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 shrink-0">
                                 PROMO
                               </Badge>
                             )}
                             {producto.bloqueado_venta && (
-                              <span className="text-[8px] text-red-600 dark:text-red-400 shrink-0" title="Requiere autorización">🔒</span>
+                              <span className="text-[8px] text-red-600 shrink-0" title="Requiere autorización">🔒</span>
                             )}
                           </div>
                         </TableCell>
@@ -292,19 +292,19 @@ export const SecretariaListaPreciosTab = () => {
                               {formatCurrency(producto.precio_venta)}{producto.precio_por_kilo && '/kg'}
                             </span>
                             {producto.aplica_iva && (
-                              <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-blue-300 text-blue-600 dark:border-blue-700 dark:text-blue-400">IVA</Badge>
+                              <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-blue-300 text-blue-600">IVA</Badge>
                             )}
                             {producto.aplica_ieps && (
-                              <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-orange-300 text-orange-600 dark:border-orange-700 dark:text-orange-400">IEPS</Badge>
+                              <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-orange-300 text-orange-600">IEPS</Badge>
                             )}
                           </div>
                         </TableCell>
                         <TableCell className="py-1 px-2 text-right">
                           {producto.descuento_maximo && producto.descuento_maximo > 0 ? (
                             <span className="text-[10px] font-medium">
-                              <span className="text-emerald-600 dark:text-emerald-400">-${producto.descuento_maximo.toFixed(0)}</span>
+                              <span className="text-emerald-600">-${producto.descuento_maximo.toFixed(0)}</span>
                               <span className="text-muted-foreground mx-0.5">→</span>
-                              <span className="text-amber-600 dark:text-amber-400 font-semibold">
+                              <span className="text-amber-600 font-semibold">
                                 {formatCurrency(producto.precio_venta - producto.descuento_maximo)}
                               </span>
                             </span>
@@ -347,7 +347,7 @@ export const SecretariaListaPreciosTab = () => {
                       <p className="text-sm leading-tight">
                         {getProductDisplayName(producto)}
                         {producto.es_promocion && (
-                          <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 ml-1 shrink-0 inline-flex">
+                          <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 ml-1 shrink-0 inline-flex">
                             PROMO
                           </Badge>
                         )}
@@ -358,7 +358,7 @@ export const SecretariaListaPreciosTab = () => {
                       <div className="text-right shrink-0">
                         <p className="font-bold text-sm">{formatCurrency(producto.precio_venta)}{producto.precio_por_kilo && '/kg'}</p>
                         {producto.descuento_maximo && producto.descuento_maximo > 0 && (
-                          <p className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">
+                          <p className="text-[10px] text-amber-600 font-semibold">
                             → {formatCurrency(producto.precio_venta - producto.descuento_maximo)}
                           </p>
                         )}
@@ -509,7 +509,7 @@ export const SecretariaListaPreciosTab = () => {
                 )}
 
                 {!editor.editingProduct.costo_promedio_ponderado && !editor.editingProduct.ultimo_costo_compra && (
-                  <p className="text-xs text-amber-600 dark:text-amber-400">Este producto no tiene costos registrados. Usa el modo manual.</p>
+                  <p className="text-xs text-amber-600">Este producto no tiene costos registrados. Usa el modo manual.</p>
                 )}
               </div>
             )}
@@ -576,8 +576,8 @@ export const SecretariaListaPreciosTab = () => {
               variant={(editor.isSaved || editor.showSuccessAnimation) ? "outline" : "default"}
               className={cn(
                 "transition-all duration-300 ease-out min-w-[140px]",
-                (editor.isSaved || editor.showSuccessAnimation) && "border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/20",
-                editor.showSuccessAnimation && "animate-success-pulse bg-green-50 dark:bg-green-950/30"
+                (editor.isSaved || editor.showSuccessAnimation) && "border-green-500 text-green-600 hover:bg-green-50",
+                editor.showSuccessAnimation && "animate-success-pulse bg-green-50"
               )}
             >
               <span className="flex items-center justify-center">

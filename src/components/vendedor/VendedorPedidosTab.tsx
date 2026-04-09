@@ -330,7 +330,7 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                                 </div>
                                 <div>
                                   <span className="block text-muted-foreground">Solicitado</span>
-                                  <span className="font-semibold text-amber-700 dark:text-amber-300">{formatCurrency(precioSolicitado)}</span>
+                                  <span className="font-semibold text-amber-700">{formatCurrency(precioSolicitado)}</span>
                                 </div>
                                 <div>
                                   <span className="block text-muted-foreground">Diferencia</span>
@@ -409,25 +409,25 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <Card>
           <CardContent className="p-3 flex items-center gap-2.5">
-            <div className="p-1.5 rounded-full bg-blue-100 dark:bg-blue-900/30"><Package className="h-3.5 w-3.5 text-blue-600" /></div>
+            <div className="p-1.5 rounded-full bg-blue-100"><Package className="h-3.5 w-3.5 text-blue-600" /></div>
             <div><p className="text-lg font-bold">{pedidosListos.length}</p><p className="text-[10px] text-muted-foreground">Por entregar</p></div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-3 flex items-center gap-2.5">
-            <div className="p-1.5 rounded-full bg-indigo-100 dark:bg-indigo-900/30"><Truck className="h-3.5 w-3.5 text-indigo-600" /></div>
+            <div className="p-1.5 rounded-full bg-indigo-100"><Truck className="h-3.5 w-3.5 text-indigo-600" /></div>
             <div><p className="text-lg font-bold">{enRuta.length}</p><p className="text-[10px] text-muted-foreground">En ruta</p></div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-3 flex items-center gap-2.5">
-            <div className="p-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30"><CreditCard className="h-3.5 w-3.5 text-amber-600" /></div>
+            <div className="p-1.5 rounded-full bg-amber-100"><CreditCard className="h-3.5 w-3.5 text-amber-600" /></div>
             <div><p className="text-lg font-bold">{porCobrar.length}</p><p className="text-[10px] text-muted-foreground">Por cobrar</p></div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-3 flex items-center gap-2.5">
-            <div className="p-1.5 rounded-full bg-green-100 dark:bg-green-900/30"><DollarSign className="h-3.5 w-3.5 text-green-600" /></div>
+            <div className="p-1.5 rounded-full bg-green-100"><DollarSign className="h-3.5 w-3.5 text-green-600" /></div>
             <div><p className="text-lg font-bold">{formatCurrency(montoporCobrar)}</p><p className="text-[10px] text-muted-foreground">Monto por cobrar</p></div>
           </CardContent>
         </Card>
@@ -546,8 +546,8 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                         </TableRow>
                         {descuentoProducts.length > 0 && (
                           <TableRow>
-                            <TableCell colSpan={10} className="bg-amber-50 dark:bg-amber-950/20 py-1.5 px-3">
-                              <p className="text-[10px] font-semibold uppercase text-amber-700 dark:text-amber-300 mb-1">Productos con descuento solicitado:</p>
+                            <TableCell colSpan={10} className="bg-amber-50 py-1.5 px-3">
+                              <p className="text-[10px] font-semibold uppercase text-amber-700 mb-1">Productos con descuento solicitado:</p>
                               {descuentoProducts.map(d => {
                                 const lista = d.producto!.precio_venta;
                                 const maxDesc = lista - (d.producto!.descuento_maximo || 0);
@@ -559,7 +559,7 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
                                     <span className="font-medium text-foreground">{d.producto!.nombre}</span>
                                     <span>Lista: {formatCurrency(lista)}</span>
                                     <span>Máx: {formatCurrency(maxDesc)}</span>
-                                    <span className="font-semibold text-amber-700 dark:text-amber-300">Solic: {formatCurrency(solicitado)}</span>
+                                    <span className="font-semibold text-amber-700">Solic: {formatCurrency(solicitado)}</span>
                                     <span className="font-semibold text-destructive">{formatCurrency(dif)}</span>
                                   </div>
                                 );
@@ -685,9 +685,9 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
 
         <TabsContent value="por_cobrar">
           {porCobrar.length > 0 && (
-            <div className="flex items-center justify-between bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-2.5 mt-2 mb-3">
-              <span className="text-sm font-medium text-amber-800 dark:text-amber-200">Total por cobrar</span>
-              <span className="font-bold text-amber-700 dark:text-amber-300">
+            <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 mt-2 mb-3">
+              <span className="text-sm font-medium text-amber-800">Total por cobrar</span>
+              <span className="font-bold text-amber-700">
                 {formatCurrency(porCobrar.reduce((s, p) => s + (p.saldo_pendiente ?? p.total), 0))}
               </span>
             </div>

@@ -224,14 +224,14 @@ export function VendedorComisionesTab() {
     switch (status) {
       case "pagada":
         return (
-          <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+          <Badge className="bg-green-100 text-green-800">
             <CheckCircle className="h-3 w-3 mr-1" />
             Pagada
           </Badge>
         );
       case "aprobada":
         return (
-          <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+          <Badge className="bg-blue-100 text-blue-800">
             <CheckCircle className="h-3 w-3 mr-1" />
             Aprobada
           </Badge>
@@ -283,8 +283,8 @@ export function VendedorComisionesTab() {
         <Card className="hover:shadow-md transition-shadow">
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <Truck className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                <Truck className="h-6 w-6 text-blue-600" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Entregas</p>
@@ -297,8 +297,8 @@ export function VendedorComisionesTab() {
         <Card className="hover:shadow-md transition-shadow">
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <Package className="h-6 w-6 text-green-600 dark:text-green-400" />
+              <div className="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center">
+                <Package className="h-6 w-6 text-green-600" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total entregas</p>
@@ -311,8 +311,8 @@ export function VendedorComisionesTab() {
         <Card className="hover:shadow-md transition-shadow">
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                <Percent className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+              <div className="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center">
+                <Percent className="h-6 w-6 text-amber-600" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">% Comisión</p>

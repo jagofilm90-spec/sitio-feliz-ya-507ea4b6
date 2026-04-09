@@ -1773,7 +1773,7 @@ export const AlmacenRecepcionSheet = ({
                   <div className={cn(
                     "p-4 border rounded-lg",
                     minutosDescarga > 180 
-                      ? "bg-amber-100 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800" 
+                      ? "bg-amber-100 border-amber-300" 
                       : "bg-primary/10 border-primary/30"
                   )}>
                     <div className="flex items-center justify-between">
@@ -1978,10 +1978,10 @@ export const AlmacenRecepcionSheet = ({
                                 <div className={cn(
                                   "text-xs p-2 rounded",
                                   totalLotes === faltante 
-                                    ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" 
+                                    ? "bg-green-100 text-green-800" 
                                     : totalLotes > faltante
-                                    ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-                                    : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                                    ? "bg-red-100 text-red-800"
+                                    : "bg-amber-100 text-amber-800"
                                 )}>
                                   <span className="font-medium">
                                     {lotes.filter(l => l.cantidad > 0).length} lotes = {totalLotes.toLocaleString()} unidades
@@ -1995,8 +1995,8 @@ export const AlmacenRecepcionSheet = ({
                             
                             {/* Razón de diferencia */}
                             {tieneDiferencia && (
-                              <div className="space-y-2 p-2 bg-amber-50 dark:bg-amber-950/20 rounded-md border border-amber-200 dark:border-amber-800">
-                                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-sm font-medium">
+                              <div className="space-y-2 p-2 bg-amber-50 rounded-md border border-amber-200">
+                                <div className="flex items-center gap-2 text-amber-700 text-sm font-medium">
                                   <AlertTriangle className="w-4 h-4" />
                                   Diferencia de {faltante - cantidadActual} unidades
                                 </div>
@@ -2021,8 +2021,8 @@ export const AlmacenRecepcionSheet = ({
                                 
                                 {/* Foto obligatoria para producto dañado o rechazado por calidad */}
                                 {RAZONES_REQUIEREN_FOTO.includes(razonActual) && (
-                                  <div className="space-y-2 p-2 bg-amber-100 dark:bg-amber-950/30 rounded border border-amber-300 dark:border-amber-700">
-                                    <Label className="text-sm text-amber-700 dark:text-amber-400 font-medium flex items-center gap-1">
+                                  <div className="space-y-2 p-2 bg-amber-100 rounded border border-amber-300">
+                                    <Label className="text-sm text-amber-700 font-medium flex items-center gap-1">
                                       <Camera className="w-4 h-4" />
                                       {razonActual === "roto" ? "Foto del producto dañado *" : "Foto del producto rechazado *"}
                                     </Label>
@@ -2053,9 +2053,9 @@ export const AlmacenRecepcionSheet = ({
                                 )}
                                 
                                 {esRazonDevolucion && (
-                                  <div className="flex items-center gap-2 p-2 bg-amber-100 dark:bg-amber-950/30 rounded border border-amber-300 dark:border-amber-700">
-                                    <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                                    <span className="text-sm text-amber-700 dark:text-amber-400">
+                                  <div className="flex items-center gap-2 p-2 bg-amber-100 rounded border border-amber-300">
+                                    <AlertTriangle className="w-4 h-4 text-amber-600" />
+                                    <span className="text-sm text-amber-700">
                                       Los {faltante - getCantidadNumerica(producto.id)} bultos serán devueltos al chofer
                                     </span>
                                   </div>
@@ -2068,12 +2068,12 @@ export const AlmacenRecepcionSheet = ({
                               <div className={cn(
                                 "space-y-2 p-3 rounded-md border",
                                 excedenteConfirmado === 'reposicion' 
-                                  ? "bg-green-50 dark:bg-green-950/20 border-green-300 dark:border-green-800"
+                                  ? "bg-green-50 border-green-300"
                                   : excedenteConfirmado === 'aceptar'
-                                  ? "bg-blue-50 dark:bg-blue-950/20 border-blue-300 dark:border-blue-800"
-                                  : "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800"
+                                  ? "bg-blue-50 border-blue-300"
+                                  : "bg-blue-50 border-blue-200"
                               )}>
-                                <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400 text-sm font-medium">
+                                <div className="flex items-center gap-2 text-blue-700 text-sm font-medium">
                                   <Package className="w-4 h-4" />
                                   Excedente de {cantidadActual - faltante} unidades
                                 </div>
@@ -2082,17 +2082,17 @@ export const AlmacenRecepcionSheet = ({
                                 {excedenteConfirmado && (
                                   <div className={cn(
                                     "p-2 rounded text-sm",
-                                    excedenteConfirmado === 'reposicion' && "bg-green-100 dark:bg-green-900/30",
-                                    excedenteConfirmado === 'aceptar' && "bg-blue-100 dark:bg-blue-900/30"
+                                    excedenteConfirmado === 'reposicion' && "bg-green-100",
+                                    excedenteConfirmado === 'aceptar' && "bg-blue-100"
                                   )}>
                                     {excedenteConfirmado === 'reposicion' && (
-                                      <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                                      <div className="flex items-center gap-2 text-green-700">
                                         <CheckCircle2 className="w-4 h-4" />
                                         <span className="font-medium">✓ Confirmado como reposición</span>
                                       </div>
                                     )}
                                     {excedenteConfirmado === 'aceptar' && (
-                                      <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400">
+                                      <div className="flex items-center gap-2 text-blue-700">
                                         <CheckCircle2 className="w-4 h-4" />
                                         <span className="font-medium">✓ Excedente aceptado - se pagará</span>
                                       </div>
@@ -2105,15 +2105,15 @@ export const AlmacenRecepcionSheet = ({
                                   <>
                                     {/* Hay crédito de reposición pendiente */}
                                     {creditoParaProducto ? (
-                                      <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded text-sm">
-                                        <p className="text-green-700 dark:text-green-400 font-medium">
+                                      <div className="p-2 bg-green-100 rounded text-sm">
+                                        <p className="text-green-700 font-medium">
                                           ✓ Posible reposición de faltante anterior
                                         </p>
-                                        <p className="text-green-600 dark:text-green-500 text-xs mt-1">
+                                        <p className="text-green-600 text-xs mt-1">
                                           De <span className="font-mono">{creditoParaProducto.oc_origen_folio}</span>: {creditoParaProducto.cantidad} bulto(s) 
                                           {creditoParaProducto.motivo && ` (${creditoParaProducto.motivo})`}
                                         </p>
-                                        <p className="text-green-600 dark:text-green-500 text-xs">
+                                        <p className="text-green-600 text-xs">
                                           Valor: {formatCurrency(creditoParaProducto.monto_total)}
                                         </p>
                                         <div className="flex gap-2 mt-2">
@@ -2140,14 +2140,14 @@ export const AlmacenRecepcionSheet = ({
                                       </div>
                                     ) : (
                                       /* NO hay crédito pendiente - el proveedor puede estar equivocado */
-                                      <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded text-sm">
+                                      <div className="p-2 bg-amber-100 rounded text-sm">
                                         <div className="flex items-start gap-2">
                                           <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                                           <div>
-                                            <p className="text-amber-700 dark:text-amber-400 font-medium">
+                                            <p className="text-amber-700 font-medium">
                                               ⚠️ Sin crédito pendiente registrado
                                             </p>
-                                            <p className="text-amber-600 dark:text-amber-500 text-xs mt-1">
+                                            <p className="text-amber-600 text-xs mt-1">
                                               El proveedor envió {cantidadActual - faltante} extra pero no hay faltante previo registrado en el sistema.
                                               Si aceptas, se pagarán <strong>{cantidadActual}</strong> unidades en vez de {faltante}.
                                             </p>
@@ -2270,13 +2270,13 @@ export const AlmacenRecepcionSheet = ({
                     </div>
                   ) : bodegaDetectada && !mostrarSelectorBodega ? (
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
-                        <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
+                      <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200">
+                        <CheckCircle2 className="w-4 h-4 text-green-600" />
                         <div className="flex-1">
-                          <span className="font-medium text-green-700 dark:text-green-300">
+                          <span className="font-medium text-green-700">
                             {bodegaDetectada.nombre}
                           </span>
-                          <span className="text-xs text-green-600 dark:text-green-400 ml-2">
+                          <span className="text-xs text-green-600 ml-2">
                             {metodoDeteccion === 'wifi' ? (
                               <>
                                 <Wifi className="w-3 h-3 inline mr-1" />
@@ -2303,9 +2303,9 @@ export const AlmacenRecepcionSheet = ({
                   ) : (
                     <div className="space-y-2">
                       {errorDeteccion && !mostrarSelectorBodega && (
-                        <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
-                          <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                          <span className="text-sm text-amber-700 dark:text-amber-300 flex-1">
+                        <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                          <AlertTriangle className="w-4 h-4 text-amber-600" />
+                          <span className="text-sm text-amber-700 flex-1">
                             {errorDeteccion}
                           </span>
                           <Button 
@@ -2351,8 +2351,8 @@ export const AlmacenRecepcionSheet = ({
                 </div>
 
                 {/* Documento del Proveedor */}
-                <div className="space-y-3 p-4 border rounded-lg bg-blue-50/50 dark:bg-blue-950/20">
-                  <h3 className="font-medium flex items-center gap-2 text-blue-700 dark:text-blue-400">
+                <div className="space-y-3 p-4 border rounded-lg bg-blue-50/50">
+                  <h3 className="font-medium flex items-center gap-2 text-blue-700">
                     <Receipt className="w-4 h-4" />
                     Documento del Proveedor
                   </h3>
@@ -2422,8 +2422,8 @@ export const AlmacenRecepcionSheet = ({
 
                 {/* Foto de Caja Vacía - Solo si descarga completa */}
                 {esDescargaCompleta() && (
-                  <div className="space-y-3 p-4 border rounded-lg bg-green-50/50 dark:bg-green-950/20">
-                    <h3 className="font-medium flex items-center gap-2 text-green-700 dark:text-green-400">
+                  <div className="space-y-3 p-4 border rounded-lg bg-green-50/50">
+                    <h3 className="font-medium flex items-center gap-2 text-green-700">
                       <PackageOpen className="w-4 h-4" />
                       Evidencia de Descarga Completa
                     </h3>
@@ -2480,24 +2480,24 @@ export const AlmacenRecepcionSheet = ({
                 </div>
 
                 {/* Indicador de firmas requeridas */}
-                <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-                  <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400">
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center gap-2 text-blue-700">
                     <PenLine className="w-5 h-5" />
                     <span className="font-medium">Firmas de conformidad requeridas</span>
                   </div>
-                  <p className="text-sm text-blue-600 dark:text-blue-500 mt-1">
+                  <p className="text-sm text-blue-600 mt-1">
                     El chofer del proveedor y el almacenista firmarán confirmando la recepción.
                   </p>
                 </div>
 
                 {/* Indicador adicional si hay diferencias */}
                 {hayDiferencias && (
-                  <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
-                    <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-center gap-2 text-amber-700">
                       <AlertTriangle className="w-5 h-5" />
                       <span className="font-medium">Hay diferencias en la entrega</span>
                     </div>
-                    <p className="text-sm text-amber-600 dark:text-amber-500 mt-1">
+                    <p className="text-sm text-amber-600 mt-1">
                       Hay {totalDiferencias} unidades de diferencia. El chofer firmará confirmando que entregó menos de lo ordenado.
                     </p>
                   </div>

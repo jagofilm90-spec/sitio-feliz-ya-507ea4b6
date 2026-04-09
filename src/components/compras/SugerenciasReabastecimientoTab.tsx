@@ -49,19 +49,19 @@ const formatCurrency = (v: number) =>
 const URGENCIA_CONFIG: Record<string, { label: string; color: string; icon: typeof XCircle }> = {
   critico: {
     label: "Sin stock",
-    color: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 border-red-300 dark:border-red-800",
+    color: "bg-red-100 text-red-800 border-red-300",
     icon: XCircle},
   urgente: {
     label: "≤3 días",
-    color: "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300 border-orange-300 dark:border-orange-800",
+    color: "bg-orange-100 text-orange-800 border-orange-300",
     icon: AlertTriangle},
   bajo: {
     label: "≤7 días",
-    color: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border-amber-300 dark:border-amber-800",
+    color: "bg-amber-100 text-amber-800 border-amber-300",
     icon: TrendingDown},
   planificar: {
     label: "Planificar",
-    color: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border-blue-300 dark:border-blue-800",
+    color: "bg-blue-100 text-blue-800 border-blue-300",
     icon: CalendarDays}};
 
 const getUrgenciaBadge = (urgencia: string) => {
@@ -290,8 +290,8 @@ export const SugerenciasReabastecimientoTab = () => {
           <p className="text-xs text-muted-foreground">Productos a reabastecer</p>
           <p className="text-2xl font-bold">{kpis.total}</p>
         </div>
-        <div className="p-3 rounded-lg border bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800">
-          <p className="text-xs text-red-700 dark:text-red-400">Sin stock (críticos)</p>
+        <div className="p-3 rounded-lg border bg-red-50 border-red-200">
+          <p className="text-xs text-red-700">Sin stock (críticos)</p>
           <p className="text-2xl font-bold text-red-600">{kpis.criticos}</p>
         </div>
         <div className="p-3 rounded-lg border bg-muted/30">
@@ -381,8 +381,8 @@ export const SugerenciasReabastecimientoTab = () => {
               key={s.producto_id}
               className={cn(
                 "p-3 rounded-lg border space-y-2",
-                s.urgencia === "critico" && "border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20",
-                s.urgencia === "urgente" && "border-orange-300 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-950/20",
+                s.urgencia === "critico" && "border-red-300 bg-red-50/50",
+                s.urgencia === "urgente" && "border-orange-300 bg-orange-50/50",
               )}
             >
               <div className="flex items-start justify-between gap-2">
@@ -447,8 +447,8 @@ export const SugerenciasReabastecimientoTab = () => {
                   key={s.producto_id}
                   className={cn(
                     "h-9",
-                    s.urgencia === "critico" && "bg-red-50 dark:bg-red-950/20",
-                    s.urgencia === "urgente" && "bg-orange-50 dark:bg-orange-950/20",
+                    s.urgencia === "critico" && "bg-red-50",
+                    s.urgencia === "urgente" && "bg-orange-50",
                   )}
                 >
                   <TableCell className="px-2">

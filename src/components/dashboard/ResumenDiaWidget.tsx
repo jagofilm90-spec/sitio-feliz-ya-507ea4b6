@@ -145,23 +145,23 @@ export const ResumenDiaWidget = () => {
         </CardHeader>
         <CardContent className="pt-0">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/50">
-              <div className="flex items-center gap-1.5 mb-1"><Package className="h-4 w-4 text-blue-600 dark:text-blue-400" /><span className="text-xs font-medium text-blue-700 dark:text-blue-400">Compras</span></div>
+            <div className="p-3 rounded-lg bg-blue-50 border border-blue-200/50">
+              <div className="flex items-center gap-1.5 mb-1"><Package className="h-4 w-4 text-blue-600" /><span className="text-xs font-medium text-blue-700">Compras</span></div>
               <p className="text-lg font-bold">{d.compras.recepciones}</p>
               <p className="text-xs text-muted-foreground">{d.compras.bultos.toLocaleString()} bultos</p>
             </div>
-            <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-800/50">
-              <div className="flex items-center gap-1.5 mb-1"><Truck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /><span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">Rutas</span></div>
+            <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200/50">
+              <div className="flex items-center gap-1.5 mb-1"><Truck className="h-4 w-4 text-emerald-600" /><span className="text-xs font-medium text-emerald-700">Rutas</span></div>
               <p className="text-lg font-bold">{d.rutas.completadas}/{d.rutas.total}</p>
               <p className="text-xs text-muted-foreground">{d.rutas.entregasCompletadas} entregas</p>
             </div>
-            <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-800/50">
-              <div className="flex items-center gap-1.5 mb-1"><DollarSign className="h-4 w-4 text-amber-600 dark:text-amber-400" /><span className="text-xs font-medium text-amber-700 dark:text-amber-400">Ventas</span></div>
+            <div className="p-3 rounded-lg bg-amber-50 border border-amber-200/50">
+              <div className="flex items-center gap-1.5 mb-1"><DollarSign className="h-4 w-4 text-amber-600" /><span className="text-xs font-medium text-amber-700">Ventas</span></div>
               <p className="text-lg font-bold">{formatCurrency(d.ventas.total + (d.ventasMostrador?.total || 0))}</p>
               <p className="text-xs text-muted-foreground">Cobros: {formatCurrency(d.cobros.total)}</p>
             </div>
-            <div className={`p-3 rounded-lg border ${totalPendientes > 0 ? "bg-red-50 dark:bg-red-950/20 border-red-200/50 dark:border-red-800/50" : "bg-green-50 dark:bg-green-950/20 border-green-200/50 dark:border-green-800/50"}`}>
-              <div className="flex items-center gap-1.5 mb-1"><AlertTriangle className={`h-4 w-4 ${totalPendientes > 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`} /><span className={`text-xs font-medium ${totalPendientes > 0 ? "text-red-700 dark:text-red-400" : "text-green-700 dark:text-green-400"}`}>Pendientes</span></div>
+            <div className={`p-3 rounded-lg border ${totalPendientes > 0 ? "bg-red-50 border-red-200/50" : "bg-green-50 border-green-200/50"}`}>
+              <div className="flex items-center gap-1.5 mb-1"><AlertTriangle className={`h-4 w-4 ${totalPendientes > 0 ? "text-red-600" : "text-green-600"}`} /><span className={`text-xs font-medium ${totalPendientes > 0 ? "text-red-700" : "text-green-700"}`}>Pendientes</span></div>
               <p className="text-lg font-bold">{totalPendientes}</p>
               <p className="text-xs text-muted-foreground">{totalPendientes > 0 ? `${d.pendientes.porAutorizar} autorizar · ${d.pendientes.atrasadas} atrasadas` : "Todo al día"}</p>
             </div>
@@ -200,7 +200,7 @@ export const ResumenDiaWidget = () => {
 
             {/* ===== RECEPCIONES ===== */}
             <section>
-              <h3 className="font-bold text-sm uppercase tracking-wide text-blue-700 dark:text-blue-400 flex items-center gap-2 mb-3">
+              <h3 className="font-bold text-sm uppercase tracking-wide text-blue-700 flex items-center gap-2 mb-3">
                 <Package className="h-4 w-4" /> Recepciones de Mercancía
                 <Badge variant="secondary" className="ml-auto">{d.compras.recepciones} · {d.compras.bultos.toLocaleString()} bultos</Badge>
               </h3>
@@ -231,7 +231,7 @@ export const ResumenDiaWidget = () => {
 
             {/* ===== RUTAS ===== */}
             <section>
-              <h3 className="font-bold text-sm uppercase tracking-wide text-emerald-700 dark:text-emerald-400 flex items-center gap-2 mb-3">
+              <h3 className="font-bold text-sm uppercase tracking-wide text-emerald-700 flex items-center gap-2 mb-3">
                 <Truck className="h-4 w-4" /> Rutas y Entregas
                 <Badge variant="secondary" className="ml-auto">{d.rutas.completadas}/{d.rutas.total} completadas · {d.rutas.entregasCompletadas} entregas</Badge>
               </h3>
@@ -262,7 +262,7 @@ export const ResumenDiaWidget = () => {
 
             {/* ===== VENTAS ===== */}
             <section>
-              <h3 className="font-bold text-sm uppercase tracking-wide text-amber-700 dark:text-amber-400 flex items-center gap-2 mb-3">
+              <h3 className="font-bold text-sm uppercase tracking-wide text-amber-700 flex items-center gap-2 mb-3">
                 <DollarSign className="h-4 w-4" /> Ventas y Cobros
               </h3>
               <div className="grid grid-cols-2 gap-3">
@@ -273,7 +273,7 @@ export const ResumenDiaWidget = () => {
                 </div>
                 <div className="p-3 border rounded-lg text-center">
                   <p className="text-xs text-muted-foreground">Cobros del Día</p>
-                  <p className="text-xl font-bold text-green-600 dark:text-green-400">{formatCurrency(d.cobros.total)}</p>
+                  <p className="text-xl font-bold text-green-600">{formatCurrency(d.cobros.total)}</p>
                 </div>
                 {d.ventasMostrador && d.ventasMostrador.count > 0 && (
                   <>
@@ -301,7 +301,7 @@ export const ResumenDiaWidget = () => {
             {/* ===== DEVOLUCIONES ===== */}
             {d.devoluciones.count > 0 && (
               <section>
-                <h3 className="font-bold text-sm uppercase tracking-wide text-orange-700 dark:text-orange-400 flex items-center gap-2 mb-3">
+                <h3 className="font-bold text-sm uppercase tracking-wide text-orange-700 flex items-center gap-2 mb-3">
                   <Package className="h-4 w-4" /> Devoluciones
                   <Badge variant="secondary" className="ml-auto">{d.devoluciones.count}</Badge>
                 </h3>
@@ -312,24 +312,24 @@ export const ResumenDiaWidget = () => {
             {/* ===== PENDIENTES ===== */}
             {totalPendientes > 0 && (
               <section>
-                <h3 className="font-bold text-sm uppercase tracking-wide text-red-700 dark:text-red-400 flex items-center gap-2 mb-3">
+                <h3 className="font-bold text-sm uppercase tracking-wide text-red-700 flex items-center gap-2 mb-3">
                   <AlertTriangle className="h-4 w-4" /> Pendientes Críticos
                 </h3>
                 <div className="space-y-2">
                   {d.pendientes.porAutorizar > 0 && (
-                    <div className="p-3 border border-red-200 dark:border-red-800 rounded-lg bg-red-50/50 dark:bg-red-950/20 flex items-center justify-between">
+                    <div className="p-3 border border-red-200 rounded-lg bg-red-50/50 flex items-center justify-between">
                       <span className="text-sm">Pedidos sin autorizar</span>
                       <Badge variant="destructive">{d.pendientes.porAutorizar}</Badge>
                     </div>
                   )}
                   {d.pendientes.atrasadas > 0 && (
-                    <div className="p-3 border border-red-200 dark:border-red-800 rounded-lg bg-red-50/50 dark:bg-red-950/20 flex items-center justify-between">
+                    <div className="p-3 border border-red-200 rounded-lg bg-red-50/50 flex items-center justify-between">
                       <span className="text-sm">Entregas de proveedor atrasadas</span>
                       <Badge variant="destructive">{d.pendientes.atrasadas}</Badge>
                     </div>
                   )}
                   {(d.pendientes.creditoExcedido || 0) > 0 && (
-                    <div className="p-3 border border-amber-200 dark:border-amber-800 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 flex items-center justify-between">
+                    <div className="p-3 border border-amber-200 rounded-lg bg-amber-50/50 flex items-center justify-between">
                       <span className="text-sm">Clientes con crédito excedido</span>
                       <Badge variant="secondary">{d.pendientes.creditoExcedido}</Badge>
                     </div>

@@ -451,8 +451,8 @@ const DevolucionesPendientesTab = () => {
             </div>
 
             {devolucionSeleccionada?.status === "resuelta" ? (
-              <div className="bg-green-50 dark:bg-green-950/30 p-3 rounded-lg">
-                <p className="text-sm font-medium text-green-700 dark:text-green-400 mb-1">Notas de resolución:</p>
+              <div className="bg-green-50 p-3 rounded-lg">
+                <p className="text-sm font-medium text-green-700 mb-1">Notas de resolución:</p>
                 <p className="text-sm">{devolucionSeleccionada?.resolucion_notas || "Sin notas"}</p>
                 <p className="text-xs text-muted-foreground mt-2">
                   Resuelta el {devolucionSeleccionada?.fecha_resolucion && 

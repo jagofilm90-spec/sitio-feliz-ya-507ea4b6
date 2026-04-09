@@ -873,8 +873,8 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
           </div>
 
           {pedidosModificados.size > 0 && (
-            <div className="border border-amber-300 dark:border-amber-700 rounded-lg p-3 bg-amber-50 dark:bg-amber-950/30 text-left">
-              <p className="text-xs font-semibold text-amber-800 dark:text-amber-200 mb-1">
+            <div className="border border-amber-300 rounded-lg p-3 bg-amber-50 text-left">
+              <p className="text-xs font-semibold text-amber-800 mb-1">
                 ⚠️ {pedidosModificados.size} pedido{pedidosModificados.size > 1 ? "s" : ""} modificado{pedidosModificados.size > 1 ? "s" : ""} — reimprimir hoja de carga
               </p>
             </div>

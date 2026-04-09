@@ -307,8 +307,8 @@ export function ConciliacionMasivaEnvio() {
               key={pedido.pedidoId}
               className={cn(
                 "transition-all",
-                estado === "listo" && "border-emerald-300 bg-emerald-50/50 dark:bg-emerald-950/10",
-                estado === "editado" && "border-amber-300 bg-amber-50/50 dark:bg-amber-950/10"
+                estado === "listo" && "border-emerald-300 bg-emerald-50/50",
+                estado === "editado" && "border-amber-300 bg-amber-50/50"
               )}
             >
               <CardContent className="p-3 sm:p-4">

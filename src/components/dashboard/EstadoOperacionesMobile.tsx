@@ -206,15 +206,15 @@ export const EstadoOperacionesMobile = () => {
   const getColorClasses = (color: string) => {
     switch (color) {
       case 'amber':
-        return { border: 'border-l-amber-500', bg: 'bg-amber-50/50 dark:bg-amber-950/20', icon: 'bg-amber-100 dark:bg-amber-900/50', iconText: 'text-amber-600 dark:text-amber-400', button: 'text-amber-600' };
+        return { border: 'border-l-amber-500', bg: 'bg-amber-50/50', icon: 'bg-amber-100', iconText: 'text-amber-600', button: 'text-amber-600' };
       case 'blue':
-        return { border: 'border-l-blue-500', bg: 'bg-blue-50/50 dark:bg-blue-950/20', icon: 'bg-blue-100 dark:bg-blue-900/50', iconText: 'text-blue-600 dark:text-blue-400', button: 'text-blue-600' };
+        return { border: 'border-l-blue-500', bg: 'bg-blue-50/50', icon: 'bg-blue-100', iconText: 'text-blue-600', button: 'text-blue-600' };
       case 'green':
-        return { border: 'border-l-green-500', bg: 'bg-green-50/50 dark:bg-green-950/20', icon: 'bg-green-100 dark:bg-green-900/50', iconText: 'text-green-600 dark:text-green-400', button: 'text-green-600' };
+        return { border: 'border-l-green-500', bg: 'bg-green-50/50', icon: 'bg-green-100', iconText: 'text-green-600', button: 'text-green-600' };
       case 'red':
-        return { border: 'border-l-red-500', bg: 'bg-red-50/50 dark:bg-red-950/20', icon: 'bg-red-100 dark:bg-red-900/50', iconText: 'text-red-600 dark:text-red-400', button: 'text-red-600' };
+        return { border: 'border-l-red-500', bg: 'bg-red-50/50', icon: 'bg-red-100', iconText: 'text-red-600', button: 'text-red-600' };
       default:
-        return { border: 'border-l-gray-300', bg: 'bg-gray-50/50 dark:bg-gray-900/20', icon: 'bg-gray-100 dark:bg-gray-800', iconText: 'text-gray-500', button: 'text-gray-600' };
+        return { border: 'border-l-gray-300', bg: 'bg-gray-50/50', icon: 'bg-gray-100', iconText: 'text-gray-500', button: 'text-gray-600' };
     }
   };
 

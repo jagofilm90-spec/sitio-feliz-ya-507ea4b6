@@ -556,7 +556,7 @@ const RouteMapContent = ({
                 <div
                   key={punto.id}
                   className={`flex items-start gap-2 p-2 rounded text-sm ${
-                    punto.lat && punto.lng ? "bg-muted/50" : "bg-orange-50 dark:bg-orange-950/20"
+                    punto.lat && punto.lng ? "bg-muted/50" : "bg-orange-50"
                   }`}
                 >
                   <div

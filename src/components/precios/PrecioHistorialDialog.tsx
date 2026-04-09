@@ -91,7 +91,7 @@ export function PrecioHistorialDialog({
                               +{formatCurrency(diferencia)}
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400 text-xs">
+                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-xs">
                               <TrendingDown className="h-3 w-3 mr-1" />
                               {formatCurrency(diferencia)}
                             </Badge>

@@ -22,7 +22,7 @@ export function InventarioItemMobile({
     <div
       className={`p-3 rounded-lg border ${
         isBajo
-          ? "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900"
+          ? "bg-red-50 border-red-200"
           : "bg-card border-border"
       }`}
     >

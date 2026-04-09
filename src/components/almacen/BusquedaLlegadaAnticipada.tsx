@@ -226,8 +226,8 @@ export const BusquedaLlegadaAnticipada = ({
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CollapsibleTrigger className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors touch-manipulation">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-full bg-amber-100 dark:bg-amber-900/30">
-              <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            <div className="p-2 rounded-full bg-amber-100">
+              <Clock className="w-5 h-5 text-amber-600" />
             </div>
             <div className="text-left">
               <span className="font-medium text-base">¿Llegó una entrega antes de tiempo?</span>
@@ -327,7 +327,7 @@ export const BusquedaLlegadaAnticipada = ({
 
                       {/* Fecha completa y botón */}
                       <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                        <div className="flex items-center gap-2 text-amber-600">
                           <Calendar className="w-4 h-4 shrink-0" />
                           <span className="text-sm font-medium">
                             Esta entrega está contemplada para el {fechaCompleta}

@@ -39,14 +39,14 @@ interface Empleado {
 }
 
 const ROLES = [
-  { value: "admin", label: "Administrador", color: "destructive", bgClass: "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30" },
-  { value: "gerente_almacen", label: "Gerente Almacén", color: "default", bgClass: "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 border-yellow-500/30" },
-  { value: "secretaria", label: "Secretaria", color: "default", bgClass: "bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/30" },
-  { value: "vendedor", label: "Vendedor", color: "secondary", bgClass: "bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30" },
-  { value: "almacen", label: "Almacén", color: "outline", bgClass: "bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30" },
-  { value: "chofer", label: "Chofer", color: "outline", bgClass: "bg-gray-500/15 text-gray-700 dark:text-gray-300 border-gray-500/30" },
-  { value: "contadora", label: "Contadores", color: "default", bgClass: "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30" },
-  { value: "cliente", label: "Cliente", color: "outline", bgClass: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-400 border-cyan-500/30" },
+  { value: "admin", label: "Administrador", color: "destructive", bgClass: "bg-red-500/15 text-red-700 border-red-500/30" },
+  { value: "gerente_almacen", label: "Gerente Almacén", color: "default", bgClass: "bg-yellow-500/15 text-yellow-700 border-yellow-500/30" },
+  { value: "secretaria", label: "Secretaria", color: "default", bgClass: "bg-purple-500/15 text-purple-700 border-purple-500/30" },
+  { value: "vendedor", label: "Vendedor", color: "secondary", bgClass: "bg-green-500/15 text-green-700 border-green-500/30" },
+  { value: "almacen", label: "Almacén", color: "outline", bgClass: "bg-orange-500/15 text-orange-700 border-orange-500/30" },
+  { value: "chofer", label: "Chofer", color: "outline", bgClass: "bg-gray-500/15 text-gray-700 border-gray-500/30" },
+  { value: "contadora", label: "Contadores", color: "default", bgClass: "bg-blue-500/15 text-blue-700 border-blue-500/30" },
+  { value: "cliente", label: "Cliente", color: "outline", bgClass: "bg-cyan-500/15 text-cyan-700 border-cyan-500/30" },
 ];
 
 export function UsuariosContent() {

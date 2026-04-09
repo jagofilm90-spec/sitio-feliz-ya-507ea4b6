@@ -468,7 +468,7 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
                     <div className="text-sm font-medium flex items-center gap-2">
                       Entrega única
                       {entregaRecibidaSingle && (
-                        <Badge variant="outline" className="text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                        <Badge variant="outline" className="text-xs bg-green-100 text-green-700">
                           <CheckCircle className="h-3 w-3 mr-1" />
                           Recibida
                         </Badge>
@@ -575,7 +575,7 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
                     <div 
                       key={entrega.id} 
                       className={`flex items-center justify-between p-2 rounded-md ${
-                        esRecibida ? "bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800" : "bg-muted/50"
+                        esRecibida ? "bg-green-50 border border-green-200" : "bg-muted/50"
                       }`}
                     >
                       <div className="flex-1">
@@ -585,13 +585,13 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
                             ({entrega.cantidad_bultos} bultos)
                           </span>
                           {esRecibida && (
-                            <Badge variant="outline" className="text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700">
+                            <Badge variant="outline" className="text-xs bg-green-100 text-green-700 border-green-300">
                               <CheckCircle className="h-3 w-3 mr-1" />
                               Recibida
                             </Badge>
                           )}
                           {!esRecibida && entrega.status === "confirmado" && (
-                            <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700">
+                            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
                               <Check className="h-3 w-3 mr-1" />
                               Confirmada
                             </Badge>
@@ -601,7 +601,7 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
                         {/* Si está recibida, mostrar fecha y botón PDF */}
                         {esRecibida ? (
                           <div className="flex items-center gap-2 mt-1 flex-wrap">
-                            <span className="text-xs text-green-600 dark:text-green-400">
+                            <span className="text-xs text-green-600">
                               Recibida el {entrega.recepcion_finalizada_en 
                                 ? format(new Date(entrega.recepcion_finalizada_en), "dd/MM/yyyy HH:mm")
                                 : "—"}

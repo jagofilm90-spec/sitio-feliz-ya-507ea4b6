@@ -33,12 +33,12 @@ const TIPO_CONFIG: Record<string, { label: string; icon: typeof Warehouse; color
   almacen_carga: {
     label: "Carga de almacén",
     icon: Warehouse,
-    color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+    color: "bg-blue-100 text-blue-700",
   },
   conciliacion_secretaria: {
     label: "Conciliación secretaria",
     icon: ClipboardCheck,
-    color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+    color: "bg-amber-100 text-amber-700",
   },
 };
 

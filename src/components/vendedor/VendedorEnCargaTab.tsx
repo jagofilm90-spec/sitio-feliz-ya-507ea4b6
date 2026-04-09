@@ -211,21 +211,21 @@ export function VendedorEnCargaTab() {
         <Card key={ruta.id} className="overflow-hidden">
           <CardContent className="p-0">
             {/* Header */}
-            <div className="bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 px-4 py-3">
+            <div className="bg-amber-50 border-b border-amber-200 px-4 py-3">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <LiveIndicator />
                   <span className="font-bold text-sm">{ruta.folio}</span>
-                  <Badge variant="outline" className="text-xs border-amber-400 text-amber-700 dark:text-amber-300">
+                  <Badge variant="outline" className="text-xs border-amber-400 text-amber-700">
                     En carga
                   </Badge>
                 </div>
-                <span className="text-lg font-bold text-amber-700 dark:text-amber-300">{ruta.porcentaje}%</span>
+                <span className="text-lg font-bold text-amber-700">{ruta.porcentaje}%</span>
               </div>
 
               {/* Progress bar */}
-              <Progress value={ruta.porcentaje} className="h-3 bg-amber-100 dark:bg-amber-900" />
-              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+              <Progress value={ruta.porcentaje} className="h-3 bg-amber-100" />
+              <p className="text-xs text-amber-600 mt-1">
                 {ruta.productos_cargados} de {ruta.total_productos} productos cargados
               </p>
             </div>

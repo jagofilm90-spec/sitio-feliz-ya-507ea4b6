@@ -310,7 +310,7 @@ const ProgramarEntregasDialog = ({ open, onOpenChange, orden }: ProgramarEntrega
                   </h4>
                   <div className="space-y-3">
                     {entregasPendientes.map((entrega: any) => (
-                      <div key={entrega.id} className="flex items-center gap-4 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                      <div key={entrega.id} className="flex items-center gap-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
                         <Badge variant="outline" className="bg-amber-100 text-amber-700">
                           Tráiler {entrega.numero_entrega}
                         </Badge>
@@ -330,12 +330,12 @@ const ProgramarEntregasDialog = ({ open, onOpenChange, orden }: ProgramarEntrega
                     
                     {/* Holiday warning alert */}
                     {hayAdvertenciasFestivos && (
-                      <Alert className="mt-3 bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800">
-                        <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                        <AlertTitle className="text-amber-800 dark:text-amber-300">
+                      <Alert className="mt-3 bg-amber-50 border-amber-200">
+                        <AlertTriangle className="h-4 w-4 text-amber-600" />
+                        <AlertTitle className="text-amber-800">
                           Advertencia: Día festivo seleccionado
                         </AlertTitle>
-                        <AlertDescription className="text-amber-700 dark:text-amber-400">
+                        <AlertDescription className="text-amber-700">
                           <ul className="mt-1 space-y-1">
                             {Object.entries(advertenciasFestivos).map(([entregaId, holiday]) => {
                               const entrega = entregasPendientes.find((e: any) => e.id === entregaId);
@@ -367,7 +367,7 @@ const ProgramarEntregasDialog = ({ open, onOpenChange, orden }: ProgramarEntrega
                   </h4>
                   <div className="space-y-2">
                     {entregasProgramadas.map((entrega: any) => (
-                      <div key={entrega.id} className="flex items-center gap-4 p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                      <div key={entrega.id} className="flex items-center gap-4 p-3 bg-green-50 rounded-lg border border-green-200">
                         <Badge variant="outline" className="bg-green-100 text-green-700">
                           Tráiler {entrega.numero_entrega}
                         </Badge>

@@ -154,13 +154,13 @@ export const SolicitudesAlmacenTab = () => {
     <div className="space-y-6">
       {/* Header with pending count */}
       {pendingCount > 0 && (
-        <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 flex items-center gap-3">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-center gap-3">
           <AlertCircle className="w-6 h-6 text-yellow-600" />
           <div>
-            <p className="font-medium text-yellow-800 dark:text-yellow-200">
+            <p className="font-medium text-yellow-800">
               {pendingCount} solicitud{pendingCount > 1 ? 'es' : ''} pendiente{pendingCount > 1 ? 's' : ''}
             </p>
-            <p className="text-sm text-yellow-600 dark:text-yellow-400">
+            <p className="text-sm text-yellow-600">
               Almacén está esperando que proceses estas ventas
             </p>
           </div>

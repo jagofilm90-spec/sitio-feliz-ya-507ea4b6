@@ -609,10 +609,10 @@ export const RecepcionDetalleDialog = ({
 
                 {/* Alert for faltante deliveries */}
                 {(recepcion as any).origen_faltante === true && (
-                  <Alert className="bg-orange-50 border-orange-200 dark:bg-orange-950/30 dark:border-orange-800">
-                    <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                    <AlertDescription className="text-orange-700 dark:text-orange-300">
-                      <span className="font-medium text-orange-800 dark:text-orange-300">Entrega de Productos Faltantes</span>
+                  <Alert className="bg-orange-50 border-orange-200">
+                    <AlertTriangle className="h-4 w-4 text-orange-600" />
+                    <AlertDescription className="text-orange-700">
+                      <span className="font-medium text-orange-800">Entrega de Productos Faltantes</span>
                       <p className="mt-1">Esta recepción corresponde a productos que no llegaron en entregas anteriores.</p>
                       {(recepcion as any).productos_faltantes && Array.isArray((recepcion as any).productos_faltantes) && (recepcion as any).productos_faltantes.length > 0 && (
                         <ul className="mt-2 list-disc ml-4">
@@ -629,16 +629,16 @@ export const RecepcionDetalleDialog = ({
 
                 {/* Resumen Visual de la OC */}
                 {resumenOC && (
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-                    <h3 className="font-medium mb-3 flex items-center gap-2 text-blue-800 dark:text-blue-300">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+                    <h3 className="font-medium mb-3 flex items-center gap-2 text-blue-800">
                       <BarChart3 className="w-4 h-4" />
                       Resumen de la Orden de Compra
                     </h3>
                     
                     <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 text-xs sm:text-base">
                       {/* Productos Completados */}
-                      <div className="text-center p-3 bg-white/50 dark:bg-white/5 rounded-lg">
-                        <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                      <div className="text-center p-3 bg-white/50 rounded-lg">
+                        <div className="text-2xl font-bold text-green-600">
                           {resumenOC.completados}/{resumenOC.totalProductos}
                         </div>
                         <div className="text-xs text-muted-foreground">
@@ -647,8 +647,8 @@ export const RecepcionDetalleDialog = ({
                       </div>
                       
                       {/* Productos Pendientes */}
-                      <div className="text-center p-3 bg-white/50 dark:bg-white/5 rounded-lg">
-                        <div className={`text-2xl font-bold ${resumenOC.pendientes === 0 ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}`}>
+                      <div className="text-center p-3 bg-white/50 rounded-lg">
+                        <div className={`text-2xl font-bold ${resumenOC.pendientes === 0 ? 'text-green-600' : 'text-orange-600'}`}>
                           {resumenOC.pendientes}
                         </div>
                         <div className="text-xs text-muted-foreground">
@@ -657,11 +657,11 @@ export const RecepcionDetalleDialog = ({
                       </div>
                       
                       {/* Porcentaje de Avance */}
-                      <div className="text-center p-3 bg-white/50 dark:bg-white/5 rounded-lg">
+                      <div className="text-center p-3 bg-white/50 rounded-lg">
                         <div className={`text-2xl font-bold ${
                           resumenOC.porcentajeAvance === 100 
-                            ? 'text-green-600 dark:text-green-400' 
-                            : 'text-blue-600 dark:text-blue-400'
+                            ? 'text-green-600' 
+                            : 'text-blue-600'
                         }`}>
                           {resumenOC.porcentajeAvance}%
                         </div>
@@ -672,7 +672,7 @@ export const RecepcionDetalleDialog = ({
                     </div>
                     
                     {/* Barra de progreso */}
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-3">
+                    <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
                       <div 
                         className={`h-2 rounded-full transition-all ${
                           resumenOC.porcentajeAvance === 100 
@@ -687,8 +687,8 @@ export const RecepcionDetalleDialog = ({
                     
                     {/* Lista de pendientes si hay */}
                     {resumenOC.productosPendientesDetalle.length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-700">
-                        <p className="text-sm font-medium text-orange-700 dark:text-orange-400 mb-2 flex items-center gap-1">
+                      <div className="mt-3 pt-3 border-t border-blue-200">
+                        <p className="text-sm font-medium text-orange-700 mb-2 flex items-center gap-1">
                           <AlertTriangle className="w-3 h-3" />
                           Productos Pendientes:
                         </p>
@@ -698,7 +698,7 @@ export const RecepcionDetalleDialog = ({
                               <span className="w-1.5 h-1.5 rounded-full bg-orange-500 flex-shrink-0" />
                               <span className="font-mono text-xs">{p.codigo}</span>
                               <span className="truncate">{p.nombre}</span>
-                              <span className="ml-auto text-orange-600 dark:text-orange-400 font-medium flex-shrink-0">
+                              <span className="ml-auto text-orange-600 font-medium flex-shrink-0">
                                 {p.recibido}/{p.ordenado}
                               </span>
                             </li>
@@ -709,7 +709,7 @@ export const RecepcionDetalleDialog = ({
                     
                     {/* Mensaje de completado */}
                     {resumenOC.pendientes === 0 && (
-                      <div className="mt-3 flex items-center gap-2 text-green-700 dark:text-green-400 text-sm">
+                      <div className="mt-3 flex items-center gap-2 text-green-700 text-sm">
                         <CheckCircle2 className="w-4 h-4" />
                         <span className="font-medium">Todos los productos han sido recibidos completamente</span>
                       </div>
@@ -738,8 +738,8 @@ export const RecepcionDetalleDialog = ({
 
                 {/* Timing and vehicle data */}
                 {(recepcion.llegada_registrada_en || recepcion.placas_vehiculo || recepcion.nombre_chofer_proveedor) && (
-                  <div className="bg-amber-50 dark:bg-amber-950/20 rounded-lg p-4 border border-amber-200 dark:border-amber-800">
-                    <h3 className="font-medium mb-3 flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                  <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
+                    <h3 className="font-medium mb-3 flex items-center gap-2 text-amber-700">
                       <Clock className="w-4 h-4" />
                       Datos de Llegada y Descarga
                     </h3>

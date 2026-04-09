@@ -464,22 +464,22 @@ export const VehiculoCheckupDialog = ({
 
             {/* NN Warning Alert */}
             {!nnValidation.isValid && (
-              <div className="p-4 rounded-lg bg-red-100 border-2 border-red-400 dark:bg-red-950 dark:border-red-700">
+              <div className="p-4 rounded-lg bg-red-100 border-2 border-red-400">
                 <div className="flex items-start gap-3">
                   <AlertTriangle className="h-6 w-6 text-red-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-bold text-red-800 dark:text-red-200">
+                    <p className="font-bold text-red-800">
                       ⚠️ ALERTA: {nnValidation.failedItems.length} punto(s) No
                       Negociable(s) con falla
                     </p>
-                    <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                    <p className="text-sm text-red-700 mt-1">
                       El vehículo NO puede salir hasta su corrección:
                     </p>
                     <ul className="mt-2 space-y-1">
                       {nnValidation.failedItems.map((item) => (
                         <li
                           key={item.key}
-                          className="text-sm font-medium text-red-800 dark:text-red-200"
+                          className="text-sm font-medium text-red-800"
                         >
                           • {item.label}
                         </li>
@@ -665,7 +665,7 @@ export const VehiculoCheckupDialog = ({
 
             {/* Notify mechanic option */}
             {counts.mal > 0 && nnValidation.isValid && (
-              <div className="flex items-center gap-3 p-3 rounded-lg border bg-amber-50 dark:bg-amber-950">
+              <div className="flex items-center gap-3 p-3 rounded-lg border bg-amber-50">
                 <input
                   type="checkbox"
                   id="notificar"

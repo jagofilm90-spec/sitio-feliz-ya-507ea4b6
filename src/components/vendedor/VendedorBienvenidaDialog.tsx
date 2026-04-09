@@ -345,8 +345,8 @@ export function VendedorBienvenidaDialog({
                     {alertas.productosNuevos.length > 0 && (
                       <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3">
                         <div className="flex items-center gap-2 mb-2">
-                          <Package className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                          <span className="font-medium text-emerald-700 dark:text-emerald-400 text-sm">
+                          <Package className="h-4 w-4 text-emerald-600" />
+                          <span className="font-medium text-emerald-700 text-sm">
                             {alertas.productosNuevos.length} producto{alertas.productosNuevos.length > 1 ? "s" : ""} nuevo{alertas.productosNuevos.length > 1 ? "s" : ""}
                           </span>
                         </div>
@@ -357,7 +357,7 @@ export function VendedorBienvenidaDialog({
                                 <span className="text-muted-foreground font-mono text-xs">{producto.codigo}</span>
                                 <span className="truncate">{producto.nombre}</span>
                               </div>
-                              <span className="font-medium text-emerald-700 dark:text-emerald-400 whitespace-nowrap ml-2">
+                              <span className="font-medium text-emerald-700 whitespace-nowrap ml-2">
                                 {formatCurrency(producto.precio_venta)}
                               </span>
                             </div>
@@ -375,8 +375,8 @@ export function VendedorBienvenidaDialog({
                     {alertas.cambiosPrecios.length > 0 && (
                       <div className="rounded-lg bg-violet-500/10 border border-violet-500/20 p-3">
                         <div className="flex items-center gap-2 mb-2">
-                          <TrendingUp className="h-4 w-4 text-violet-600 dark:text-violet-400" />
-                          <span className="font-medium text-violet-700 dark:text-violet-400 text-sm">
+                          <TrendingUp className="h-4 w-4 text-violet-600" />
+                          <span className="font-medium text-violet-700 text-sm">
                             {alertas.cambiosPrecios.length} cambio{alertas.cambiosPrecios.length > 1 ? "s" : ""} de precio
                           </span>
                         </div>
@@ -402,8 +402,8 @@ export function VendedorBienvenidaDialog({
                                     variant="secondary" 
                                     className={`text-xs px-1.5 py-0 ${
                                       esAumento 
-                                        ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" 
-                                        : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                        ? "bg-red-100 text-red-700" 
+                                        : "bg-green-100 text-green-700"
                                     }`}
                                   >
                                     {esAumento ? (
@@ -430,8 +430,8 @@ export function VendedorBienvenidaDialog({
                     {alertas.productosInhabilitados.length > 0 && (
                       <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3">
                         <div className="flex items-center gap-2 mb-2">
-                          <Ban className="h-4 w-4 text-red-600 dark:text-red-400" />
-                          <span className="font-medium text-red-700 dark:text-red-400 text-sm">
+                          <Ban className="h-4 w-4 text-red-600" />
+                          <span className="font-medium text-red-700 text-sm">
                             {alertas.productosInhabilitados.length} producto{alertas.productosInhabilitados.length > 1 ? "s" : ""} descontinuado{alertas.productosInhabilitados.length > 1 ? "s" : ""}
                           </span>
                         </div>
@@ -494,17 +494,17 @@ export function VendedorBienvenidaDialog({
                   {alertas.facturasPorVencer > 0 && (
                     <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
                       <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
-                        <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                        <Clock className="h-5 w-5 text-amber-600" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-amber-700 dark:text-amber-400">
+                        <p className="font-medium text-amber-700">
                           {alertas.facturasPorVencer} factura{alertas.facturasPorVencer > 1 ? "s" : ""} por vencer
                         </p>
                         <p className="text-sm text-muted-foreground">
                           Próximos 7 días: {formatCurrency(alertas.montoPorVencer)}
                         </p>
                       </div>
-                      <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                      <Badge className="bg-amber-100 text-amber-800">
                         {alertas.facturasPorVencer}
                       </Badge>
                     </div>
@@ -514,17 +514,17 @@ export function VendedorBienvenidaDialog({
                   {alertas.pedidosPendientes > 0 && (
                     <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
                       <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0">
-                        <ShoppingCart className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        <ShoppingCart className="h-5 w-5 text-blue-600" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-blue-700 dark:text-blue-400">
+                        <p className="font-medium text-blue-700">
                           {alertas.pedidosPendientes} pedido{alertas.pedidosPendientes > 1 ? "s" : ""} pendiente{alertas.pedidosPendientes > 1 ? "s" : ""}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           En proceso de entrega
                         </p>
                       </div>
-                      <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                      <Badge className="bg-blue-100 text-blue-800">
                         {alertas.pedidosPendientes}
                       </Badge>
                     </div>
@@ -534,10 +534,10 @@ export function VendedorBienvenidaDialog({
                   {!tieneAlertas && !tieneNovedadesProductos && (
                     <div className="flex items-center gap-3 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
                       <div className="h-10 w-10 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
-                        <Wallet className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        <Wallet className="h-5 w-5 text-green-600" />
                       </div>
                       <div className="flex-1">
-                        <p className="font-medium text-green-700 dark:text-green-400">
+                        <p className="font-medium text-green-700">
                           Todo al corriente
                         </p>
                         <p className="text-sm text-muted-foreground">

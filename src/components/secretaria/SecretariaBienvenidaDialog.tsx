@@ -241,7 +241,7 @@ export const SecretariaBienvenidaDialog = ({
     <button
       onClick={() => handleNavigate(tab)}
       className={`flex items-center gap-3 p-3 rounded-lg border transition-all hover:shadow-md ${
-        count > 0 ? "bg-pink-50 dark:bg-pink-950/30 border-pink-200 dark:border-pink-800" : "bg-muted/50 border-border"
+        count > 0 ? "bg-pink-50 border-pink-200" : "bg-muted/50 border-border"
       }`}
     >
       <div className={`p-2 rounded-full ${color}`}>
@@ -249,7 +249,7 @@ export const SecretariaBienvenidaDialog = ({
       </div>
       <div className="flex-1 text-left">
         <p className="text-sm font-medium">{label}</p>
-        <p className={`text-xs ${count > 0 ? "text-pink-600 dark:text-pink-400" : "text-muted-foreground"}`}>
+        <p className={`text-xs ${count > 0 ? "text-pink-600" : "text-muted-foreground"}`}>
           {count} pendiente{count !== 1 ? "s" : ""}
         </p>
       </div>
@@ -299,14 +299,14 @@ export const SecretariaBienvenidaDialog = ({
               )}
 
               {/* Summary Banner */}
-              <div className="bg-gradient-to-r from-pink-100 to-rose-100 dark:from-pink-950/50 dark:to-rose-950/50 p-4 rounded-lg">
+              <div className="bg-gradient-to-r from-pink-100 to-rose-100 p-4 rounded-lg">
                 <div className="flex items-center gap-2 mb-1">
                   <ClipboardList className="h-5 w-5 text-pink-600" />
-                  <span className="font-medium text-pink-900 dark:text-pink-100">
+                  <span className="font-medium text-pink-900">
                     Resumen del día
                   </span>
                 </div>
-                <p className="text-sm text-pink-700 dark:text-pink-300">
+                <p className="text-sm text-pink-700">
                   {totalPendientes > 0
                     ? `Tienes ${totalPendientes} tarea${totalPendientes !== 1 ? "s" : ""} pendiente${totalPendientes !== 1 ? "s" : ""}`
                     : "¡No tienes tareas pendientes! 🎉"}
@@ -382,19 +382,19 @@ export const SecretariaBienvenidaDialog = ({
                   </div>
                   <div className="space-y-1 text-xs">
                     {productosNuevos.length > 0 && (
-                      <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                      <div className="flex items-center gap-2 text-emerald-600">
                         <TrendingUp className="h-3 w-3" />
                         <span>{productosNuevos.length} producto{productosNuevos.length !== 1 ? "s" : ""} nuevo{productosNuevos.length !== 1 ? "s" : ""}</span>
                       </div>
                     )}
                     {cambiosPrecios.length > 0 && (
-                      <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                      <div className="flex items-center gap-2 text-amber-600">
                         <TrendingUp className="h-3 w-3" />
                         <span>{cambiosPrecios.length} cambio{cambiosPrecios.length !== 1 ? "s" : ""} de precio</span>
                       </div>
                     )}
                     {productosInhabilitados.length > 0 && (
-                      <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                      <div className="flex items-center gap-2 text-red-600">
                         <TrendingDown className="h-3 w-3" />
                         <span>{productosInhabilitados.length} producto{productosInhabilitados.length !== 1 ? "s" : ""} descontinuado{productosInhabilitados.length !== 1 ? "s" : ""}</span>
                       </div>

@@ -49,7 +49,7 @@ interface Factura {
 const getStatusBadge = (factura: Factura) => {
   if (factura.cfdi_uuid) {
     return (
-      <Badge className="gap-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30">
+      <Badge className="gap-1 bg-emerald-100 text-emerald-700">
         <CheckCircle2 className="h-3 w-3" />
         Timbrada
       </Badge>
@@ -243,9 +243,9 @@ export const SecretariaFacturacionTab = () => {
 
       {/* Alert for pending invoices */}
       {pendingCount > 0 && filter !== "timbradas" && (
-        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 flex items-center gap-3">
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center gap-3">
           <AlertCircle className="h-5 w-5 text-amber-600 shrink-0" />
-          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+          <p className="text-sm font-medium text-amber-800">
             {pendingCount} factura{pendingCount > 1 ? "s" : ""} pendiente
             {pendingCount > 1 ? "s" : ""} de timbrar
           </p>

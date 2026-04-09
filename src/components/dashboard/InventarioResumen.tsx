@@ -151,14 +151,14 @@ export const InventarioResumen = () => {
 
         {/* Entradas y salidas del mes */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg">
+          <div className="flex items-center gap-2 p-3 bg-emerald-50 rounded-lg">
             <TrendingUp className="h-5 w-5 text-emerald-600" />
             <div>
               <div className="text-xs text-muted-foreground">Entradas</div>
               <div className="font-semibold">{stats?.entradasMes.toLocaleString()} uds</div>
             </div>
           </div>
-          <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/30 rounded-lg">
+          <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg">
             <TrendingDown className="h-5 w-5 text-red-600" />
             <div>
               <div className="text-xs text-muted-foreground">Salidas</div>

@@ -229,7 +229,7 @@ const AutorizacionOCDialog = ({ open, onOpenChange, orden }: AutorizacionOCDialo
           </div>
 
           {/* Solicitante */}
-          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+          <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
             <p className="text-sm">
               <span className="text-muted-foreground">Solicitado por:</span>{" "}
               <span className="font-medium">{creadorProfile?.full_name || "Usuario"}</span>
@@ -336,7 +336,7 @@ const AutorizacionOCDialog = ({ open, onOpenChange, orden }: AutorizacionOCDialo
 
           {/* Notas */}
           {orden.notas && (
-            <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+            <div className="mb-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
               <p className="text-sm">
                 <span className="font-medium">Notas:</span> {orden.notas}
               </p>
@@ -345,8 +345,8 @@ const AutorizacionOCDialog = ({ open, onOpenChange, orden }: AutorizacionOCDialo
 
           {/* Rechazo Form */}
           {showRechazoForm && (
-            <div className="mt-4 p-4 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
-              <Label className="text-red-700 dark:text-red-400">Motivo del rechazo</Label>
+            <div className="mt-4 p-4 bg-red-50 rounded-lg border border-red-200">
+              <Label className="text-red-700">Motivo del rechazo</Label>
               <Textarea
                 value={motivoRechazo}
                 onChange={(e) => setMotivoRechazo(e.target.value)}

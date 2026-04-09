@@ -166,8 +166,8 @@ export function CalendarioPedidosTab() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {tomorrowItems.programaciones.map(prog => (
                 <div key={prog.id} className="flex items-center gap-3 p-3 bg-background rounded-lg border">
-                  <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                    <CalendarDays className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                    <CalendarDays className="h-5 w-5 text-blue-600" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{prog.clientes.nombre}</p>
@@ -177,21 +177,21 @@ export function CalendarioPedidosTab() {
                       </p>
                     )}
                   </div>
-                  <Badge variant="outline" className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700">
                     Programado
                   </Badge>
                 </div>
               ))}
               {tomorrowItems.pedidos.map(pedido => (
                 <div key={pedido.id} className="flex items-center gap-3 p-3 bg-background rounded-lg border">
-                  <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                    <Package className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                    <Package className="h-5 w-5 text-green-600" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{pedido.clientes.nombre}</p>
                     <p className="text-xs text-muted-foreground">{pedido.folio}</p>
                   </div>
-                  <Badge variant="outline" className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300">
+                  <Badge variant="outline" className="bg-green-50 text-green-700">
                     Confirmado
                   </Badge>
                 </div>
@@ -351,7 +351,7 @@ export function CalendarioPedidosTab() {
                         {selectedDateItems.programaciones.map(prog => (
                           <div 
                             key={prog.id} 
-                            className="p-3 rounded-lg border bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800"
+                            className="p-3 rounded-lg border bg-blue-50/50 border-blue-200"
                           >
                             <div className="flex items-start justify-between">
                               <div>
@@ -375,7 +375,7 @@ export function CalendarioPedidosTab() {
                                   </p>
                                 )}
                               </div>
-                              <Badge variant="outline" className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 shrink-0">
+                              <Badge variant="outline" className="bg-blue-100 text-blue-700 shrink-0">
                                 Cada {prog.dia_semana}
                               </Badge>
                             </div>
@@ -396,7 +396,7 @@ export function CalendarioPedidosTab() {
                         {selectedDateItems.pedidos.map(pedido => (
                           <div 
                             key={pedido.id} 
-                            className="p-3 rounded-lg border bg-green-50/50 dark:bg-green-900/10 border-green-200 dark:border-green-800"
+                            className="p-3 rounded-lg border bg-green-50/50 border-green-200"
                           >
                             <div className="flex items-start justify-between">
                               <div>
@@ -409,11 +409,11 @@ export function CalendarioPedidosTab() {
                                     📍 {pedido.cliente_sucursales.nombre}
                                   </p>
                                 )}
-                                <p className="text-sm font-medium text-green-700 dark:text-green-400 mt-1">
+                                <p className="text-sm font-medium text-green-700 mt-1">
                                   ${pedido.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                                 </p>
                               </div>
-                              <Badge variant="outline" className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 shrink-0">
+                              <Badge variant="outline" className="bg-green-100 text-green-700 shrink-0">
                                 {pedido.status}
                               </Badge>
                             </div>

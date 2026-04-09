@@ -325,16 +325,16 @@ const CreditosPendientesPanel = () => {
   return (
     <div className="space-y-4">
       {/* KPI Card */}
-      <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-800">
+      <Card className="border-amber-200 bg-amber-50/50">
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900">
+              <div className="p-2 rounded-lg bg-amber-100">
                 <DollarSign className="h-6 w-6 text-amber-600" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Créditos Pendientes</p>
-                <p className="text-2xl font-bold text-amber-700 dark:text-amber-400">
+                <p className="text-2xl font-bold text-amber-700">
                   {formatCurrency(totalGeneral)}
                 </p>
               </div>
@@ -532,12 +532,12 @@ const CreditosPendientesPanel = () => {
                       </RadioGroup>
 
                       {modoReembolso === "solicitar_deposito" && (
-                        <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-3 rounded-lg text-sm">
-                          <p className="font-medium text-blue-800 dark:text-blue-300 flex items-center gap-2">
+                        <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg text-sm">
+                          <p className="font-medium text-blue-800 flex items-center gap-2">
                             <Mail className="h-4 w-4" />
                             Se enviará un email con:
                           </p>
-                          <ul className="mt-2 space-y-1 text-blue-700 dark:text-blue-400 text-xs">
+                          <ul className="mt-2 space-y-1 text-blue-700 text-xs">
                             <li>• Monto exacto a depositar</li>
                             <li>• Datos bancarios de ALMASA</li>
                             <li>• Instrucción de enviar comprobante a pagos@almasa.com.mx</li>

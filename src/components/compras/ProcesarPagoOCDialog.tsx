@@ -639,12 +639,12 @@ export function ProcesarPagoOCDialog({
           <div className="space-y-6 pb-4">
             {/* Alert when there are registered invoices */}
             {tieneFacturasRegistradas && (
-              <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/30">
+              <Alert className="border-amber-300 bg-amber-50">
                 <Receipt className="h-4 w-4 text-amber-600" />
-                <AlertTitle className="text-amber-800 dark:text-amber-300">
+                <AlertTitle className="text-amber-800">
                   Esta OC tiene facturas del proveedor registradas
                 </AlertTitle>
-                <AlertDescription className="text-amber-700 dark:text-amber-400">
+                <AlertDescription className="text-amber-700">
                   <p className="mb-3">
                     También puedes gestionar los pagos por factura individual.
                   </p>
@@ -694,10 +694,10 @@ export function ProcesarPagoOCDialog({
 
             {/* Alerta pago anticipado */}
             {orden?.tipo_pago === 'anticipado' && (
-              <Alert className="border-blue-300 bg-blue-50 dark:bg-blue-950/30">
+              <Alert className="border-blue-300 bg-blue-50">
                 <Package className="h-4 w-4 text-blue-600" />
-                <AlertTitle className="text-blue-800 dark:text-blue-300">Pago Anticipado</AlertTitle>
-                <AlertDescription className="text-blue-700 dark:text-blue-400">
+                <AlertTitle className="text-blue-800">Pago Anticipado</AlertTitle>
+                <AlertDescription className="text-blue-700">
                   <p>Este es un pago previo a la recepción de mercancía.</p>
                   <div className="flex gap-6 mt-2 font-medium">
                     <span>Total bultos: {totalesLogisticos.totalBultos.toLocaleString('es-MX')}</span>
@@ -719,12 +719,12 @@ export function ProcesarPagoOCDialog({
 
             {/* NUEVA ALERTA: Conciliación pendiente */}
             {tieneConciliacionPendiente && (
-              <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/30">
+              <Alert className="border-amber-300 bg-amber-50">
                 <Receipt className="h-4 w-4 text-amber-600" />
-                <AlertTitle className="text-amber-800 dark:text-amber-300">
+                <AlertTitle className="text-amber-800">
                   ⚠️ Costos pendientes de conciliar
                 </AlertTitle>
-                <AlertDescription className="text-amber-700 dark:text-amber-400">
+                <AlertDescription className="text-amber-700">
                   <p className="mb-2">
                     {entregasPorConciliar.length} entrega(s) tienen costos provisionales que no han sido verificados con la factura del proveedor.
                   </p>
@@ -740,12 +740,12 @@ export function ProcesarPagoOCDialog({
 
             {/* Alerta si hay entregas pendientes - Solo para pagos contra entrega */}
             {tieneEntregasPendientes && isPagoCompleto && orden?.tipo_pago !== 'anticipado' && (
-              <Alert className="border-orange-300 bg-orange-50 dark:bg-orange-950/30">
+              <Alert className="border-orange-300 bg-orange-50">
                 <AlertTriangle className="h-4 w-4 text-orange-600" />
-                <AlertTitle className="text-orange-800 dark:text-orange-300">
+                <AlertTitle className="text-orange-800">
                   Entregas pendientes de recepción
                 </AlertTitle>
-                <AlertDescription className="text-orange-700 dark:text-orange-400">
+                <AlertDescription className="text-orange-700">
                   <p className="mb-2">
                     Esta OC tiene {entregasSinRecibir.length} entrega(s) sin recibir
                     {tieneFaltantesPendientes && " (incluye faltantes programados)"}.
@@ -822,9 +822,9 @@ export function ProcesarPagoOCDialog({
                         <TableRow 
                           key={p.detalle_id}
                           className={cn(
-                            p.pagado && "bg-green-50/50 dark:bg-green-950/20",
+                            p.pagado && "bg-green-50/50",
                             !p.pagado && !productosSeleccionados.has(p.detalle_id) && "opacity-50",
-                            tieneAjuste && "bg-amber-50/50 dark:bg-amber-950/20"
+                            tieneAjuste && "bg-amber-50/50"
                           )}
                         >
                           <TableCell>
@@ -857,7 +857,7 @@ export function ProcesarPagoOCDialog({
                                 min="0"
                                 className={cn(
                                   "w-24 text-right h-8",
-                                  tieneAjuste && "border-amber-400 bg-amber-50 dark:bg-amber-950/50"
+                                  tieneAjuste && "border-amber-400 bg-amber-50"
                                 )}
                                 value={precioEfectivo}
                                 onChange={(e) =>
@@ -868,7 +868,7 @@ export function ProcesarPagoOCDialog({
                           </TableCell>
                           <TableCell className={cn(
                             "text-right font-medium",
-                            tieneAjuste && "text-amber-600 dark:text-amber-400"
+                            tieneAjuste && "text-amber-600"
                           )}>
                             ${subtotalCalculado.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
                           </TableCell>
@@ -895,12 +895,12 @@ export function ProcesarPagoOCDialog({
 
             {/* Ajuste de Precios - Solo si hay cambios */}
             {calcularTotalesSeleccionados.hayAjustes && (
-              <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/30">
+              <Alert className="border-amber-300 bg-amber-50">
                 <AlertTriangle className="h-4 w-4 text-amber-600" />
-                <AlertTitle className="text-amber-800 dark:text-amber-300">
+                <AlertTitle className="text-amber-800">
                   Ajuste de Costos Detectado
                 </AlertTitle>
-                <AlertDescription className="text-amber-700 dark:text-amber-400">
+                <AlertDescription className="text-amber-700">
                   <div className="mt-2 space-y-1 text-sm">
                     <div className="flex justify-between">
                       <span>Total Original OC:</span>
@@ -932,8 +932,8 @@ export function ProcesarPagoOCDialog({
 
             {/* Resumen Financiero Dinámico */}
             <div className="border rounded-lg overflow-hidden">
-              <div className="bg-green-50 dark:bg-green-950/30 p-4">
-                <h3 className="font-semibold text-green-800 dark:text-green-300 mb-3">
+              <div className="bg-green-50 p-4">
+                <h3 className="font-semibold text-green-800 mb-3">
                   Resumen del Pago {!isPagoCompleto && "(Parcial)"}
                 </h3>
                 
@@ -955,7 +955,7 @@ export function ProcesarPagoOCDialog({
                   </div>
                   
                   {calcularTotalesSeleccionados.iva > 0 && (
-                    <div className="flex justify-between text-sm text-blue-600 dark:text-blue-400">
+                    <div className="flex justify-between text-sm text-blue-600">
                       <span>IVA (16%):</span>
                       <span className="font-medium">
                         +${calcularTotalesSeleccionados.iva.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
@@ -964,7 +964,7 @@ export function ProcesarPagoOCDialog({
                   )}
                   
                   {calcularTotalesSeleccionados.ieps > 0 && (
-                    <div className="flex justify-between text-sm text-amber-600 dark:text-amber-400">
+                    <div className="flex justify-between text-sm text-amber-600">
                       <span>IEPS (8%):</span>
                       <span className="font-medium">
                         +${calcularTotalesSeleccionados.ieps.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
@@ -974,7 +974,7 @@ export function ProcesarPagoOCDialog({
                   
                   <Separator className="my-2" />
                   
-                  <div className="flex justify-between text-lg font-bold text-green-700 dark:text-green-400">
+                  <div className="flex justify-between text-lg font-bold text-green-700">
                     <span>MONTO A PAGAR:</span>
                     <span>${calcularTotalesSeleccionados.total.toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
                   </div>
@@ -985,8 +985,8 @@ export function ProcesarPagoOCDialog({
             {/* Devoluciones detalle (solo mostrar si hay) */}
             {tieneDevoluciones && devolucionesDetalle.length > 0 && (
               <div className="border rounded-lg overflow-hidden">
-                <div className="bg-red-50 dark:bg-red-950/30 p-3 border-b">
-                  <h4 className="font-medium text-red-800 dark:text-red-300 flex items-center gap-2">
+                <div className="bg-red-50 p-3 border-b">
+                  <h4 className="font-medium text-red-800 flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4" />
                     Devoluciones Registradas ({devolucionesDetalle.length})
                   </h4>
@@ -1015,7 +1015,7 @@ export function ProcesarPagoOCDialog({
                             {MOTIVO_LABELS[dev.motivo] || dev.motivo}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right text-red-600 dark:text-red-400 font-medium">
+                        <TableCell className="text-right text-red-600 font-medium">
                           -${dev.monto.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
                         </TableCell>
                       </TableRow>
@@ -1087,7 +1087,7 @@ export function ProcesarPagoOCDialog({
               </div>
 
               {isPagoCompleto && tieneDevoluciones && (
-                <div className="flex items-center space-x-2 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                <div className="flex items-center space-x-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
                   <Checkbox
                     id="notificarDevoluciones"
                     checked={notificarDevoluciones}

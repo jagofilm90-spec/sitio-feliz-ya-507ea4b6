@@ -202,8 +202,8 @@ const ProductoRow = ({
 
   const borderColor = producto.cargado
     ? isCortesia
-      ? "border-l-amber-500 bg-amber-50/50 dark:bg-amber-950/20"
-      : "border-l-green-500 bg-green-50/50 dark:bg-green-950/20"
+      ? "border-l-amber-500 bg-amber-50/50"
+      : "border-l-green-500 bg-green-50/50"
     : "border-l-muted-foreground/30";
 
   return (
@@ -258,7 +258,7 @@ const ProductoRow = ({
             onChange={(e) => handleCantidadChange(e.target.value)}
             onBlur={handleCantidadBlur}
             className={`h-9 w-20 text-center text-sm font-semibold ${
-              cantidadDifiere ? "border-amber-400 bg-amber-50 dark:bg-amber-950/30" : ""
+              cantidadDifiere ? "border-amber-400 bg-amber-50" : ""
             }`}
             disabled={disabled}
           />
@@ -287,9 +287,9 @@ const ProductoRow = ({
                 placeholder={pesoTeoricoTotal.toFixed(1)}
                 className={`h-9 w-20 text-center text-sm font-semibold ${
                   pesoConfirmadoLocal
-                    ? "border-blue-400 bg-blue-50 dark:bg-blue-950/30"
+                    ? "border-blue-400 bg-blue-50"
                     : pesoDifiere
-                    ? "border-amber-400 bg-amber-50 dark:bg-amber-950/30"
+                    ? "border-amber-400 bg-amber-50"
                     : ""
                 }`}
                 disabled={disabled || pesoConfirmadoLocal}

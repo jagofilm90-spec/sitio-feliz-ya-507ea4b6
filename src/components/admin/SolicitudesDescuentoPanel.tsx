@@ -316,10 +316,10 @@ function SolicitudCardFlat({
   const margenColor = costo === 0
     ? 'text-muted-foreground'
     : margenPct >= 10
-      ? 'text-green-700 dark:text-green-400'
+      ? 'text-green-700'
       : margenPct >= 0
-        ? 'text-amber-700 dark:text-amber-400'
-        : 'text-red-700 dark:text-red-400';
+        ? 'text-amber-700'
+        : 'text-red-700';
 
   // Suggested intermediate prices
   const precioMedio = Math.round((solicitud.precio_solicitado + solicitud.precio_lista) / 2);
@@ -368,7 +368,7 @@ function SolicitudCardFlat({
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm bg-muted/50 rounded px-2 py-1.5">
         <span className="text-muted-foreground line-through">{formatCurrency(solicitud.precio_lista)}</span>
         <span className="text-primary font-bold">→ {formatCurrency(solicitud.precio_solicitado)}</span>
-        <span className="text-red-600 dark:text-red-400 text-xs font-medium">
+        <span className="text-red-600 text-xs font-medium">
           (-{formatCurrency(solicitud.descuento_solicitado)})
         </span>
         {costo > 0 && (
@@ -494,7 +494,7 @@ function DetalleDialog({ solicitud, open, onClose }: DetalleDialogProps) {
         <div className="space-y-4">
           {/* Client balance */}
           {hasSaldo && (
-            <div className="flex items-center gap-2 text-sm bg-amber-50 dark:bg-amber-950/30 p-2 rounded border border-amber-200 dark:border-amber-800">
+            <div className="flex items-center gap-2 text-sm bg-amber-50 p-2 rounded border border-amber-200">
               <Wallet className="h-4 w-4 text-amber-600" />
               <span>Saldo pendiente: <strong>{formatCurrency(solicitud.cliente!.saldo_pendiente!)}</strong></span>
             </div>
@@ -514,15 +514,15 @@ function DetalleDialog({ solicitud, open, onClose }: DetalleDialogProps) {
                     <div
                       key={idx}
                       className={`flex justify-between items-center text-sm py-1 px-2 rounded ${
-                        esEste ? 'bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700 font-medium' : ''
+                        esEste ? 'bg-amber-50 border border-amber-300 font-medium' : ''
                       }`}
                     >
-                      <span className={`line-clamp-1 ${esEste ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>
+                      <span className={`line-clamp-1 ${esEste ? 'text-amber-700' : 'text-muted-foreground'}`}>
                         {item.productoNombre} ×{item.cantidad}
                         {item.tieneDescuentoPendiente && !esEste && ' ⚠️'}
                         {esEste && ' ← este'}
                       </span>
-                      <span className={esEste ? 'text-amber-700 dark:text-amber-400' : 'font-medium'}>
+                      <span className={esEste ? 'text-amber-700' : 'font-medium'}>
                         {formatCurrency(item.subtotal)}
                       </span>
                     </div>

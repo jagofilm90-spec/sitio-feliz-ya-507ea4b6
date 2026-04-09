@@ -55,9 +55,9 @@ function getEstado(diasRestantes: number): EstadoCaducidad {
 }
 
 const estadoConfig: Record<EstadoCaducidad, { label: string; badgeClass: string; rowClass: string }> = {
-  vencido: { label: "VENCIDO", badgeClass: "bg-destructive text-destructive-foreground", rowClass: "bg-destructive/10 dark:bg-destructive/20" },
-  critico: { label: "CRÍTICO", badgeClass: "bg-orange-500 text-white", rowClass: "bg-orange-500/10 dark:bg-orange-500/20" },
-  proximo: { label: "PRÓXIMO", badgeClass: "bg-yellow-500 text-white", rowClass: "bg-yellow-500/10 dark:bg-yellow-500/15" },
+  vencido: { label: "VENCIDO", badgeClass: "bg-destructive text-destructive-foreground", rowClass: "bg-destructive/10" },
+  critico: { label: "CRÍTICO", badgeClass: "bg-orange-500 text-white", rowClass: "bg-orange-500/10" },
+  proximo: { label: "PRÓXIMO", badgeClass: "bg-yellow-500 text-white", rowClass: "bg-yellow-500/10" },
   vigente: { label: "VIGENTE", badgeClass: "bg-primary text-primary-foreground", rowClass: "" },
 };
 

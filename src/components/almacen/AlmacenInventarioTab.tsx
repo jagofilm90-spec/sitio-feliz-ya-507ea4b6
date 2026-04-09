@@ -124,15 +124,15 @@ export const AlmacenInventarioTab = () => {
 
   const getStockBadge = (stockActual: number, stockMinimo: number) => {
     if (stockActual <= 0) return <Badge variant="destructive">Sin stock</Badge>;
-    if (stockActual <= stockMinimo) return <Badge className="bg-yellow-500/20 text-yellow-700 dark:text-yellow-400">Stock bajo</Badge>;
-    return <Badge className="bg-green-500/20 text-green-700 dark:text-green-400">OK</Badge>;
+    if (stockActual <= stockMinimo) return <Badge className="bg-yellow-500/20 text-yellow-700">Stock bajo</Badge>;
+    return <Badge className="bg-green-500/20 text-green-700">OK</Badge>;
   };
 
   const formatCaducidad = (fecha: string | null) => {
     if (!fecha) return null;
     const diffDays = Math.ceil((new Date(fecha).getTime() - Date.now()) / 86400000);
     if (diffDays < 0) return <Badge variant="destructive">Vencido hace {Math.abs(diffDays)}d</Badge>;
-    if (diffDays <= 30) return <Badge className="bg-orange-500/20 text-orange-700 dark:text-orange-400">Vence en {diffDays}d</Badge>;
+    if (diffDays <= 30) return <Badge className="bg-orange-500/20 text-orange-700">Vence en {diffDays}d</Badge>;
     return <span className="text-muted-foreground text-sm">{new Date(fecha).toLocaleDateString("es-MX")}</span>;
   };
 
@@ -333,7 +333,7 @@ export const AlmacenInventarioTab = () => {
                 />
                 {diferencia !== 0 && (
                   <div className={cn("text-center p-2 rounded-lg text-sm font-bold",
-                    diferencia > 0 ? "bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400" : "bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-400"
+                    diferencia > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
                   )}>
                     {diferencia > 0 ? `+${diferencia}` : diferencia} {loteAjuste.producto.unidad}
                   </div>

@@ -781,7 +781,7 @@ const CrearCotizacionDialog = ({
           {/* Lecaroz-specific controls */}
           {isLecarozClient && (
             <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg space-y-4">
-              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-medium">
+              <div className="flex items-center gap-2 text-amber-700 font-medium">
                 <FileText className="h-4 w-4" />
                 Cotización para Lecaroz
               </div>

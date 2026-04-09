@@ -1361,7 +1361,7 @@ function ProductoCargaConPeso({
   };
 
   return (
-    <Card className={producto.cargado ? "border-green-300 bg-green-50 dark:bg-green-950/20" : ""}>
+    <Card className={producto.cargado ? "border-green-300 bg-green-50" : ""}>
       <CardContent className="py-3 space-y-2">
         <div className="flex items-center gap-3">
           <div className={`w-3 h-3 rounded-full ${producto.cargado ? "bg-green-500" : "bg-muted"}`} />

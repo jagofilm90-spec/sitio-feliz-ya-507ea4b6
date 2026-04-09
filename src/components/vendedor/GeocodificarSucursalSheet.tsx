@@ -194,7 +194,7 @@ export function GeocodificarSucursalSheet({
 
           {/* New Coordinates Display */}
           {latitud && longitud && hasNewCoordinates && (
-            <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 dark:bg-green-900/20 p-3 rounded-md">
+            <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-3 rounded-md">
               <CheckCircle2 className="h-5 w-5" />
               <div>
                 <p className="font-medium">Nuevas coordenadas listas para guardar:</p>

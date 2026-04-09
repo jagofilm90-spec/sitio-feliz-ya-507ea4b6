@@ -265,7 +265,7 @@ const ConvertirEntregasMultiplesDialog = ({ open, onOpenChange, orden }: Convert
           </div>
 
           {/* Summary */}
-          <div className={`p-3 rounded-lg mb-4 ${faltante === 0 ? "bg-green-50 dark:bg-green-950/20 border border-green-200" : "bg-amber-50 dark:bg-amber-950/20 border border-amber-200"}`}>
+          <div className={`p-3 rounded-lg mb-4 ${faltante === 0 ? "bg-green-50 border border-green-200" : "bg-amber-50 border border-amber-200"}`}>
             <div className="flex justify-between items-center">
               <span className="text-sm">
                 Asignado: <strong>{totalAsignado.toLocaleString()}</strong> / {totalUnidades.toLocaleString()}
@@ -356,7 +356,7 @@ const ConvertirEntregasMultiplesDialog = ({ open, onOpenChange, orden }: Convert
 
           {/* Warning */}
           {entregas.length < 2 && (
-            <div className="flex items-center gap-2 text-amber-600 text-sm mt-4 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg">
+            <div className="flex items-center gap-2 text-amber-600 text-sm mt-4 p-3 bg-amber-50 rounded-lg">
               <AlertCircle className="h-4 w-4" />
               Agrega al menos 2 entregas para dividir la orden
             </div>
