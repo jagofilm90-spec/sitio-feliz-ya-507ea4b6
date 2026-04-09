@@ -33,6 +33,7 @@ export const AlmacenProductosTab = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState<"nombre" | "codigo" | "stock">("nombre");
   const [filterCategory, setFilterCategory] = useState<string>("todos");
+  const { data: categoriasCanon } = useCategorias();
 
   useEffect(() => {
     loadProductos();
@@ -70,8 +71,8 @@ export const AlmacenProductosTab = () => {
     }
   };
 
-  // Obtener categorías únicas
-  const categorias = [...new Set(productos.map((p) => p.categoria).filter(Boolean))];
+  // Obtener categorías canónicas
+  const categorias = (categoriasCanon || []).map(c => c.nombre);
 
   // Filtrar
   const filteredProductos = productos.filter((p) => {
