@@ -82,6 +82,7 @@ interface UseListaPreciosOptions {
 
 export function useListaPrecios(options: UseListaPreciosOptions = {}) {
   const { includeAnalisis = false } = options;
+  const { data: categoriasCanon } = useCategorias();
 
   // Filters state
   const [searchTerm, setSearchTerm] = useState("");
@@ -125,11 +126,10 @@ export function useListaPrecios(options: UseListaPreciosOptions = {}) {
     });
   }, [productos, includeAnalisis]);
 
-  // Unique categories
+  // Unique categories from canonical table
   const categorias = useMemo(() => {
-    if (!productos) return [];
-    return [...new Set(productos.map(p => p.categoria).filter(Boolean))] as string[];
-  }, [productos]);
+    return (categoriasCanon || []).map(c => c.nombre);
+  }, [categoriasCanon]);
 
   // Filter + sort
   const filteredProductos = useMemo(() => {
