@@ -38,14 +38,14 @@ export const ThreadView = ({ email, account, onPrev, onNext, hasPrev, hasNext }:
 
   if (!email) {
     return (
-      <div className="flex-1 flex items-center justify-center" style={{ background: '#fafaf7' }}>
+      <div className="flex-1 flex items-center justify-center h-full" style={{ background: '#fafaf7' }}>
         <div className="text-center">
-          <svg width="64" height="64" viewBox="0 0 100 100" className="mx-auto mb-6 text-ink-200">
-            <path d="M50 10 C25 10, 10 30, 10 50 C10 75, 30 90, 50 90" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" />
-            <path d="M50 20 C30 20, 20 35, 20 50 C20 70, 35 80, 50 80" stroke="currentColor" fill="none" strokeWidth="1.5" strokeLinecap="round" opacity="0.5" />
-            <circle cx="50" cy="50" r="3" fill="currentColor" opacity="0.3" />
-          </svg>
-          <p className="font-serif text-xl italic text-ink-400">Selecciona un correo para verlo</p>
+          <p className="font-serif italic text-[22px] text-ink-400">
+            Selecciona un correo de la lista.
+          </p>
+          <p className="text-[12px] text-ink-500 mt-2">
+            O presiona <kbd className="px-1.5 py-0.5 bg-white border border-ink-200 rounded text-[10px] font-mono mx-0.5">J</kbd> para empezar a navegar con el teclado.
+          </p>
         </div>
       </div>
     );
@@ -65,7 +65,7 @@ export const ThreadView = ({ email, account, onPrev, onNext, hasPrev, hasNext }:
   const initials = email.from.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
   return (
-    <div className="flex-1 flex flex-col h-full" style={{ background: '#fafaf7' }}>
+    <div className="flex flex-col h-full min-h-0" style={{ background: '#fafaf7' }}>
       {/* Toolbar */}
       <div className="bg-white px-8 py-[14px] border-b border-ink-100 flex items-center gap-3">
         {/* Context label */}

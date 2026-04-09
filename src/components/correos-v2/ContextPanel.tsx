@@ -24,8 +24,12 @@ export const ContextPanel = ({ email, accountType }: ContextPanelProps) => {
     return (
       <div className="h-full flex items-center justify-center border-l border-ink-100 bg-white px-8">
         <div className="text-center">
-          <span className="text-ink-200 text-4xl mb-4 block">📬</span>
-          <p className="font-serif italic text-ink-400">Sin correo seleccionado</p>
+          <p className="font-serif italic text-[18px] text-ink-400">
+            El contexto aparecerá aquí.
+          </p>
+          <p className="text-[11px] text-ink-500 mt-2 leading-relaxed max-w-[220px] mx-auto">
+            Cuando abras un correo, verás el cliente, proveedor o contacto vinculado.
+          </p>
         </div>
       </div>
     );

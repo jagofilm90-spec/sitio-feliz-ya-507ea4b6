@@ -26,7 +26,7 @@ export const AccountRail = ({ accounts, activeAccountId, onSelectAccount }: Acco
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="flex flex-col items-center h-full py-[18px] gap-1" style={{ background: '#fafaf7' }}>
+      <div className="flex flex-col items-center h-full py-[18px] gap-1 overflow-y-auto" style={{ background: '#fafaf7' }}>
         {/* Personal account */}
         {personal && (
           <Tooltip>

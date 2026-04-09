@@ -81,7 +81,7 @@ export const EmailList = ({ emails, account, selectedEmailId, onSelectEmail }: E
   };
 
   return (
-    <div className="flex flex-col h-full border-r border-ink-100 bg-white">
+    <div className="flex flex-col h-full min-h-0 border-r border-ink-100 bg-white">
       {/* Header */}
       <div className="px-7 pt-[26px] pb-4 border-b border-ink-100">
         <div className="flex items-center gap-2 mb-2">
@@ -240,15 +240,13 @@ export const EmailList = ({ emails, account, selectedEmailId, onSelectEmail }: E
         ))}
 
         {grouped.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 px-8">
-            <svg width="48" height="48" viewBox="0 0 100 100" className="mb-6 text-ink-200">
-              <path d="M50 10 C25 10, 10 30, 10 50 C10 75, 30 90, 50 90" stroke="currentColor" fill="none" strokeWidth="2.5" strokeLinecap="round" />
-              <path d="M50 20 C30 20, 20 35, 20 50 C20 70, 35 80, 50 80" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
-              <path d="M50 30 C35 30, 30 40, 30 50 C30 65, 40 70, 50 70" stroke="currentColor" fill="none" strokeWidth="1.5" strokeLinecap="round" opacity="0.3" />
-              <circle cx="50" cy="50" r="3" fill="currentColor" opacity="0.4" />
-            </svg>
-            <p className="font-serif text-lg italic text-ink-400">No hay correos en este buzón</p>
-            <button className="mt-4 text-sm text-crimson-500 hover:underline">Configurar cuenta</button>
+          <div className="flex flex-col items-center justify-center h-full px-8">
+            <p className="font-serif italic text-[18px] text-ink-400">
+              No hay correos en {account.nombre.toLowerCase()}.
+            </p>
+            <p className="text-[11px] text-ink-500 mt-2">
+              Cuando llegue algo aquí, lo verás.
+            </p>
           </div>
         )}
       </div>
