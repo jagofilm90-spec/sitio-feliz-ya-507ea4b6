@@ -242,12 +242,16 @@ const Productos = () => {
       return false;
     }
 
+    // Resolve categoria_id from canonical categories
+    const matchedCat = categoriasCanon?.find(c => c.nombre === formData.categoria);
+
     const productData = {
       codigo: formData.codigo,
       codigo_sat: formData.codigo_sat || null,
       nombre: formData.nombre,
       marca: formData.marca || null,
       categoria: formData.categoria || null,
+      categoria_id: matchedCat?.id || null,
       especificaciones: formData.especificaciones || null,
       contenido_empaque: formData.contenido_empaque || null,
       unidad_sat: formData.unidad_sat || null,
