@@ -412,9 +412,10 @@ const Productos = () => {
     });
   };
 
-  // ─── Derived filter values ───
+   // ─── Derived filter values ───
+  const { data: categoriasCanon } = useCategorias();
   const marcasUnicas = [...new Set(productos.filter(p => p.activo !== false && p.marca).map(p => p.marca))].sort();
-  const categoriasUnicas = [...new Set(productos.filter(p => p.activo !== false && p.categoria).map(p => p.categoria))].sort();
+  const categoriasUnicas = categoriasCanon?.map(c => c.nombre) || [];
 
   const filteredProductos = (() => {
     let filtered = productos.filter((p) => {
@@ -664,16 +665,19 @@ const Productos = () => {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="categoria">Categoría</Label>
-                        <Input
-                          id="categoria" value={formData.categoria}
-                          onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
-                          placeholder="Ej: Azúcar, Frijol, Aceite" list="categorias-existentes" spellCheck={true} lang="es-MX"
-                        />
-                        <datalist id="categorias-existentes">
-                          {[...new Set(productos.map(p => p.categoria).filter(Boolean))].sort().map(cat => (
-                            <option key={cat} value={cat} />
-                          ))}
-                        </datalist>
+                        <Select
+                          value={formData.categoria || ""}
+                          onValueChange={(value) => setFormData({ ...formData, categoria: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar categoría" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(categoriasCanon || []).map(cat => (
+                              <SelectItem key={cat.id} value={cat.nombre}>{cat.nombre}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
 
