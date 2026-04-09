@@ -38,6 +38,7 @@ interface CategoriaAgrupada {
 
 export const InventarioPorCategoria = () => {
   const isMobile = useIsMobile();
+  const { data: categoriasCanon } = useCategorias();
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
