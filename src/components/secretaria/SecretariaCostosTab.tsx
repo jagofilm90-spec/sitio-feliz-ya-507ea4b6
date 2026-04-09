@@ -380,7 +380,7 @@ export const SecretariaCostosTab = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Coins className="h-5 w-5 text-pink-600" />
+            <Coins className="h-5 w-5 text-crimson-500" />
             {isAdmin ? "Análisis Costo-Precio-Margen" : "Costos de Productos"}
           </h2>
           <p className="text-sm text-muted-foreground">

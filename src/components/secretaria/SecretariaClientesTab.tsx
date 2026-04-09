@@ -138,7 +138,7 @@ export const SecretariaClientesTab = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Users className="h-5 w-5 text-pink-600" />
+            <Users className="h-5 w-5 text-crimson-500" />
             Gestión de Clientes
           </h2>
           <p className="text-sm text-muted-foreground">
@@ -147,7 +147,7 @@ export const SecretariaClientesTab = () => {
         </div>
         <Button
           onClick={() => navigate("/clientes")}
-          className="bg-pink-600 hover:bg-pink-700"
+          className="bg-crimson-500 hover:bg-crimson-600"
         >
           <Plus className="h-4 w-4 mr-2" />
           Nuevo Cliente
@@ -158,18 +158,18 @@ export const SecretariaClientesTab = () => {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <Card
           className={`cursor-pointer transition-all hover:shadow-md ${
-            vendedorFilter === "all" ? "ring-2 ring-pink-500" : ""
+            vendedorFilter === "all" ? "ring-2 ring-crimson-500" : ""
           }`}
           onClick={() => setVendedorFilter("all")}
         >
           <CardContent className="p-3 text-center">
-            <p className="text-2xl font-bold text-pink-600">{clientes?.length || 0}</p>
+            <p className="text-2xl font-bold text-crimson-500">{clientes?.length || 0}</p>
             <p className="text-xs font-medium text-muted-foreground">Todos</p>
           </CardContent>
         </Card>
         <Card
           className={`cursor-pointer transition-all hover:shadow-md ${
-            vendedorFilter === "casa" ? "ring-2 ring-pink-500" : ""
+            vendedorFilter === "casa" ? "ring-2 ring-crimson-500" : ""
           } bg-slate-50`}
           onClick={() => setVendedorFilter("casa")}
         >
@@ -182,7 +182,7 @@ export const SecretariaClientesTab = () => {
           <Card
             key={vendedor.id}
             className={`cursor-pointer transition-all hover:shadow-md ${
-              vendedorFilter === vendedor.id ? "ring-2 ring-pink-500" : ""
+              vendedorFilter === vendedor.id ? "ring-2 ring-crimson-500" : ""
             }`}
             onClick={() => setVendedorFilter(vendedor.id)}
           >
@@ -242,7 +242,7 @@ export const SecretariaClientesTab = () => {
                 {filteredClientes && filteredClientes.length > 0 ? (
                   filteredClientes.map((cliente) => (
                     <TableRow key={cliente.id} className="group">
-                      <TableCell className="font-mono font-medium text-pink-600">
+                      <TableCell className="font-mono font-medium text-crimson-500">
                         {cliente.codigo}
                       </TableCell>
                       <TableCell>

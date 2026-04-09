@@ -323,15 +323,17 @@ export function VendedorCobranzaTab() {
       <ScrollArea className="h-[calc(100vh-580px)] lg:h-[calc(100vh-540px)]">
         <div className="space-y-4">
           {pedidosFiltrados.length === 0 ? (
-            <Card className="border-dashed border-2">
-              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                <CreditCard className="h-16 w-16 text-muted-foreground mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Sin pedidos pendientes</h3>
-                <p className="text-muted-foreground">
-                  {filtro === "todas" ? "No tienes pedidos pendientes de cobro" : "No hay pedidos con este filtro"}
-                </p>
-              </CardContent>
-            </Card>
+            <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+              <p
+                className="text-[22px] text-ink-400 italic leading-tight"
+                style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500 }}
+              >
+                Sin pedidos por cobrar.
+              </p>
+              <p className="mt-2 text-xs text-ink-500">
+                {filtro === "todas" ? "Cuando haya entregas pendientes de pago, aparecerán aquí." : "No hay pedidos con este filtro."}
+              </p>
+            </div>
           ) : (
             pedidosFiltrados.map((pedido) => {
               const estado = calcularEstadoCredito({

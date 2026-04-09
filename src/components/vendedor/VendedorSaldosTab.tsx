@@ -267,13 +267,17 @@ export function VendedorSaldosTab() {
       {/* Lista de clientes */}
       <ScrollArea className="h-[calc(100vh-420px)] lg:h-[calc(100vh-380px)]">
         {clientesFiltrados.length === 0 ? (
-          <div className="text-center py-12">
-            <CheckCircle className="h-16 w-16 mx-auto text-green-500 mb-4" />
-            <h3 className="text-lg font-semibold mb-2">¡Sin saldos pendientes!</h3>
-            <p className="text-muted-foreground">
-              {searchTerm 
-                ? "No se encontraron clientes con ese criterio"
-                : "Todos tus clientes están al corriente"}
+          <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+            <p
+              className="text-[22px] text-ink-400 italic leading-tight"
+              style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500 }}
+            >
+              Sin saldos pendientes.
+            </p>
+            <p className="mt-2 text-xs text-ink-500">
+              {searchTerm
+                ? "No se encontraron clientes con ese criterio."
+                : "Todos tus clientes están al corriente."}
             </p>
           </div>
         ) : (

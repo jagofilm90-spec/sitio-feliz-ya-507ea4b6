@@ -221,7 +221,7 @@ export const SecretariaChatTab = () => {
             </Button>
           )}
           <h2 className="text-xl font-semibold flex items-center gap-2">
-            <MessageCircle className="h-5 w-5 text-pink-600" />
+            <MessageCircle className="h-5 w-5 text-crimson-500" />
             {conversacionActiva ? getNombreConversacion(conversacionActiva) : "Chat Interno"}
           </h2>
         </div>
@@ -239,12 +239,12 @@ export const SecretariaChatTab = () => {
                     onClick={() => setConversacionActiva(conv)}
                     className={cn(
                       "w-full p-4 border-b hover:bg-muted/50 text-left transition-colors",
-                      conversacionActiva?.id === conv.id && "bg-pink-50"
+                      conversacionActiva?.id === conv.id && "bg-crimson-50"
                     )}
                   >
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
-                        <AvatarFallback className="bg-pink-100 text-pink-600">
+                        <AvatarFallback className="bg-crimson-100 text-crimson-500">
                           {conv.tipo === "individual" ? (
                             getNombreConversacion(conv).charAt(0).toUpperCase()
                           ) : (
@@ -309,12 +309,12 @@ export const SecretariaChatTab = () => {
                               className={cn(
                                 "max-w-[70%] rounded-lg px-4 py-2",
                                 isOwn
-                                  ? "bg-pink-600 text-white"
+                                  ? "bg-crimson-500 text-white"
                                   : "bg-muted"
                               )}
                             >
                               {!isOwn && mensaje.remitente && (
-                                <p className="text-xs font-medium text-pink-600 mb-1">
+                                <p className="text-xs font-medium text-crimson-500 mb-1">
                                   {mensaje.remitente.full_name}
                                 </p>
                               )}
@@ -322,7 +322,7 @@ export const SecretariaChatTab = () => {
                               <p
                                 className={cn(
                                   "text-xs mt-1",
-                                  isOwn ? "text-pink-200" : "text-muted-foreground"
+                                  isOwn ? "text-crimson-100" : "text-muted-foreground"
                                 )}
                               >
                                 {format(new Date(mensaje.created_at), "HH:mm", { locale: es })}
@@ -334,9 +334,16 @@ export const SecretariaChatTab = () => {
                       <div ref={messagesEndRef} />
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-center">
-                      <MessageCircle className="h-12 w-12 text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground">No hay mensajes</p>
+                    <div className="flex flex-col items-center justify-center h-full px-6 text-center">
+                      <p
+                        className="text-[22px] text-ink-400 italic leading-tight"
+                        style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500 }}
+                      >
+                        No hay mensajes todavía.
+                      </p>
+                      <p className="mt-2 text-xs text-ink-500">
+                        Escribe algo para empezar la conversación.
+                      </p>
                     </div>
                   )}
                 </ScrollArea>
@@ -355,7 +362,7 @@ export const SecretariaChatTab = () => {
                   <Button
                     type="submit"
                     disabled={!nuevoMensaje.trim() || sendMutation.isPending}
-                    className="bg-pink-600 hover:bg-pink-700"
+                    className="bg-crimson-500 hover:bg-crimson-600"
                   >
                     {sendMutation.isPending ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -366,11 +373,15 @@ export const SecretariaChatTab = () => {
                 </form>
               </>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full text-center">
-                <MessageCircle className="h-16 w-16 text-muted-foreground mb-4" />
-                <p className="text-lg font-medium">Selecciona una conversación</p>
-                <p className="text-sm text-muted-foreground">
-                  Elige una conversación de la lista para comenzar
+              <div className="flex flex-col items-center justify-center h-full px-6 text-center">
+                <p
+                  className="text-[22px] text-ink-400 italic leading-tight"
+                  style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500 }}
+                >
+                  Selecciona una conversación.
+                </p>
+                <p className="mt-2 text-xs text-ink-500">
+                  Elige un contacto de la lista para empezar.
                 </p>
               </div>
             )}

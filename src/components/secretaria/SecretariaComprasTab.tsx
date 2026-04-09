@@ -34,7 +34,7 @@ export const SecretariaComprasTab = () => {
       {/* Header */}
       <div>
         <h2 className="text-xl font-semibold flex items-center gap-2">
-          <ShoppingCart className="h-5 w-5 text-pink-600" />
+          <ShoppingCart className="h-5 w-5 text-crimson-500" />
           Módulo de Compras
         </h2>
         <p className="text-sm text-muted-foreground">

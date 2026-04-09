@@ -247,7 +247,7 @@ export const MigracionProductosDialog = ({
       <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-pink-600" />
+            <Sparkles className="h-5 w-5 text-crimson-500" />
             Normalizar Productos con IA
           </DialogTitle>
           <DialogDescription>
@@ -351,7 +351,7 @@ export const MigracionProductosDialog = ({
                 {/* Sugerencia IA */}
                 {isAnalyzing ? (
                   <div className="flex items-center justify-center py-8 gap-2">
-                    <Loader2 className="h-5 w-5 animate-spin text-pink-600" />
+                    <Loader2 className="h-5 w-5 animate-spin text-crimson-500" />
                     <span className="text-muted-foreground">Analizando con IA...</span>
                   </div>
                 ) : sugerencia ? (
@@ -373,7 +373,7 @@ export const MigracionProductosDialog = ({
                     </div>
 
                     {editMode && editedSugerencia ? (
-                      <div className="grid gap-3 bg-pink-50 p-3 rounded-md border border-pink-200">
+                      <div className="grid gap-3 bg-crimson-50 p-3 rounded-md border border-crimson-100">
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1">
                             <Label className="text-xs">Nombre</Label>
@@ -469,23 +469,23 @@ export const MigracionProductosDialog = ({
                         </div>
                       </div>
                     ) : (
-                      <div className="grid gap-2 text-sm bg-pink-50 p-3 rounded-md border border-pink-200">
+                      <div className="grid gap-2 text-sm bg-crimson-50 p-3 rounded-md border border-crimson-100">
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           <div>
                             <span className="text-muted-foreground text-xs">Nombre:</span>
-                            <p className="font-medium text-pink-700">
+                            <p className="font-medium text-crimson-600">
                               {sugerencia.nombre_sugerido}
                             </p>
                           </div>
                           <div>
                             <span className="text-muted-foreground text-xs">Especificaciones:</span>
-                            <p className="font-medium text-pink-700">
+                            <p className="font-medium text-crimson-600">
                               {sugerencia.especificaciones_sugerida || "(vacío)"}
                             </p>
                           </div>
                           <div>
                             <span className="text-muted-foreground text-xs">Marca:</span>
-                            <p className="font-medium text-pink-700">
+                            <p className="font-medium text-crimson-600">
                               {sugerencia.marca_sugerida || "(sin marca)"}
                             </p>
                           </div>
@@ -493,19 +493,19 @@ export const MigracionProductosDialog = ({
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           <div>
                             <span className="text-muted-foreground text-xs">Contenido:</span>
-                            <p className="font-medium text-pink-700">
+                            <p className="font-medium text-crimson-600">
                               {sugerencia.contenido_empaque_sugerido || "—"}
                             </p>
                           </div>
                           <div>
                             <span className="text-muted-foreground text-xs">Peso (kg):</span>
-                            <p className="font-medium text-pink-700">
+                            <p className="font-medium text-crimson-600">
                               {sugerencia.peso_kg_sugerido ?? "—"}
                             </p>
                           </div>
                           <div>
                             <span className="text-muted-foreground text-xs">Unidad SAT:</span>
-                            <p className="font-medium text-pink-700">
+                            <p className="font-medium text-crimson-600">
                               {sugerencia.unidad_sat_sugerida ? (
                                 <Badge variant="outline" className="text-xs">
                                   {sugerencia.unidad_sat_sugerida}
@@ -575,7 +575,7 @@ export const MigracionProductosDialog = ({
                 <Button
                   onClick={handleApply}
                   disabled={isAnalyzing || isSaving || !sugerencia}
-                  className="bg-pink-600 hover:bg-pink-700"
+                  className="bg-crimson-500 hover:bg-crimson-600"
                 >
                   {isSaving ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />

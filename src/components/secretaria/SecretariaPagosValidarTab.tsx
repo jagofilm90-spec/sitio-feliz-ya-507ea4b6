@@ -222,11 +222,15 @@ export function SecretariaPagosValidarTab() {
 
   if (pagos.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <CheckCircle className="h-16 w-16 text-emerald-500 mb-4" />
-        <h3 className="text-xl font-semibold mb-2">Sin pagos pendientes</h3>
-        <p className="text-muted-foreground">
-          No hay pagos que requieran validación
+      <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+        <p
+          className="text-[22px] text-ink-400 italic leading-tight"
+          style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500 }}
+        >
+          Sin pagos pendientes.
+        </p>
+        <p className="mt-2 text-xs text-ink-500">
+          Cuando llegue un pago a validar, lo verás aquí.
         </p>
       </div>
     );

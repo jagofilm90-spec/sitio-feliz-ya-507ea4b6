@@ -52,7 +52,7 @@ const REGIONES = [
   { value: "morelos", label: "Morelos", color: "bg-orange-500" },
   { value: "puebla", label: "Puebla", color: "bg-red-500" },
   { value: "hidalgo", label: "Hidalgo", color: "bg-purple-500" },
-  { value: "queretaro", label: "Querétaro", color: "bg-pink-500" },
+  { value: "queretaro", label: "Querétaro", color: "bg-crimson-500" },
   { value: "tlaxcala", label: "Tlaxcala", color: "bg-indigo-500" },
 ];
 

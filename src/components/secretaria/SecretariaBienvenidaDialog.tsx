@@ -241,7 +241,7 @@ export const SecretariaBienvenidaDialog = ({
     <button
       onClick={() => handleNavigate(tab)}
       className={`flex items-center gap-3 p-3 rounded-lg border transition-all hover:shadow-md ${
-        count > 0 ? "bg-pink-50 border-pink-200" : "bg-muted/50 border-border"
+        count > 0 ? "bg-crimson-50 border-crimson-100" : "bg-muted/50 border-border"
       }`}
     >
       <div className={`p-2 rounded-full ${color}`}>
@@ -249,12 +249,12 @@ export const SecretariaBienvenidaDialog = ({
       </div>
       <div className="flex-1 text-left">
         <p className="text-sm font-medium">{label}</p>
-        <p className={`text-xs ${count > 0 ? "text-pink-600" : "text-muted-foreground"}`}>
+        <p className={`text-xs ${count > 0 ? "text-crimson-500" : "text-muted-foreground"}`}>
           {count} pendiente{count !== 1 ? "s" : ""}
         </p>
       </div>
       {count > 0 && (
-        <Badge variant="destructive" className="bg-pink-600">
+        <Badge variant="destructive" className="bg-crimson-500">
           {count}
         </Badge>
       )}
@@ -273,7 +273,7 @@ export const SecretariaBienvenidaDialog = ({
       <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[90vh] overflow-hidden overflow-x-hidden">
         <DialogHeader className="pb-2">
           <DialogTitle className="flex items-center gap-2 text-xl">
-            <GreetingIcon className="h-6 w-6 text-pink-500" />
+            <GreetingIcon className="h-6 w-6 text-crimson-500" />
             <span>
               {greeting.text}, {secretariaNombre.split(" ")[0]}!
             </span>
@@ -287,7 +287,7 @@ export const SecretariaBienvenidaDialog = ({
             <div className="space-y-4">
               {/* Birthday Banner */}
               {esCumpleanos && (
-                <div className="bg-gradient-to-r from-pink-500 to-rose-500 text-white p-4 rounded-lg flex items-center gap-3">
+                <div className="bg-gradient-to-r from-crimson-500 to-crimson-500 text-white p-4 rounded-lg flex items-center gap-3">
                   <Cake className="h-8 w-8" />
                   <div>
                     <p className="font-semibold">¡Feliz Cumpleaños! 🎂</p>
@@ -299,14 +299,14 @@ export const SecretariaBienvenidaDialog = ({
               )}
 
               {/* Summary Banner */}
-              <div className="bg-gradient-to-r from-pink-100 to-rose-100 p-4 rounded-lg">
+              <div className="bg-gradient-to-r from-crimson-100 to-crimson-100 p-4 rounded-lg">
                 <div className="flex items-center gap-2 mb-1">
-                  <ClipboardList className="h-5 w-5 text-pink-600" />
-                  <span className="font-medium text-pink-900">
+                  <ClipboardList className="h-5 w-5 text-crimson-500" />
+                  <span className="font-medium text-crimson-700">
                     Resumen del día
                   </span>
                 </div>
-                <p className="text-sm text-pink-700">
+                <p className="text-sm text-crimson-600">
                   {totalPendientes > 0
                     ? `Tienes ${totalPendientes} tarea${totalPendientes !== 1 ? "s" : ""} pendiente${totalPendientes !== 1 ? "s" : ""}`
                     : "¡No tienes tareas pendientes! 🎉"}
@@ -349,7 +349,7 @@ export const SecretariaBienvenidaDialog = ({
               {entregasHoy.length > 0 && (
                 <div className="border rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <Truck className="h-4 w-4 text-pink-600" />
+                    <Truck className="h-4 w-4 text-crimson-500" />
                     <span className="font-medium text-sm">
                       Entregas esperadas hoy ({entregasHoy.length})
                     </span>
@@ -375,7 +375,7 @@ export const SecretariaBienvenidaDialog = ({
                 productosInhabilitados.length > 0) && (
                 <div className="border rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="h-4 w-4 text-pink-600" />
+                    <Sparkles className="h-4 w-4 text-crimson-500" />
                     <span className="font-medium text-sm">
                       Novedades en productos (últimas 48h)
                     </span>
@@ -406,7 +406,7 @@ export const SecretariaBienvenidaDialog = ({
               {/* CTA Button */}
               <Button
                 onClick={() => onOpenChange(false)}
-                className="w-full bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700"
+                className="w-full bg-gradient-to-r from-crimson-500 to-crimson-500 hover:from-crimson-600 hover:to-crimson-600"
               >
                 Comenzar a trabajar
               </Button>

@@ -98,7 +98,7 @@ const CATEGORIA_COLORS: Record<string, string> = {
   "Botanas": "bg-purple-100 text-purple-800",
   "Bebidas": "bg-cyan-100 text-cyan-800",
   "Limpieza": "bg-teal-100 text-teal-800",
-  "Mascotas": "bg-pink-100 text-pink-800",
+  "Mascotas": "bg-crimson-100 text-crimson-600",
 };
 
 const getTerminoPagoBadge = (termino: string | null | undefined) => {

@@ -53,7 +53,7 @@ export const SecretariaCorreosTab = () => {
       <div className="space-y-4">
         <div>
           <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Mail className="h-5 w-5 text-pink-600" />
+            <Mail className="h-5 w-5 text-crimson-500" />
             Correos Corporativos
           </h2>
           <p className="text-sm text-muted-foreground">
@@ -78,7 +78,7 @@ export const SecretariaCorreosTab = () => {
     <div className="space-y-4">
       <div>
         <h2 className="text-xl font-semibold flex items-center gap-2">
-          <Mail className="h-5 w-5 text-pink-600" />
+          <Mail className="h-5 w-5 text-crimson-500" />
           Correos Corporativos
         </h2>
         <p className="text-sm text-muted-foreground">

@@ -334,33 +334,31 @@ export function VendedorMisClientesTab({ onClienteCreado, onNavigateNuevoPedido 
       {/* Client Grid - Responsive for tablet/desktop */}
       <ScrollArea className="h-[calc(100vh-400px)] lg:h-[calc(100vh-350px)]">
         {clientesFiltrados.length === 0 ? (
-          <Card className="border-dashed border-2">
-            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-              <Building2 className="h-16 w-16 text-muted-foreground mb-4" />
-              <h3 className="text-xl font-semibold mb-2">
-                {searchTerm || activeRegion !== 'todos' 
-                  ? "No se encontraron clientes" 
-                  : "No tienes clientes asignados"}
-              </h3>
-              <p className="text-muted-foreground mb-6 max-w-md">
-                {searchTerm 
-                  ? "Intenta con otro término de búsqueda" 
-                  : activeRegion !== 'todos'
-                    ? "No hay clientes en esta zona"
-                    : "Comienza agregando tu primer cliente para empezar a vender"}
-              </p>
-              {!searchTerm && activeRegion === 'todos' && (
-                <Button 
-                  onClick={() => setShowNuevoCliente(true)}
-                  size="lg"
-                  className="h-12 px-6"
-                >
-                  <Plus className="h-5 w-5 mr-2" />
-                  Agregar primer cliente
-                </Button>
-              )}
-            </CardContent>
-          </Card>
+          <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+            <p
+              className="text-[22px] text-ink-400 italic leading-tight"
+              style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500 }}
+            >
+              No se encontraron clientes.
+            </p>
+            <p className="mt-2 text-xs text-ink-500">
+              {searchTerm
+                ? "Prueba ajustando los filtros de búsqueda."
+                : activeRegion !== 'todos'
+                  ? "No hay clientes en esta zona."
+                  : "Comienza agregando tu primer cliente para empezar a vender."}
+            </p>
+            {!searchTerm && activeRegion === 'todos' && (
+              <Button
+                onClick={() => setShowNuevoCliente(true)}
+                size="lg"
+                className="h-12 px-6 mt-4"
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                Agregar primer cliente
+              </Button>
+            )}
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {clientesFiltrados.map((cliente) => (

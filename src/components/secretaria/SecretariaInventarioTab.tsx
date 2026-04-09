@@ -161,7 +161,7 @@ export const SecretariaInventarioTab = () => {
       {/* Header */}
       <div>
         <h2 className="text-xl font-semibold flex items-center gap-2">
-          <Warehouse className="h-5 w-5 text-pink-600" />
+          <Warehouse className="h-5 w-5 text-crimson-500" />
           Inventario General
         </h2>
         <p className="text-sm text-muted-foreground">
@@ -292,7 +292,7 @@ export const SecretariaInventarioTab = () => {
                     <TableRow key={lote.id}>
                       <TableCell>
                         <div>
-                          <span className="font-mono text-xs text-pink-600">{lote.productos?.codigo}</span>
+                          <span className="font-mono text-xs text-crimson-500">{lote.productos?.codigo}</span>
                           <p className="font-medium text-sm">{lote.productos?.nombre}</p>
                         </div>
                       </TableCell>
@@ -335,7 +335,7 @@ export const SecretariaInventarioTab = () => {
                     <TableRow key={mov.id}>
                       <TableCell>
                         <div>
-                          <span className="font-mono text-xs text-pink-600">{mov.productos?.codigo}</span>
+                          <span className="font-mono text-xs text-crimson-500">{mov.productos?.codigo}</span>
                           <p className="font-medium text-sm truncate max-w-[150px]">{mov.productos?.nombre}</p>
                         </div>
                       </TableCell>

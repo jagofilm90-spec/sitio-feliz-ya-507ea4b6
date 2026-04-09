@@ -141,15 +141,17 @@ export const MonitoreoRutasTab = () => {
         {/* Panel de rutas */}
         <div className="lg:col-span-2 space-y-4">
           {rutas.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Truck className="h-16 w-16 mx-auto mb-4 text-muted-foreground/30" />
-                <h3 className="text-lg font-medium mb-1">Sin rutas programadas</h3>
-                <p className="text-muted-foreground">
-                  No hay rutas programadas para hoy
-                </p>
-              </CardContent>
-            </Card>
+            <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+              <p
+                className="text-[22px] text-ink-400 italic leading-tight"
+                style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 500 }}
+              >
+                Sin rutas programadas.
+              </p>
+              <p className="mt-2 text-xs text-ink-500">
+                Las rutas del día aparecerán aquí al asignarlas.
+              </p>
+            </div>
           ) : (
             <>
               {/* Rutas en curso (prioridad) */}

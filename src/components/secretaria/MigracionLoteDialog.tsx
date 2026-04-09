@@ -296,7 +296,7 @@ export const MigracionLoteDialog = ({
       <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-5xl max-h-[90vh] overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-pink-600" />
+            <Sparkles className="h-5 w-5 text-crimson-500" />
             Migración en Lote con IA
           </DialogTitle>
           <DialogDescription>
@@ -309,7 +309,7 @@ export const MigracionLoteDialog = ({
           <div className="space-y-6 py-4">
             <Card>
               <CardContent className="pt-6 text-center space-y-4">
-                <Sparkles className="h-12 w-12 text-pink-600 mx-auto" />
+                <Sparkles className="h-12 w-12 text-crimson-500 mx-auto" />
                 <div>
                   <h3 className="font-semibold text-lg">
                     {productos.length} productos pendientes de normalizar
@@ -324,7 +324,7 @@ export const MigracionLoteDialog = ({
                   <Badge variant="outline">Sin especificaciones: ~80%</Badge>
                   <Badge variant="outline" className="text-red-600 border-red-200">Sin unidad SAT: ~99%</Badge>
                 </div>
-                <Button onClick={startAnalysis} className="bg-pink-600 hover:bg-pink-700">
+                <Button onClick={startAnalysis} className="bg-crimson-500 hover:bg-crimson-600">
                   <Play className="h-4 w-4 mr-2" />
                   Iniciar Análisis
                 </Button>
@@ -437,7 +437,7 @@ export const MigracionLoteDialog = ({
                             {sug.cambios_detectados && (
                               <>
                                 <span className="text-muted-foreground">→</span>
-                                <span className="font-medium text-pink-700">
+                                <span className="font-medium text-crimson-600">
                                   {sug.nombre_sugerido}
                                   {sug.especificaciones_sugerida && ` ${sug.especificaciones_sugerida}`}
                                 </span>
@@ -505,7 +505,7 @@ export const MigracionLoteDialog = ({
                     <Button
                       onClick={applySelected}
                       disabled={seleccionados.size === 0}
-                      className="bg-pink-600 hover:bg-pink-700"
+                      className="bg-crimson-500 hover:bg-crimson-600"
                     >
                       <Check className="h-4 w-4 mr-2" />
                       Aplicar {seleccionados.size} seleccionados

@@ -299,7 +299,7 @@ export function VendedorBienvenidaDialog({
               <>
                 {/* Sección especial de cumpleaños */}
                 {esCumpleanos && (
-                  <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-pink-500/20 via-purple-500/20 to-indigo-500/20 border-2 border-pink-500/30 p-6 mb-2">
+                  <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-crimson-500/20 via-purple-500/20 to-indigo-500/20 border-2 border-crimson-500/30 p-6 mb-2">
                     {/* Efectos decorativos */}
                     <div className="absolute -top-2 -right-2 text-4xl animate-bounce" style={{ animationDelay: "0.1s" }}>🎈</div>
                     <div className="absolute -bottom-1 -left-1 text-3xl animate-bounce" style={{ animationDelay: "0.3s" }}>🎉</div>
@@ -308,11 +308,11 @@ export function VendedorBienvenidaDialog({
                     
                     <div className="text-center space-y-3 relative z-10">
                       <div className="flex justify-center items-center gap-2">
-                        <Cake className="h-10 w-10 text-pink-500 animate-bounce" />
+                        <Cake className="h-10 w-10 text-crimson-500 animate-bounce" />
                         <span className="text-5xl animate-bounce">🎂</span>
                         <Cake className="h-10 w-10 text-purple-500 animate-bounce" style={{ animationDelay: "0.2s" }} />
                       </div>
-                      <h2 className="text-2xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                      <h2 className="text-2xl font-bold bg-gradient-to-r from-crimson-500 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
                         ¡Feliz Cumpleaños, {vendedorNombre}!
                       </h2>
                       <p className="text-muted-foreground text-sm">
