@@ -7,7 +7,7 @@ import Soporte from "./pages/Soporte";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { ThemeProvider } from "next-themes";
+
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -119,7 +119,6 @@ const AccessibilityPreferencesApplicator = () => {
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <TooltipProvider>
           <Toaster />
           <Sonner />
@@ -326,7 +325,6 @@ const App = () => (
             </Routes>
           </BrowserRouter>
         </TooltipProvider>
-      </ThemeProvider>
     </QueryClientProvider>
   </ErrorBoundary>
 );
