@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Search, Package, Filter, Download, FileText, User, TrendingDown, TrendingUp, Shield } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { cn } from "@/lib/utils";
 import {
   Select,
@@ -120,8 +121,12 @@ export function VendedorListaPreciosTab() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)]">
+      <PageHeader
+        title="Lista de precios."
+        lead="Catálogo autorizado para cotizar"
+      />
       {/* Header */}
-      <div className="pb-3 border-b bg-background sticky top-0 z-20 space-y-2">
+      <div className="pb-3 border-b bg-background sticky top-0 z-20 space-y-2 mt-4">
         <div className="flex items-center justify-between">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

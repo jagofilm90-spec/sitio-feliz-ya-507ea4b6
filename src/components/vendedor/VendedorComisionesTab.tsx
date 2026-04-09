@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { format, startOfMonth, endOfMonth, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -262,15 +263,19 @@ export function VendedorComisionesTab() {
 
   return (
     <div className="space-y-6">
+      <PageHeader
+        title="Comisiones."
+        lead="Histórico y cálculo del período"
+      />
       {/* Header del periodo */}
-      <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
+      <Card className="bg-white border border-ink-100 rounded-xl">
         <CardContent className="p-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
-              <h3 className="font-semibold text-lg capitalize">{periodoActual?.periodo}</h3>
-              <p className="text-sm text-muted-foreground">{rangoFechas}</p>
+              <h3 className="font-serif text-[18px] font-medium text-ink-900 capitalize">{periodoActual?.periodo}</h3>
+              <p className="text-[12px] text-ink-500">{rangoFechas}</p>
             </div>
-            <Badge variant="outline" className="text-primary border-primary">
+            <Badge variant="outline" className="text-ink-600 border-ink-200">
               <Clock className="h-3 w-3 mr-1" />
               {diasRestantes === 0 ? "Último día" : `Faltan ${diasRestantes} días`}
             </Badge>
@@ -279,64 +284,11 @@ export function VendedorComisionesTab() {
       </Card>
 
       {/* KPIs del periodo actual */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                <Truck className="h-6 w-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Entregas</p>
-                <p className="text-2xl font-bold">{periodoActual?.cantidadEntregas || 0}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center">
-                <Package className="h-6 w-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total entregas</p>
-                <p className="text-2xl font-bold">{formatCurrency(periodoActual?.totalEntregas || 0)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center">
-                <Percent className="h-6 w-6 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">% Comisión</p>
-                <p className="text-2xl font-bold">{porcentajeComision}%</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow bg-primary/5 border-primary/30">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-primary/20 flex items-center justify-center">
-                <DollarSign className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Comisión estimada</p>
-                <p className="text-2xl font-bold text-primary">
-                  {formatCurrency(periodoActual?.comisionCalculada || 0)}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-5"><p className="font-serif text-[32px] font-medium tabular-nums text-ink-900 leading-none">{periodoActual?.cantidadEntregas || 0}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Entregas</p></CardContent></Card>
+        <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-5"><p className="font-serif text-[32px] font-medium tabular-nums text-ink-900 leading-none">{formatCurrency(periodoActual?.totalEntregas || 0)}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Total Entregas</p></CardContent></Card>
+        <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-5"><p className="font-serif text-[32px] font-medium tabular-nums text-ink-900 leading-none">{porcentajeComision}%</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">% Comisión</p></CardContent></Card>
+        <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-5"><p className="font-serif text-[32px] font-medium tabular-nums text-ink-900 leading-none">{formatCurrency(periodoActual?.comisionCalculada || 0)}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Comisión Estimada</p></CardContent></Card>
       </div>
 
       {/* Periodo selector */}

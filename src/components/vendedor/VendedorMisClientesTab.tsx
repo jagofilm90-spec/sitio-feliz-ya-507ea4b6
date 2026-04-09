@@ -23,6 +23,7 @@ import { formatCurrency } from "@/lib/utils";
 import { VendedorNuevoClienteSheet } from "./VendedorNuevoClienteSheet";
 import { GeocodificarSucursalSheet } from "./GeocodificarSucursalSheet";
 import { EditarClienteSheet } from "./EditarClienteSheet";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 interface Props {
   onClienteCreado: () => void;
@@ -284,6 +285,10 @@ export function VendedorMisClientesTab({ onClienteCreado, onNavigateNuevoPedido 
 
   return (
     <div className="space-y-4">
+      <PageHeader
+        title="Mis clientes."
+        lead="Directorio asignado"
+      />
       {/* Search and Add - Larger for tablet */}
       <div className="flex gap-3">
         <div className="relative flex-1">

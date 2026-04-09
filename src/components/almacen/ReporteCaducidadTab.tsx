@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -249,6 +250,10 @@ export const ReporteCaducidadTab = ({ onStatsUpdate }: ReporteCaducidadTabProps)
 
   return (
     <div className="space-y-4">
+      <PageHeader
+        title="Caducidad."
+        lead="Productos por vencer"
+      />
       {/* Expired alert banner */}
       {canRemove && lotesVencidos.length > 0 && (
         <div className="flex items-center justify-between p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
@@ -264,11 +269,11 @@ export const ReporteCaducidadTab = ({ onStatsUpdate }: ReporteCaducidadTabProps)
       )}
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="border-destructive/30"><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-destructive/10"><AlertTriangle className="w-6 h-6 text-destructive" /></div><div><p className="text-2xl font-bold">{resumen.vencidos}</p><p className="text-sm text-muted-foreground">🔴 Vencidos</p></div></CardContent></Card>
-        <Card className="border-orange-500/30"><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-orange-500/10"><Timer className="w-6 h-6 text-orange-500" /></div><div><p className="text-2xl font-bold">{resumen.criticos}</p><p className="text-sm text-muted-foreground">🟠 Críticos (≤7d)</p></div></CardContent></Card>
-        <Card className="border-yellow-500/30"><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-yellow-500/10"><Clock className="w-6 h-6 text-yellow-500" /></div><div><p className="text-2xl font-bold">{resumen.proximos}</p><p className="text-sm text-muted-foreground">🟡 Próximos (8-30d)</p></div></CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-3"><div className="p-3 rounded-full bg-primary/10"><CheckCircle2 className="w-6 h-6 text-primary" /></div><div><p className="text-2xl font-bold">{resumen.vigentes}</p><p className="text-sm text-muted-foreground">🟢 Vigentes (&gt;30d)</p></div></CardContent></Card>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-4"><p className="font-serif text-[32px] font-medium tabular-nums text-crimson-600 leading-none">{resumen.vencidos}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Vencidos</p></CardContent></Card>
+        <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-4"><p className="font-serif text-[32px] font-medium tabular-nums text-crimson-600 leading-none">{resumen.criticos}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Críticos (7d)</p></CardContent></Card>
+        <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-4"><p className="font-serif text-[32px] font-medium tabular-nums text-ink-900 leading-none">{resumen.proximos}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Próximos (8-30d)</p></CardContent></Card>
+        <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-4"><p className="font-serif text-[32px] font-medium tabular-nums text-ink-900 leading-none">{resumen.vigentes}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Vigentes (+30d)</p></CardContent></Card>
       </div>
 
       {/* Filters */}

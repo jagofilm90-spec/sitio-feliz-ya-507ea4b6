@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { 
@@ -205,39 +206,14 @@ export function VendedorSaldosTab() {
 
   return (
     <div className="space-y-4">
+      <PageHeader
+        title="Saldos."
+        lead="Estado de cuenta por cliente"
+      />
       {/* Resumen totales */}
-      <div className="grid grid-cols-2 gap-4">
-        <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-          <CardContent className="p-4 lg:p-5">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-primary/20 flex items-center justify-center">
-                <Wallet className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Por Cobrar</p>
-                <p className="text-2xl lg:text-3xl font-bold text-primary">
-                  {formatCurrency(totales.total)}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-destructive/10 to-destructive/5 border-destructive/20">
-          <CardContent className="p-4 lg:p-5">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-destructive/20 flex items-center justify-center">
-                <TrendingDown className="h-6 w-6 text-destructive" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Monto Vencido</p>
-                <p className="text-2xl lg:text-3xl font-bold text-destructive">
-                  {formatCurrency(totales.vencido)}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 gap-3">
+        <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-5"><p className="font-serif text-[32px] font-medium tabular-nums text-ink-900 leading-none">{formatCurrency(totales.total)}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Total Por Cobrar</p></CardContent></Card>
+        <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-5"><p className="font-serif text-[32px] font-medium tabular-nums text-crimson-600 leading-none">{formatCurrency(totales.vencido)}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Monto Vencido</p></CardContent></Card>
       </div>
 
       {/* Buscador y ordenar */}

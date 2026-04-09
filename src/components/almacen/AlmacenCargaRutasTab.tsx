@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -552,6 +553,11 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
 
   if (rutas.length === 0) {
     return (
+      <div className="space-y-4">
+      <PageHeader
+        title="Carga de rutas."
+        lead="Escaneo y confirmación de carga"
+      />
       <Tabs defaultValue="carga" className="w-full">
         <TabsList className="w-full grid grid-cols-3 mb-4">
           <TabsTrigger value="carga" className="gap-1.5">
@@ -612,10 +618,16 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
           <RutasEntregadasTab />
         </TabsContent>
       </Tabs>
+      </div>
     );
   }
 
   return (
+    <div className="space-y-4">
+    <PageHeader
+      title="Carga de rutas."
+      lead="Escaneo y confirmación de carga"
+    />
     <Tabs defaultValue="carga" className="w-full">
       <TabsList className="w-full grid grid-cols-3 mb-4">
         <TabsTrigger value="carga" className="gap-1.5">
@@ -892,5 +904,6 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
         <RutasEntregadasTab />
       </TabsContent>
     </Tabs>
+    </div>
   );
 };

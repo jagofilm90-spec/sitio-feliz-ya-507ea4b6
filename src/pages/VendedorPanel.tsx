@@ -364,88 +364,19 @@ export default function VendedorPanel() {
         {/* Contenido principal */}
         <main className="flex-1" onClick={() => sidebarOpen && setSidebarOpen(false)}>
           <div className="p-4 lg:p-8 pb-32 md:pb-8">
-            {/* Header con toggle en desktop */}
-            <div className="hidden md:flex items-center gap-4 mb-6">
+            {/* SidebarTrigger desktop */}
+            <div className="hidden md:flex items-center mb-4">
               <SidebarTrigger className="h-8 w-8 shrink-0" />
-              <div>
-                <h1 className="text-xl font-semibold">Panel de Ventas</h1>
-                <p className="text-sm text-muted-foreground">Bienvenido, {vendedorNombre}</p>
-                <p className="text-xs italic text-muted-foreground/70">"{COMPANY_DATA.slogan}"</p>
-              </div>
             </div>
 
-            {/* Stats Dashboard - 5 KPIs */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-4 mb-6">
-              <Card className="hover:shadow-md transition-shadow">
-                <CardContent className="p-3 lg:p-4">
-                  <div className="flex items-center gap-2 lg:gap-3">
-                    <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
-                      <Users className="h-5 w-5 lg:h-6 lg:w-6 text-blue-600" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs lg:text-sm text-muted-foreground truncate">Clientes</p>
-                      <p className="text-xl lg:text-2xl font-bold">{stats.totalClientes}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="hover:shadow-md transition-shadow">
-                <CardContent className="p-3 lg:p-4">
-                  <div className="flex items-center gap-2 lg:gap-3">
-                    <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
-                      <Calendar className="h-5 w-5 lg:h-6 lg:w-6 text-green-600" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs lg:text-sm text-muted-foreground truncate">Ventas Mes</p>
-                      <p className="text-lg lg:text-xl font-bold">{formatCurrency(stats.ventasMes)}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:shadow-md transition-shadow bg-primary/5 border-primary/20">
-                <CardContent className="p-3 lg:p-4">
-                  <div className="flex items-center gap-2 lg:gap-3">
-                    <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
-                      <TrendingUp className="h-5 w-5 lg:h-6 lg:w-6 text-primary" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs lg:text-sm text-muted-foreground truncate">Ventas Año</p>
-                      <p className="text-lg lg:text-xl font-bold text-primary">{formatCurrency(stats.ventasAnio)}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="hover:shadow-md transition-shadow">
-                <CardContent className="p-3 lg:p-4">
-                  <div className="flex items-center gap-2 lg:gap-3">
-                    <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
-                      <CreditCard className="h-5 w-5 lg:h-6 lg:w-6 text-amber-600" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs lg:text-sm text-muted-foreground truncate">Por Cobrar</p>
-                      <p className="text-lg lg:text-xl font-bold text-amber-600">{formatCurrency(stats.porCobrar)}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="hover:shadow-md transition-shadow col-span-2 lg:col-span-1">
-                <CardContent className="p-3 lg:p-4">
-                  <div className="flex items-center gap-2 lg:gap-3">
-                    <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
-                      <CreditCard className="h-5 w-5 lg:h-6 lg:w-6 text-red-600" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs lg:text-sm text-muted-foreground truncate">Vencido</p>
-                      <p className="text-lg lg:text-xl font-bold text-destructive">{formatCurrency(stats.vencido)}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            {/* Stats Dashboard - 5 KPIs — solo en tab Clientes */}
+            {activeTab === "clientes" && <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-4 mb-6">
+              <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-4 lg:p-5"><p className="font-serif text-[32px] font-medium tabular-nums text-ink-900 leading-none">{stats.totalClientes}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Clientes</p></CardContent></Card>
+              <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-4 lg:p-5"><p className="font-serif text-[32px] font-medium tabular-nums text-ink-900 leading-none">{formatCurrency(stats.ventasMes)}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Ventas del Mes</p></CardContent></Card>
+              <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-4 lg:p-5"><p className="font-serif text-[32px] font-medium tabular-nums text-ink-900 leading-none">{formatCurrency(stats.ventasAnio)}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Ventas del Año</p></CardContent></Card>
+              <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-4 lg:p-5"><p className="font-serif text-[32px] font-medium tabular-nums text-ink-900 leading-none">{formatCurrency(stats.porCobrar)}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Por Cobrar</p></CardContent></Card>
+              <Card className="bg-white border border-ink-100 rounded-xl col-span-2 lg:col-span-1"><CardContent className="p-4 lg:p-5"><p className="font-serif text-[32px] font-medium tabular-nums text-crimson-600 leading-none">{formatCurrency(stats.vencido)}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Vencido</p></CardContent></Card>
+            </div>}
 
             {/* Content Area - Desktop/Tablet uses activeTab state */}
             <div className="hidden md:block">

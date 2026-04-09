@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search, Package, Bug, Calendar, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 interface Producto {
   id: string;
@@ -133,6 +134,10 @@ export const AlmacenProductosTab = () => {
 
   return (
     <div className="space-y-4">
+      <PageHeader
+        title="Productos."
+        lead="Catálogo en vista de solo lectura"
+      />
       {/* Barra de búsqueda y filtros */}
       <div className="flex flex-wrap gap-4">
         <div className="relative flex-1 min-w-[250px]">

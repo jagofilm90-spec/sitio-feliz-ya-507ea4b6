@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { calcularEstadoCredito, CREDITO_LABELS, getCreditoColorClasses } from "@/lib/creditoUtils";
 import { RegistrarPagoDialog } from "./RegistrarPagoDialog";
+import { PageHeader } from "@/components/layout/PageHeader";
 import {
   Select,
   SelectContent,
@@ -217,92 +218,18 @@ export function VendedorCobranzaTab() {
 
   return (
     <div className="space-y-6">
+      <PageHeader
+        title="Cobranza."
+        lead="Registro y seguimiento de pagos"
+      />
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                <CreditCard className="h-6 w-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Por cobrar</p>
-                <p className="text-2xl font-bold">{formatCurrency(stats.total)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-destructive/50 hover:shadow-md transition-shadow">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-red-100 flex items-center justify-center">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Vencido</p>
-                <p className="text-2xl font-bold text-destructive">{formatCurrency(stats.vencido)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-amber-500/50 hover:shadow-md transition-shadow">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center">
-                <Clock className="h-6 w-6 text-amber-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Por vencer</p>
-                <p className="text-2xl font-bold text-amber-600">{formatCurrency(stats.porVencer)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-orange-500/50 hover:shadow-md transition-shadow">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-orange-100 flex items-center justify-center">
-                <Truck className="h-6 w-6 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Sin entregar</p>
-                <p className="text-2xl font-bold text-orange-600">{formatCurrency(stats.sinEntregar)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-green-500/50 hover:shadow-md transition-shadow">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-green-100 flex items-center justify-center">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Al corriente</p>
-                <p className="text-2xl font-bold text-green-600">{formatCurrency(stats.alCorriente)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Cobros de hoy KPI */}
-        <Card className="border-emerald-500/50 hover:shadow-md transition-shadow bg-emerald-50/50">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center">
-                <DollarSign className="h-6 w-6 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Cobros hoy</p>
-                <p className="text-2xl font-bold text-emerald-600">{formatCurrency(cobrosHoy)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+        <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-4"><p className="font-serif text-[28px] font-medium tabular-nums text-ink-900 leading-none">{formatCurrency(stats.total)}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Por Cobrar</p></CardContent></Card>
+        <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-4"><p className="font-serif text-[28px] font-medium tabular-nums text-crimson-600 leading-none">{formatCurrency(stats.vencido)}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Vencido</p></CardContent></Card>
+        <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-4"><p className="font-serif text-[28px] font-medium tabular-nums text-crimson-600 leading-none">{formatCurrency(stats.porVencer)}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Por Vencer</p></CardContent></Card>
+        <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-4"><p className="font-serif text-[28px] font-medium tabular-nums text-ink-900 leading-none">{formatCurrency(stats.sinEntregar)}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Sin Entregar</p></CardContent></Card>
+        <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-4"><p className="font-serif text-[28px] font-medium tabular-nums text-ink-900 leading-none">{formatCurrency(stats.alCorriente)}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Al Corriente</p></CardContent></Card>
+        <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-4"><p className="font-serif text-[28px] font-medium tabular-nums text-ink-900 leading-none">{formatCurrency(cobrosHoy)}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Cobros Hoy</p></CardContent></Card>
       </div>
 
       {/* Filter */}

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { PageHeader } from "@/components/layout/PageHeader";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -313,6 +314,11 @@ export const AlmacenVentasMostradorTab = ({ empleadoId, onStatsUpdate }: Almacen
   const solicitudesHoy = solicitudes.filter(s => s.fecha_solicitud?.startsWith(today));
 
   return (
+    <div className="space-y-4">
+    <PageHeader
+      title="Mostrador."
+      lead="Ventas directas al público"
+    />
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Left: POS */}
       <Card>
@@ -584,6 +590,7 @@ export const AlmacenVentasMostradorTab = ({ empleadoId, onStatsUpdate }: Almacen
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   );
 };

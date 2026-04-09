@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -282,29 +283,26 @@ export const AlmacenFumigacionesTab = ({ onStatsUpdate }: AlmacenFumigacionesTab
     );
   };
 
-  if (loading) {
-    return (
-      <div className="p-4 space-y-4">
-        {[1, 2, 3].map(i => (
-          <Skeleton key={i} className="h-24 w-full" />
-        ))}
-      </div>
-    );
-  }
-
-  if (productos.length === 0) {
-    return (
-      <div className="p-8 text-center text-muted-foreground">
-        <Bug className="w-12 h-12 mx-auto mb-3 opacity-50" />
-        <p>No hay productos configurados para fumigación</p>
-        <p className="text-xs mt-1">Marca productos con "Requiere fumigación" en el catálogo</p>
-      </div>
-    );
-  }
-
   return (
     <>
-      <Tabs defaultValue="sin_registro" className="w-full">
+      <PageHeader
+        title="Fumigaciones."
+        lead="Control de pestes y bitácora"
+      />
+      {loading ? (
+        <div className="p-4 space-y-4">
+          {[1, 2, 3].map(i => (
+            <Skeleton key={i} className="h-24 w-full" />
+          ))}
+        </div>
+      ) : productos.length === 0 ? (
+        <div className="p-8 text-center text-muted-foreground">
+          <Bug className="w-12 h-12 mx-auto mb-3 opacity-50" />
+          <p>No hay productos configurados para fumigación</p>
+          <p className="text-xs mt-1">Marca productos con "Requiere fumigación" en el catálogo</p>
+        </div>
+      ) : (
+      <Tabs defaultValue="sin_registro" className="w-full mt-4">
         <TabsList className="w-full grid grid-cols-4 mb-2">
           <TabsTrigger value="sin_registro" className="flex items-center gap-1 text-xs px-1">
             <FileQuestion className="w-3.5 h-3.5 shrink-0" />
@@ -378,6 +376,7 @@ export const AlmacenFumigacionesTab = ({ onStatsUpdate }: AlmacenFumigacionesTab
           </CardContent>
         </Card>
       </Tabs>
+      )}
 
       {/* Dialog para editar fecha */}
       <Dialog open={!!editingProducto} onOpenChange={() => setEditingProducto(null)}>

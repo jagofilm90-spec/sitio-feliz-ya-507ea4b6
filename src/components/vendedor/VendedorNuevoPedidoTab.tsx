@@ -23,6 +23,7 @@ import { SolicitudDescuentoDialog } from "./SolicitudDescuentoDialog";
 import { DatosPedidoPrint } from "@/components/pedidos/PedidoPrintTemplate";
 import { getDisplayName } from "@/lib/productUtils";
 import type { Cliente, Sucursal, Producto, LineaPedido, TotalesCalculados } from "./pedido-wizard/types";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 
 interface Props {
@@ -1064,6 +1065,10 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
 
   return (
     <div className={cn("mx-auto space-y-4", step === 2 ? "px-2" : "max-w-4xl p-4")}>
+      <PageHeader
+        title="Nuevo pedido."
+        lead="Captura rápida de orden"
+      />
 
       {/* Step Indicator */}
       <StepIndicator

@@ -26,6 +26,7 @@ import { VendedorEnRutaTab } from "./VendedorEnRutaTab";
 import { EditarPedidoRechazadoDialog } from "./EditarPedidoRechazadoDialog";
 import { EditarPedidoPendienteDialog } from "./EditarPedidoPendienteDialog";
 import { AlertCircle, Edit2, Pencil } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 interface PedidoDetalle {
   id: string;
@@ -405,32 +406,16 @@ export function VendedorPedidosTab({ onDashboardRefresh }: { onDashboardRefresh?
 
   return (
     <div className="space-y-4">
+      <PageHeader
+        title="Mis pedidos."
+        lead="Seguimiento de órdenes en curso"
+      />
       {/* Resumen rápido */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <Card>
-          <CardContent className="p-3 flex items-center gap-2.5">
-            <div className="p-1.5 rounded-full bg-blue-100"><Package className="h-3.5 w-3.5 text-blue-600" /></div>
-            <div><p className="text-lg font-bold">{pedidosListos.length}</p><p className="text-[10px] text-muted-foreground">Por entregar</p></div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-3 flex items-center gap-2.5">
-            <div className="p-1.5 rounded-full bg-indigo-100"><Truck className="h-3.5 w-3.5 text-indigo-600" /></div>
-            <div><p className="text-lg font-bold">{enRuta.length}</p><p className="text-[10px] text-muted-foreground">En ruta</p></div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-3 flex items-center gap-2.5">
-            <div className="p-1.5 rounded-full bg-amber-100"><CreditCard className="h-3.5 w-3.5 text-amber-600" /></div>
-            <div><p className="text-lg font-bold">{porCobrar.length}</p><p className="text-[10px] text-muted-foreground">Por cobrar</p></div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-3 flex items-center gap-2.5">
-            <div className="p-1.5 rounded-full bg-green-100"><DollarSign className="h-3.5 w-3.5 text-green-600" /></div>
-            <div><p className="text-lg font-bold">{formatCurrency(montoporCobrar)}</p><p className="text-[10px] text-muted-foreground">Monto por cobrar</p></div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-4"><p className="font-serif text-[28px] font-medium tabular-nums text-ink-900 leading-none">{pedidosListos.length}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Por Entregar</p></CardContent></Card>
+        <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-4"><p className="font-serif text-[28px] font-medium tabular-nums text-ink-900 leading-none">{enRuta.length}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">En Ruta</p></CardContent></Card>
+        <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-4"><p className="font-serif text-[28px] font-medium tabular-nums text-ink-900 leading-none">{porCobrar.length}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Por Cobrar</p></CardContent></Card>
+        <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-4"><p className="font-serif text-[28px] font-medium tabular-nums text-ink-900 leading-none">{formatCurrency(montoporCobrar)}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Monto por Cobrar</p></CardContent></Card>
       </div>
 
       <Tabs defaultValue={pedidosPorAutorizar.length > 0 ? "por_autorizar" : "pedidos"}>

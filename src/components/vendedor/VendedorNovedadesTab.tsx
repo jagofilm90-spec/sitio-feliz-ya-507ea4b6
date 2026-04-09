@@ -6,15 +6,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { 
-  Package, 
-  TrendingUp, 
-  TrendingDown, 
-  ArrowRight, 
+import {
+  Package,
+  TrendingUp,
+  TrendingDown,
+  ArrowRight,
   Ban,
-  Sparkles,
   CheckCircle2
 } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 interface ProductoNuevo {
   id: string;
@@ -164,13 +164,14 @@ export function VendedorNovedadesTab() {
 
   return (
     <div className="space-y-6">
+      <PageHeader
+        title="Novedades."
+        lead="Cambios de precio y productos nuevos"
+      />
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Sparkles className="h-5 w-5 text-primary" />
-          </div>
           <div>
-            <h2 className="text-lg font-semibold">Novedades en Productos</h2>
+            <h2 className="text-lg font-semibold">Últimas 48 horas</h2>
             <p className="text-sm text-muted-foreground">Cambios en las últimas 48 horas</p>
           </div>
         </div>

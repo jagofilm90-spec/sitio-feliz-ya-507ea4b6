@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency } from "@/lib/utils";
 import { Phone, ShoppingCart, Building2, Clock, TrendingDown, Star, Package } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 interface ClienteInactivo {
   id: string;
@@ -196,13 +197,10 @@ export function VendedorAnalisisClientesTab({ onNavigateNuevoPedido }: Props) {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold flex items-center gap-2">
-          <TrendingDown className="h-5 w-5 text-primary" />
-          Análisis de Clientes
-        </h2>
-        <p className="text-sm text-muted-foreground">Inteligencia comercial para incrementar ventas</p>
-      </div>
+      <PageHeader
+        title="Análisis."
+        lead="Métricas y tendencias de venta"
+      />
 
       <Tabs defaultValue="inactivos">
         <TabsList className="grid w-full grid-cols-2">

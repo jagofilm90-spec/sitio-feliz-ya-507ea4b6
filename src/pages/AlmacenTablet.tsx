@@ -343,24 +343,8 @@ const AlmacenTablet = () => {
         
         {/* Contenido Principal */}
         <main className="flex-1 p-4 md:p-6 pb-44 md:pb-6">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              {/* Removed SidebarTrigger - sidebar is always visible */}
-              <div>
-                <div className="flex items-center gap-3">
-                  <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-                    {getTabTitle()}
-                  </h1>
-                  <LiveIndicator size="md" className={showMobileNav ? "" : "hidden"} />
-                </div>
-                <p className="text-muted-foreground mt-1 text-lg flex items-center gap-2">
-                  <Calendar className="w-5 h-5" />
-                  {format(new Date(), "EEEE, d 'de' MMMM yyyy", { locale: es })}
-                </p>
-                <p className="text-xs italic text-muted-foreground/70 mt-0.5">"{COMPANY_DATA.slogan}"</p>
-              </div>
-            </div>
+          {/* Toolbar */}
+          <div className="flex items-center justify-end mb-6">
             <div className="flex items-center gap-3">
               {/* Indicador de bodega */}
               {detectandoBodega ? (
@@ -403,9 +387,6 @@ const AlmacenTablet = () => {
               </Button>
             </div>
           </div>
-
-          {/* Stats cards según tab activo */}
-          {renderStats()}
 
           {/* Contenido del tab */}
           {renderTabContent()}

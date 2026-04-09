@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { Progress } from "@/components/ui/progress";
 import {
   AlertDialog,
@@ -586,12 +587,12 @@ export const AlmacenRecepcionTab = ({ onStatsUpdate }: AlmacenRecepcionTabProps)
 
   return (
     <>
-      <Card>
+      <PageHeader
+        title="Recepción."
+        lead="Órdenes de compra pendientes de recibir"
+      />
+      <Card className="mt-4">
         <CardHeader className="pb-0">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Package className="w-5 h-5" />
-            Recepción de mercancía
-          </CardTitle>
           {/* Pestañas */}
           <div className="flex gap-1 mt-3 border-b border-border -mx-6 px-6">
             <button

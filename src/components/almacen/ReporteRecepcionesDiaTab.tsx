@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { PageHeader } from "@/components/layout/PageHeader";
 import {
   Table,
   TableBody,
@@ -331,6 +332,10 @@ export const ReporteRecepcionesDiaTab = () => {
 
   return (
     <div className="space-y-4">
+      <PageHeader
+        title="Reporte del día."
+        lead="Cierre operativo"
+      />
       {/* Header con controles */}
       <Card>
         <CardContent className="p-4">
@@ -385,51 +390,11 @@ export const ReporteRecepcionesDiaTab = () => {
       </Card>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-3 rounded-full bg-primary/10">
-              <Package className="w-6 h-6 text-primary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{stats.totalRecepciones}</p>
-              <p className="text-sm text-muted-foreground">Recepciones</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-3 rounded-full bg-blue-500/10">
-              <Clock className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{formatDuration(stats.tiempoPromedioMinutos)}</p>
-              <p className="text-sm text-muted-foreground">Tiempo Promedio</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-3 rounded-full bg-yellow-500/10">
-              <AlertTriangle className="w-6 h-6 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{stats.conDiferencias}</p>
-              <p className="text-sm text-muted-foreground">Con Diferencias</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-3 rounded-full bg-green-500/10">
-              <Users className="w-6 h-6 text-green-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{stats.personalActivo.length}</p>
-              <p className="text-sm text-muted-foreground">Personal Activo</p>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-4"><p className="font-serif text-[32px] font-medium tabular-nums text-ink-900 leading-none">{stats.totalRecepciones}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Recepciones</p></CardContent></Card>
+        <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-4"><p className="font-serif text-[32px] font-medium tabular-nums text-ink-900 leading-none">{formatDuration(stats.tiempoPromedioMinutos)}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Tiempo Promedio</p></CardContent></Card>
+        <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-4"><p className="font-serif text-[32px] font-medium tabular-nums text-crimson-600 leading-none">{stats.conDiferencias}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Con Diferencias</p></CardContent></Card>
+        <Card className="bg-white border border-ink-100 rounded-xl"><CardContent className="p-4"><p className="font-serif text-[32px] font-medium tabular-nums text-ink-900 leading-none">{stats.personalActivo.length}</p><p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">Personal Activo</p></CardContent></Card>
       </div>
 
       {/* Tabla de recepciones */}

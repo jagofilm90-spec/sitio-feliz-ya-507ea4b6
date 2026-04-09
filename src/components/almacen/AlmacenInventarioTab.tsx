@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageHeader } from "@/components/layout/PageHeader";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -194,6 +195,10 @@ export const AlmacenInventarioTab = () => {
 
   return (
     <div className="space-y-4">
+      <PageHeader
+        title="Inventario."
+        lead="Stock físico y movimientos"
+      />
       {/* Search, bodega filter and sort */}
       <div className="flex gap-4">
         <div className="relative flex-1">

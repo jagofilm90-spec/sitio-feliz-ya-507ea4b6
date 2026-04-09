@@ -14,6 +14,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis } from "recharts";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 interface VentaMensual {
   mes: string;
@@ -124,25 +125,22 @@ export function VendedorMisVentasTab({ onDashboardRefresh }: { onDashboardRefres
 
   return (
     <div className="space-y-6">
+      <PageHeader
+        title="Mis ventas."
+        lead="Histórico y performance del mes"
+      />
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: "Total vendido (año)", value: formatCurrency(stats.totalVentas), icon: DollarSign, bg: "bg-primary/10", fg: "text-primary" },
-          { label: "Pedidos activos", value: String(stats.totalPedidos), icon: Package, bg: "bg-secondary", fg: "text-secondary-foreground" },
-          { label: "Ticket promedio", value: formatCurrency(stats.ticketPromedio), icon: TrendingUp, bg: "bg-muted", fg: "text-foreground" },
-          { label: "Comisión (1%)", value: formatCurrency(stats.comisionEstimada), icon: Receipt, bg: "bg-primary/5", fg: "text-primary" },
+          { label: "Total vendido (año)", value: formatCurrency(stats.totalVentas) },
+          { label: "Pedidos activos", value: String(stats.totalPedidos) },
+          { label: "Ticket promedio", value: formatCurrency(stats.ticketPromedio) },
+          { label: "Comisión (1%)", value: formatCurrency(stats.comisionEstimada) },
         ].map((kpi, i) => (
-          <Card key={i} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className={`h-11 w-11 rounded-lg ${kpi.bg} flex items-center justify-center shrink-0`}>
-                  <kpi.icon className={`h-5 w-5 ${kpi.fg}`} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground leading-tight">{kpi.label}</p>
-                  <p className="text-lg font-bold leading-tight">{kpi.value}</p>
-                </div>
-              </div>
+          <Card key={i} className="bg-white border border-ink-100 rounded-xl">
+            <CardContent className="p-5">
+              <p className="font-serif text-[32px] font-medium tabular-nums text-ink-900 leading-none">{kpi.value}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-500 mt-2">{kpi.label}</p>
             </CardContent>
           </Card>
         ))}
