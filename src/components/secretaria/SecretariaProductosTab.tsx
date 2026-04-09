@@ -39,6 +39,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { MigracionProductosDialog } from "./MigracionProductosDialog";
 import { MigracionLoteDialog } from "./MigracionLoteDialog";
 import { getDisplayName, UNIDADES_SAT, UNIDADES_PRODUCTO } from "@/lib/productUtils";
+import { useCategorias } from "@/hooks/useCategorias";
 
 interface Producto {
   id: string;
@@ -200,11 +201,14 @@ export const SecretariaProductosTab = () => {
   // Save mutation
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
+      const matchedCat = categoriasCanon?.find(c => c.nombre === data.categoria);
+
       const productData = {
         codigo: data.codigo,
         nombre: data.nombre,
         marca: data.marca || null,
         categoria: data.categoria || null,
+        categoria_id: matchedCat?.id || null,
         especificaciones: data.especificaciones || null,
         contenido_empaque: data.contenido_empaque || null,
         unidad_sat: data.unidad_sat || null,
@@ -569,6 +573,23 @@ export const SecretariaProductosTab = () => {
                   onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
                   className={eInput}
                 />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="categoria" className={eLabel}>Categoría</Label>
+                <Select
+                  value={formData.categoria || ""}
+                  onValueChange={(v) => setFormData({ ...formData, categoria: v })}
+                >
+                  <SelectTrigger className={eSelect}>
+                    <SelectValue placeholder="Seleccionar categoría" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(categoriasCanon || []).map(cat => (
+                      <SelectItem key={cat.id} value={cat.nombre}>{cat.nombre}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
