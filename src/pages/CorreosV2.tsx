@@ -8,14 +8,15 @@ import { ContextPanel } from '@/components/correos-v2/ContextPanel';
 import { useEmailKeyboard } from '@/hooks/useEmailKeyboard';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { AlmasaLoading } from '@/components/brand/AlmasaLoading';
-import { ArrowLeft } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { ArrowLeft, PanelRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const CorreosV2 = () => {
   const [activeAccountId, setActiveAccountId] = useState('pedidos');
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showContext, setShowContext] = useState(false);
   const [mobileView, setMobileView] = useState<'list' | 'thread'>('list');
   const isMobile = useIsMobile();
 
@@ -156,8 +157,8 @@ const CorreosV2 = () => {
   // Desktop: 4-pane layout
   return (
     <Layout>
-      <div className="correos-grid-root overflow-hidden grid" style={{
-        height: 'calc(100vh - 64px)',
+      {/* -mx/-my counteract Layout <main> padding so correos fills the entire content area */}
+      <div className="-mx-6 sm:-mx-8 lg:-mx-12 -my-8 lg:-my-10 h-[calc(100%+4rem)] lg:h-[calc(100%+5rem)] overflow-hidden grid correos-grid-root" style={{
         gridTemplateColumns: '72px 380px 1fr 340px',
       }}>
         <style>{`
@@ -168,7 +169,6 @@ const CorreosV2 = () => {
             .correos-grid-root { grid-template-columns: 64px 340px 1fr 300px !important; }
           }
           @media (max-width: 1279px) {
-            .correos-grid-root > :nth-child(4) { display: none; }
             .correos-grid-root { grid-template-columns: 60px 300px 1fr !important; }
           }
         `}</style>
@@ -195,14 +195,30 @@ const CorreosV2 = () => {
           onNext={goNext}
           hasPrev={selectedIndex > 0}
           hasNext={selectedIndex < filteredEmails.length - 1}
+          onOpenContext={() => setShowContext(true)}
         />
 
-        {/* Pane 4 — Context */}
-        <ContextPanel
-          email={selectedEmail}
-          accountType={activeAccount.type}
-        />
+        {/* Pane 4 — Context (hidden <1280px, replaced by sheet) */}
+        <div className="hidden 2xl:block xl:block min-h-0">
+          <ContextPanel
+            email={selectedEmail}
+            accountType={activeAccount.type}
+          />
+        </div>
       </div>
+
+      {/* Context drawer for <1280px screens */}
+      <Sheet open={showContext} onOpenChange={setShowContext}>
+        <SheetContent side="right" className="w-[380px] p-0">
+          <SheetHeader className="sr-only">
+            <SheetTitle>Contexto</SheetTitle>
+          </SheetHeader>
+          <ContextPanel
+            email={selectedEmail}
+            accountType={activeAccount.type}
+          />
+        </SheetContent>
+      </Sheet>
 
       {/* Keyboard shortcuts modal */}
       <Dialog open={showShortcuts} onOpenChange={setShowShortcuts}>

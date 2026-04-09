@@ -81,9 +81,9 @@ export const EmailList = ({ emails, account, selectedEmailId, onSelectEmail }: E
   };
 
   return (
-    <div className="flex flex-col h-full min-h-0 border-r border-ink-100 bg-white">
-      {/* Header */}
-      <div className="px-7 pt-[26px] pb-4 border-b border-ink-100">
+    <div className="flex flex-col h-full min-h-0 border-r border-ink-100 bg-white overflow-hidden">
+      {/* Header — sticky top */}
+      <div className="shrink-0 px-7 pt-[26px] pb-4 border-b border-ink-100">
         <div className="flex items-center gap-2 mb-2">
           <span
             className={cn(
@@ -104,7 +104,7 @@ export const EmailList = ({ emails, account, selectedEmailId, onSelectEmail }: E
       </div>
 
       {/* Search */}
-      <div className="px-6 py-[14px] pb-[10px]">
+      <div className="shrink-0 px-6 py-[14px] pb-[10px]">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400" />
           <input
@@ -120,7 +120,7 @@ export const EmailList = ({ emails, account, selectedEmailId, onSelectEmail }: E
       </div>
 
       {/* Filter tabs */}
-      <div className="flex gap-1.5 px-6 pb-[14px] overflow-x-auto scrollbar-none">
+      <div className="shrink-0 flex gap-1.5 px-6 pb-[14px] overflow-x-auto scrollbar-none">
         {filterTabs.map(tab => (
           <button
             key={tab.value}

@@ -1,6 +1,6 @@
 import { MockEmail, mockClientContexts, mockSupplierContexts } from '@/lib/mock-emails';
 import { cn } from '@/lib/utils';
-import { Search, Lock, ExternalLink, AlertTriangle, Clock, TrendingDown } from 'lucide-react';
+import { Lock, ExternalLink, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface ContextPanelProps {
@@ -22,7 +22,7 @@ export const ContextPanel = ({ email, accountType }: ContextPanelProps) => {
 
   if (!email) {
     return (
-      <div className="h-full flex items-center justify-center border-l border-ink-100 bg-white px-8">
+      <div className="h-full flex items-center justify-center border-l border-ink-100 bg-white px-8 overflow-hidden">
         <div className="text-center">
           <p className="font-serif italic text-[18px] text-ink-400">
             El contexto aparecerá aquí.
@@ -246,9 +246,8 @@ export const ContextPanel = ({ email, accountType }: ContextPanelProps) => {
   return (
     <div className="h-full border-l border-ink-100 bg-white flex items-center justify-center">
       <div className="text-center px-8">
-        <Search className="w-12 h-12 text-ink-200 mx-auto mb-4" />
-        <h3 className="font-serif text-lg text-ink-700 mb-1">Sin contexto vinculado</h3>
-        <p className="text-xs text-ink-400 mb-6 leading-relaxed">
+        <p className="font-serif italic text-[18px] text-ink-400 mb-1">Sin contexto vinculado.</p>
+        <p className="text-[11px] text-ink-500 mb-6 leading-relaxed">
           No encontramos este remitente en tus clientes, proveedores ni contactos.
         </p>
         <div className="space-y-2">

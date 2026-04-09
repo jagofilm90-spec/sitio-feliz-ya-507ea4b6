@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Bold, Italic, List, Link as LinkIcon, Send, Save, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Bold, Italic, List, Link as LinkIcon, Send, Save, X, PanelRight } from 'lucide-react';
 import { MockEmail, MockAccount, toolbarActionsByAccount } from '@/lib/mock-emails';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -13,6 +13,7 @@ interface ThreadViewProps {
   onNext: () => void;
   hasPrev: boolean;
   hasNext: boolean;
+  onOpenContext?: () => void;
 }
 
 const attachmentIcons: Record<string, { emoji: string; color: string }> = {
@@ -33,7 +34,7 @@ const accountDotLabels: Record<string, { label: string; color: string }> = {
   general: { label: 'General', color: 'bg-ink-500' },
 };
 
-export const ThreadView = ({ email, account, onPrev, onNext, hasPrev, hasNext }: ThreadViewProps) => {
+export const ThreadView = ({ email, account, onPrev, onNext, hasPrev, hasNext, onOpenContext }: ThreadViewProps) => {
   const [composerOpen, setComposerOpen] = useState(false);
 
   if (!email) {
@@ -65,9 +66,9 @@ export const ThreadView = ({ email, account, onPrev, onNext, hasPrev, hasNext }:
   const initials = email.from.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
   return (
-    <div className="flex flex-col h-full min-h-0" style={{ background: '#fafaf7' }}>
+    <div className="flex flex-col h-full min-h-0 overflow-hidden" style={{ background: '#fafaf7' }}>
       {/* Toolbar */}
-      <div className="bg-white px-8 py-[14px] border-b border-ink-100 flex items-center gap-3">
+      <div className="shrink-0 bg-white px-8 py-[14px] border-b border-ink-100 flex items-center gap-3">
         {/* Context label */}
         <div className="flex items-center gap-1.5 mr-4">
           <span className={cn('w-[6px] h-[6px] rounded-full', dotLabel.color)} />
@@ -97,6 +98,17 @@ export const ThreadView = ({ email, account, onPrev, onNext, hasPrev, hasNext }:
             </button>
           ))}
         </div>
+
+        {/* Context drawer toggle (visible <1280px when context panel is hidden) */}
+        {onOpenContext && (
+          <button
+            onClick={onOpenContext}
+            className="2xl:hidden xl:hidden p-1.5 rounded text-ink-400 hover:text-ink-700 hover:bg-warm-50 transition"
+            title="Ver contexto"
+          >
+            <PanelRight className="w-4 h-4" />
+          </button>
+        )}
 
         {/* Navigation */}
         <div className="flex items-center gap-1">
