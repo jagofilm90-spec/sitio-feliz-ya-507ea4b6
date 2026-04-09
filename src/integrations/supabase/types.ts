@@ -284,6 +284,33 @@ export type Database = {
           },
         ]
       }
+      categorias_productos: {
+        Row: {
+          activo: boolean
+          created_at: string
+          id: string
+          nombre: string
+          orden: number
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          id?: string
+          nombre: string
+          orden?: number
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          id?: string
+          nombre?: string
+          orden?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       chofer_ubicaciones: {
         Row: {
           chofer_id: string
@@ -4396,6 +4423,7 @@ export type Database = {
           aplica_iva: boolean
           bloqueado_venta: boolean | null
           categoria: string | null
+          categoria_id: string | null
           codigo: string
           codigo_sat: string | null
           contenido_empaque: string | null
@@ -4435,6 +4463,7 @@ export type Database = {
           aplica_iva?: boolean
           bloqueado_venta?: boolean | null
           categoria?: string | null
+          categoria_id?: string | null
           codigo: string
           codigo_sat?: string | null
           contenido_empaque?: string | null
@@ -4474,6 +4503,7 @@ export type Database = {
           aplica_iva?: boolean
           bloqueado_venta?: boolean | null
           categoria?: string | null
+          categoria_id?: string | null
           codigo?: string
           codigo_sat?: string | null
           contenido_empaque?: string | null
@@ -4508,6 +4538,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "productos_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias_productos"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "productos_producto_base_id_fkey"
             columns: ["producto_base_id"]
@@ -6700,27 +6737,155 @@ export type Database = {
       }
       productos_stock_bajo: {
         Row: {
+          activo: boolean | null
+          aplica_ieps: boolean | null
+          aplica_iva: boolean | null
+          bloqueado_venta: boolean | null
+          categoria: string | null
+          categoria_id: string | null
           codigo: string | null
+          codigo_sat: string | null
+          contenido_empaque: string | null
+          costo_promedio_ponderado: number | null
+          created_at: string | null
+          descripcion: string | null
+          descripcion_promocion: string | null
+          descuento_maximo: number | null
+          es_promocion: boolean | null
+          especificaciones: string | null
+          fecha_ultima_compra: string | null
+          fecha_ultima_fumigacion: string | null
           id: string | null
+          maneja_caducidad: boolean | null
+          marca: string | null
           nombre: string | null
+          peso_kg: number | null
+          piezas_por_unidad: number | null
+          precio_compra: number | null
+          precio_por_kilo: boolean | null
+          precio_venta: number | null
+          producto_base_id: string | null
+          proveedor_preferido_id: string | null
+          puede_tener_promocion: boolean | null
+          requiere_fumigacion: boolean | null
+          solo_uso_interno: boolean | null
           stock_actual: number | null
           stock_minimo: number | null
+          ultimo_costo_compra: number | null
+          unidad: Database["public"]["Enums"]["unit_type"] | null
+          unidad_sat: string | null
+          updated_at: string | null
         }
         Insert: {
+          activo?: boolean | null
+          aplica_ieps?: boolean | null
+          aplica_iva?: boolean | null
+          bloqueado_venta?: boolean | null
+          categoria?: string | null
+          categoria_id?: string | null
           codigo?: string | null
+          codigo_sat?: string | null
+          contenido_empaque?: string | null
+          costo_promedio_ponderado?: number | null
+          created_at?: string | null
+          descripcion?: string | null
+          descripcion_promocion?: string | null
+          descuento_maximo?: number | null
+          es_promocion?: boolean | null
+          especificaciones?: string | null
+          fecha_ultima_compra?: string | null
+          fecha_ultima_fumigacion?: string | null
           id?: string | null
+          maneja_caducidad?: boolean | null
+          marca?: string | null
           nombre?: string | null
+          peso_kg?: number | null
+          piezas_por_unidad?: number | null
+          precio_compra?: number | null
+          precio_por_kilo?: boolean | null
+          precio_venta?: number | null
+          producto_base_id?: string | null
+          proveedor_preferido_id?: string | null
+          puede_tener_promocion?: boolean | null
+          requiere_fumigacion?: boolean | null
+          solo_uso_interno?: boolean | null
           stock_actual?: number | null
           stock_minimo?: number | null
+          ultimo_costo_compra?: number | null
+          unidad?: Database["public"]["Enums"]["unit_type"] | null
+          unidad_sat?: string | null
+          updated_at?: string | null
         }
         Update: {
+          activo?: boolean | null
+          aplica_ieps?: boolean | null
+          aplica_iva?: boolean | null
+          bloqueado_venta?: boolean | null
+          categoria?: string | null
+          categoria_id?: string | null
           codigo?: string | null
+          codigo_sat?: string | null
+          contenido_empaque?: string | null
+          costo_promedio_ponderado?: number | null
+          created_at?: string | null
+          descripcion?: string | null
+          descripcion_promocion?: string | null
+          descuento_maximo?: number | null
+          es_promocion?: boolean | null
+          especificaciones?: string | null
+          fecha_ultima_compra?: string | null
+          fecha_ultima_fumigacion?: string | null
           id?: string | null
+          maneja_caducidad?: boolean | null
+          marca?: string | null
           nombre?: string | null
+          peso_kg?: number | null
+          piezas_por_unidad?: number | null
+          precio_compra?: number | null
+          precio_por_kilo?: boolean | null
+          precio_venta?: number | null
+          producto_base_id?: string | null
+          proveedor_preferido_id?: string | null
+          puede_tener_promocion?: boolean | null
+          requiere_fumigacion?: boolean | null
+          solo_uso_interno?: boolean | null
           stock_actual?: number | null
           stock_minimo?: number | null
+          ultimo_costo_compra?: number | null
+          unidad?: Database["public"]["Enums"]["unit_type"] | null
+          unidad_sat?: string | null
+          updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "productos_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias_productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "productos_producto_base_id_fkey"
+            columns: ["producto_base_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "productos_producto_base_id_fkey"
+            columns: ["producto_base_id"]
+            isOneToOne: false
+            referencedRelation: "productos_stock_bajo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "productos_proveedor_preferido_id_fkey"
+            columns: ["proveedor_preferido_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles_chat: {
         Row: {
