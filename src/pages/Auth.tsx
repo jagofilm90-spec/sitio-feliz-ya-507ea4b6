@@ -2,11 +2,10 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { AlmasaLogoBoot } from "@/components/brand/AlmasaLogoBoot";
+import { cn } from "@/lib/utils";
 
 const colors = ["#E24B4A", "#D85A30", "#BA7517", "#639922", "#1D9E75", "#378ADD", "#7F77DD", "#D4537E"];
 const getColor = (n: string) => colors[n.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % colors.length];
@@ -22,6 +21,7 @@ const Auth = () => {
   const [userFoto, setUserFoto] = useState<string | null>(null);
   const [showReset, setShowReset] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  const [animate, setAnimate] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -76,7 +76,6 @@ const Auth = () => {
       setUserPuesto(info?.puesto || "");
       setUserFoto(info?.foto_url || null);
 
-      // Fallback: if Edge Function didn't return a photo, try querying empleados directly
       if (!info?.foto_url) {
         const { data: emp } = await supabase
           .from("empleados")
@@ -86,7 +85,6 @@ const Auth = () => {
         if (emp?.foto_url) setUserFoto(emp.foto_url);
       }
     } catch {
-      // Edge Function failed entirely — try direct DB lookup
       try {
         const { data: emp } = await supabase
           .from("empleados")
@@ -105,7 +103,9 @@ const Auth = () => {
       }
     }
     setLoading(false);
+    setAnimate(false);
     setStep(2);
+    requestAnimationFrame(() => setAnimate(true));
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -130,237 +130,300 @@ const Auth = () => {
     setStep(1); setPassword(""); setUserFoto(null); setUserName(""); setUserPuesto(""); setShowReset(false);
   };
 
+  /* ── shared input style: border-bottom only ── */
+  const inputClass = cn(
+    "w-full bg-transparent px-0 py-3 text-[16px] text-ink-900 placeholder:text-ink-300",
+    "border-0 border-b border-ink-200 rounded-none outline-none",
+    "focus:border-b-[1.5px] focus:border-crimson-500 transition-colors duration-200",
+    "font-['Inter_Tight',sans-serif]"
+  );
+
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-b from-background to-muted p-4">
-      <div className="w-full max-w-sm" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        {/* Branding */}
-        <div className="text-center">
-          <AlmasaLogoBoot size={130} className="almasa-logo-boot mx-auto mb-4" />
-          <h1 className="boot-wordmark text-center"
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-white p-4">
+      {/* ── Branding header ── */}
+      <div className="text-center">
+        <AlmasaLogoBoot size={130} className="almasa-logo-boot mx-auto mb-4" />
+        <h1
+          className="text-center"
+          style={{
+            fontFamily: "'Cormorant Garamond', Georgia, serif",
+            fontSize: '26px',
+            fontWeight: 600,
+            color: '#c41e3a',
+            letterSpacing: '0.06em',
+            lineHeight: 1,
+          }}
+        >
+          ALMASA<span style={{ fontStyle: 'italic', fontWeight: 400, fontSize: '0.75em', marginLeft: '0.05em' }}>·OS</span>
+        </h1>
+        <p
+          className="text-center"
+          style={{
+            fontFamily: "'Inter Tight', sans-serif",
+            fontSize: '11px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.22em',
+            color: '#6a6a6a',
+            fontWeight: 500,
+            marginTop: '12px',
+          }}
+        >
+          Sistema operativo · Casa fundada en 1904
+        </p>
+      </div>
+
+      {/* ── Form area — no card, no border, no shadow ── */}
+      <div className="w-full max-w-[360px] mt-16">
+
+        {/* ══════ STEP 1: Email ══════ */}
+        {step === 1 && (
+          <div>
+            <label
+              className="block mb-2"
+              style={{
+                fontFamily: "'Inter Tight', sans-serif",
+                fontSize: '10px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+                color: '#6a6a6a',
+                fontWeight: 600,
+              }}
+            >
+              Correo electrónico
+            </label>
+            <input
+              type="email"
+              placeholder="tu@empresa.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleContinue(); }}
+              autoFocus
+              className={inputClass}
+            />
+            <button
+              onClick={handleContinue}
+              disabled={loading || !email}
+              className="w-full mt-7 py-3 rounded-lg text-white text-[14px] font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              style={{
+                fontFamily: "'Inter Tight', sans-serif",
+                background: '#c41e3a',
+                letterSpacing: '0.01em',
+              }}
+              onMouseEnter={(e) => { if (!loading && email) (e.target as HTMLButtonElement).style.background = '#a8182f'; }}
+              onMouseLeave={(e) => { (e.target as HTMLButtonElement).style.background = '#c41e3a'; }}
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : "Continuar"}
+            </button>
+            <p
+              className="text-center mt-5"
+              style={{
+                fontFamily: "'Inter Tight', sans-serif",
+                fontSize: '12px',
+                color: '#8a8a87',
+              }}
+            >
+              ¿Necesitas acceso?{' '}
+              <span className="text-[#c41e3a] font-medium cursor-pointer hover:underline">
+                Contacta al administrador
+              </span>
+            </p>
+          </div>
+        )}
+
+        {/* ══════ STEP 2: Photo + Name + Password ══════ */}
+        {step === 2 && !showReset && (
+          <form
+            onSubmit={handleLogin}
+            className={cn(
+              "transition-all duration-300 ease-out",
+              animate ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+            )}
+          >
+            {/* Avatar */}
+            <div className="flex justify-center">
+              {userFoto ? (
+                <img
+                  src={userFoto}
+                  className="w-24 h-24 sm:w-24 sm:h-24 rounded-full object-cover"
+                  style={{
+                    border: '3px solid white',
+                    boxShadow: '0 4px 12px rgba(15,14,13,0.08)',
+                  }}
+                />
+              ) : (
+                <div
+                  className="w-24 h-24 sm:w-24 sm:h-24 rounded-full flex items-center justify-center text-white text-3xl font-bold"
+                  style={{
+                    backgroundColor: getColor(userName || email),
+                    border: '3px solid white',
+                    boxShadow: '0 4px 12px rgba(15,14,13,0.08)',
+                  }}
+                >
+                  {getInitials(userName || email)}
+                </div>
+              )}
+            </div>
+
+            {/* Greeting */}
+            <p
+              className="text-center mt-6 italic"
+              style={{
+                fontFamily: "'Inter Tight', sans-serif",
+                fontSize: '13px',
+                color: '#6a6a6a',
+              }}
+            >
+              Bienvenido de vuelta,
+            </p>
+
+            {/* Name — editorial Cormorant */}
+            <h2
+              className="text-center mt-1"
               style={{
                 fontFamily: "'Cormorant Garamond', Georgia, serif",
-                fontSize: '26px',
+                fontSize: '32px',
+                fontWeight: 500,
+                color: '#1a1a1a',
+                lineHeight: 1.1,
+                letterSpacing: '-0.01em',
+              }}
+            >
+              {userName}
+            </h2>
+
+            {/* Role */}
+            {userPuesto && (
+              <p
+                className="text-center mt-1.5"
+                style={{
+                  fontFamily: "'Inter Tight', sans-serif",
+                  fontSize: '13px',
+                  color: '#6a6a6a',
+                }}
+              >
+                {userPuesto}
+              </p>
+            )}
+
+            {/* Separator */}
+            <div className="flex justify-center mt-8">
+              <div className="w-10 h-px bg-ink-200" />
+            </div>
+
+            {/* Password label */}
+            <label
+              className="block mt-8 mb-2"
+              style={{
+                fontFamily: "'Inter Tight', sans-serif",
+                fontSize: '10px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+                color: '#6a6a6a',
                 fontWeight: 600,
-                color: '#c41e3a',
-                letterSpacing: '0.06em',
-                lineHeight: 1
-              }}>
-            ALMASA<span style={{
-              fontStyle: 'italic',
-              fontWeight: 400,
-              fontSize: '0.75em',
-              marginLeft: '0.05em'
-            }}>·OS</span>
-          </h1>
-          <p className="boot-tagline text-center"
-             style={{
-               fontFamily: "'Inter Tight', sans-serif",
-               fontSize: '11px',
-               textTransform: 'uppercase',
-               letterSpacing: '0.22em',
-               color: '#6a6a6a',
-               fontWeight: 500,
-               marginTop: '12px',
-               marginBottom: '40px'
-             }}>
-            Sistema operativo · Casa fundada en 1904
-          </p>
-        </div>
+              }}
+            >
+              Contraseña
+            </label>
 
-        <div className="boot-card"
-             style={{
-               background: 'hsl(var(--card))',
-               border: '0.5px solid #e8e8e6',
-               borderRadius: '12px',
-               padding: '32px 36px',
-               width: '100%',
-               maxWidth: '400px',
-               margin: '0 auto',
-               boxShadow: '0 1px 3px rgba(10,10,10,0.04), 0 12px 32px rgba(10,10,10,0.06)'
-             }}>
-            {step === 1 && (
-              <div>
-                <label style={{
-                  display: 'block',
-                  fontFamily: "'Inter Tight', sans-serif",
-                  fontSize: '11px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.16em',
-                  color: '#8a8a87',
-                  fontWeight: 500,
-                  marginBottom: '8px'
-                }}>
-                  Correo electrónico
-                </label>
-                <input
-                  type="email"
-                  placeholder="tu@empresa.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") handleContinue(); }}
-                  autoFocus
-                  className="auth-input"
-                  style={{
-                    width: '100%',
-                    padding: '12px 14px',
-                    background: '#faf9f6',
-                    border: '1px solid #e8e8e6',
-                    borderRadius: '8px',
-                    fontFamily: "'Inter Tight', sans-serif",
-                    fontSize: '14px',
-                    color: 'hsl(var(--foreground))',
-                    outline: 'none',
-                    transition: 'all 0.18s ease'
-                  }}
-                />
-                <button
-                  onClick={handleContinue}
-                  disabled={loading || !email}
-                  className="auth-button disabled:opacity-60 disabled:cursor-not-allowed"
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    background: '#c41e3a',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontFamily: "'Inter Tight', sans-serif",
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    cursor: loading || !email ? 'not-allowed' : 'pointer',
-                    letterSpacing: '0.01em',
-                    marginTop: '24px',
-                    boxShadow: '0 1px 2px rgba(10, 10, 10, 0.08)',
-                    transition: 'all 0.18s ease'
-                  }}
-                >
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : "Continuar"}
-                </button>
-                <p style={{
-                  textAlign: 'center',
-                  marginTop: '20px',
-                  fontSize: '12px',
-                  color: '#8a8a87',
-                  fontFamily: "'Inter Tight', sans-serif",
-                  fontWeight: 400
-                }}>
-                  ¿Necesitas acceso? <span style={{ color: '#c41e3a', fontWeight: 500, cursor: 'pointer' }}>Contacta al administrador</span>
-                </p>
-              </div>
-            )}
+            {/* Password input */}
+            <input
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoFocus
+              className={inputClass}
+            />
 
-            {step === 2 && !showReset && (
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="text-center mb-4">
-                  {userFoto ? (
-                    <img src={userFoto} className="w-20 h-20 rounded-full object-cover mx-auto mb-3" />
-                  ) : (
-                    <div className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto mb-3" style={{ backgroundColor: getColor(userName || email) }}>
-                      {getInitials(userName || email)}
-                    </div>
-                  )}
-                  <p className="text-lg font-semibold text-muted-foreground">Bienvenido</p>
-                  <p className="font-bold text-xl">{userName}</p>
-                  {userPuesto && <p className="text-sm text-muted-foreground">{userPuesto}</p>}
-                </div>
-                <label style={{
-                  display: 'block',
-                  fontFamily: "'Inter Tight', sans-serif",
-                  fontSize: '11px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.16em',
-                  color: '#8a8a87',
-                  fontWeight: 500,
-                  marginBottom: '8px'
-                }}>
-                  Contraseña
-                </label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoFocus
-                  className="auth-input"
-                  style={{
-                    width: '100%',
-                    padding: '12px 14px',
-                    background: '#faf9f6',
-                    border: '1px solid #e8e8e6',
-                    borderRadius: '8px',
-                    fontFamily: "'Inter Tight', sans-serif",
-                    fontSize: '14px',
-                    color: 'hsl(var(--foreground))',
-                    outline: 'none',
-                    transition: 'all 0.18s ease'
-                  }}
-                />
-                <button type="submit" disabled={loading}
-                  className="auth-button disabled:opacity-60 disabled:cursor-not-allowed"
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    background: '#c41e3a',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontFamily: "'Inter Tight', sans-serif",
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    cursor: loading ? 'not-allowed' : 'pointer',
-                    letterSpacing: '0.01em',
-                    marginTop: '24px',
-                    boxShadow: '0 1px 2px rgba(10, 10, 10, 0.08)',
-                    transition: 'all 0.18s ease'
-                  }}
-                >
-                  {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin inline" />Iniciando sesión...</> : "Iniciar Sesión"}
-                </button>
-                <div className="flex justify-between text-xs">
-                  <button type="button" className="text-muted-foreground hover:text-foreground flex items-center gap-1" onClick={handleBack}>
-                    <ArrowLeft className="h-3 w-3" /> Cambiar cuenta
-                  </button>
-                  <button type="button" className="text-primary hover:underline" onClick={() => setShowReset(true)}>
-                    ¿Olvidaste tu contraseña?
-                  </button>
-                </div>
-              </form>
-            )}
+            {/* Submit button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full mt-7 py-3 rounded-lg text-white text-[14px] font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              style={{
+                fontFamily: "'Inter Tight', sans-serif",
+                background: '#c41e3a',
+                letterSpacing: '0.01em',
+              }}
+              onMouseEnter={(e) => { if (!loading) (e.target as HTMLButtonElement).style.background = '#a8182f'; }}
+              onMouseLeave={(e) => { (e.target as HTMLButtonElement).style.background = '#c41e3a'; }}
+            >
+              {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin inline" />Iniciando sesión...</> : "Iniciar sesión"}
+            </button>
 
-            {step === 2 && showReset && (
-              <div className="space-y-4">
-                <p className="text-sm font-medium">Recuperar contraseña</p>
-                <p className="text-xs text-muted-foreground">Enviaremos un enlace a <strong>{email}</strong></p>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="flex-1" onClick={() => setShowReset(false)}>Cancelar</Button>
-                  <button className="flex-1 disabled:opacity-60" disabled={resetLoading}
-                    style={{
-                      padding: '8px 16px',
-                      background: '#c41e3a',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '6px',
-                      fontFamily: "'Inter Tight', sans-serif",
-                      fontSize: '14px',
-                      fontWeight: 500,
-                      cursor: resetLoading ? 'not-allowed' : 'pointer',
-                      flex: 1
-                    }}
-                    onClick={async () => {
-                    setResetLoading(true);
-                    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + "/reset-password" });
-                    setResetLoading(false);
-                    if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
-                    else { toast({ title: "Enlace enviado", description: "Revisa tu correo." }); setShowReset(false); }
-                  }}>
-                    {resetLoading ? "Enviando..." : "Enviar enlace"}
-                  </button>
-                </div>
-              </div>
+            {/* Bottom links */}
+            <div className="flex justify-between mt-5">
+              <button
+                type="button"
+                onClick={handleBack}
+                className="flex items-center gap-1 text-[12px] text-ink-500 hover:text-crimson-500 transition-colors"
+                style={{ fontFamily: "'Inter Tight', sans-serif" }}
+              >
+                <ArrowLeft className="h-3 w-3" /> Cambiar cuenta
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowReset(true)}
+                className="text-[12px] text-[#c41e3a] hover:text-[#a8182f] transition-colors"
+                style={{ fontFamily: "'Inter Tight', sans-serif" }}
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* ══════ STEP 2: Reset password ══════ */}
+        {step === 2 && showReset && (
+          <div
+            className={cn(
+              "transition-all duration-300 ease-out",
+              animate ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
             )}
+          >
+            <p className="font-serif italic text-[18px] text-ink-400 mb-2">Recuperar contraseña</p>
+            <p className="text-[12px] text-ink-500 mb-6" style={{ fontFamily: "'Inter Tight', sans-serif" }}>
+              Enviaremos un enlace de recuperación a <strong className="text-ink-700">{email}</strong>
+            </p>
+            <div className="flex gap-3">
+              <Button variant="outline" size="sm" className="flex-1" onClick={() => setShowReset(false)}>
+                Cancelar
+              </Button>
+              <button
+                className="flex-1 py-2 rounded-lg text-white text-[14px] font-medium disabled:opacity-50"
+                disabled={resetLoading}
+                style={{
+                  fontFamily: "'Inter Tight', sans-serif",
+                  background: '#c41e3a',
+                  cursor: resetLoading ? 'not-allowed' : 'pointer',
+                }}
+                onClick={async () => {
+                  setResetLoading(true);
+                  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + "/reset-password" });
+                  setResetLoading(false);
+                  if (error) toast({ title: "Error", description: error.message, variant: "destructive" });
+                  else { toast({ title: "Enlace enviado", description: "Revisa tu correo." }); setShowReset(false); }
+                }}
+              >
+                {resetLoading ? "Enviando..." : "Enviar enlace"}
+              </button>
+            </div>
           </div>
-
+        )}
       </div>
+
+      {/* ── Footer ── */}
+      <p
+        className="fixed bottom-6 left-0 right-0 text-center"
+        style={{
+          fontFamily: "'Inter Tight', sans-serif",
+          fontSize: '10px',
+          color: '#a0a09e',
+          letterSpacing: '0.05em',
+        }}
+      >
+        ALMASA·OS · Phase 1 · Desde 1904
+      </p>
     </div>
   );
 };
