@@ -8,6 +8,7 @@ import {
   Server,
   Calendar,
   CheckCircle2,
+  Info,
   Bell,
   AlertTriangle
 } from "lucide-react";
