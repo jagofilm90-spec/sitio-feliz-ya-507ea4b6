@@ -63,6 +63,7 @@ const Productos = () => {
   const isMobile = useIsMobile();
   const { isAdmin, isSecretaria, isContadora } = useUserRoles();
   const canSeeCosts = isAdmin || isSecretaria || isContadora;
+  const { data: categoriasCanon } = useCategorias();
 
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
@@ -417,7 +418,6 @@ const Productos = () => {
   };
 
    // ─── Derived filter values ───
-  const { data: categoriasCanon } = useCategorias();
   const marcasUnicas = [...new Set(productos.filter(p => p.activo !== false && p.marca).map(p => p.marca))].sort();
   const categoriasUnicas = categoriasCanon?.map(c => c.nombre) || [];
 
