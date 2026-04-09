@@ -15,6 +15,7 @@ import {
 import { LotesDesglose } from "@/components/productos/LotesDesglose";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CategoriaProductoMobile } from "@/components/inventario/CategoriaProductoMobile";
+import { useCategorias } from "@/hooks/useCategorias";
 
 interface Producto {
   id: string;

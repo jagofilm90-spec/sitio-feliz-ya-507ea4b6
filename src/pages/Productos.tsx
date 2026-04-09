@@ -39,6 +39,7 @@ import { UNIDADES_SAT, UNIDADES_PRODUCTO, UNIDADES_LEGACY, getDisplayName } from
 import { useIsMobile } from "@/hooks/use-mobile";
 import ProductoCardMobile from "@/components/productos/ProductoCardMobile";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import { useCategorias } from "@/hooks/useCategorias";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(value);
