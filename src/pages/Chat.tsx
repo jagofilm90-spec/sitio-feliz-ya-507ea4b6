@@ -148,10 +148,17 @@ const Chat = () => {
 
   // Cargar conversaciones solo cuando currentUserId esté disponible
   useEffect(() => {
-    if (currentUserId) {
-      loadConversaciones();
-      setupPresence();
-    }
+    if (!currentUserId) return;
+    loadConversaciones();
+
+    let presenceCleanup: (() => void) | undefined;
+    setupPresence().then((fn) => {
+      presenceCleanup = fn;
+    });
+
+    return () => {
+      presenceCleanup?.();
+    };
   }, [currentUserId]);
 
   const setupPresence = async () => {

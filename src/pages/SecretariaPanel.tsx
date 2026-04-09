@@ -42,7 +42,7 @@ import { SecretariaPedidosTab } from "@/components/secretaria/SecretariaPedidosT
 import Compras from "@/pages/Compras";
 import { SecretariaInventarioTab } from "@/components/secretaria/SecretariaInventarioTab";
 import { SecretariaFacturacionTab } from "@/components/secretaria/SecretariaFacturacionTab";
-import { SecretariaChatTab } from "@/components/secretaria/SecretariaChatTab";
+import { MessageSquare } from "lucide-react";
 import { SecretariaCorreosTab } from "@/components/secretaria/SecretariaCorreosTab";
 import { SecretariaClientesTab } from "@/components/secretaria/SecretariaClientesTab";
 import { SecretariaRutasTab } from "@/components/secretaria/SecretariaRutasTab";
@@ -193,7 +193,18 @@ const SecretariaPanel = () => {
       case "facturacion":
         return <SecretariaFacturacionTab />;
       case "chat":
-        return <SecretariaChatTab />;
+        return (
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <MessageSquare className="h-12 w-12 text-ink-300 mb-4" />
+            <h3 className="font-serif text-2xl text-ink-900 mb-2">Chat completo en su propia vista.</h3>
+            <p className="text-ink-500 mb-6 max-w-md">
+              Accede a todas las conversaciones, archivos y notificaciones desde el chat central.
+            </p>
+            <Button onClick={() => navigate("/chat")} className="bg-crimson-500 text-white hover:bg-crimson-600">
+              Abrir chat
+            </Button>
+          </div>
+        );
       case "correos":
         return <SecretariaCorreosTab />;
       case "clientes":
