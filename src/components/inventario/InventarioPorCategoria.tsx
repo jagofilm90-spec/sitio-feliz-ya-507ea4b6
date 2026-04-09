@@ -15,6 +15,7 @@ import {
 import { LotesDesglose } from "@/components/productos/LotesDesglose";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { CategoriaProductoMobile } from "@/components/inventario/CategoriaProductoMobile";
+import { useCategorias } from "@/hooks/useCategorias";
 
 interface Producto {
   id: string;
@@ -37,6 +38,7 @@ interface CategoriaAgrupada {
 
 export const InventarioPorCategoria = () => {
   const isMobile = useIsMobile();
+  const { data: categoriasCanon } = useCategorias();
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");

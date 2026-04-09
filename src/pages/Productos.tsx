@@ -39,6 +39,7 @@ import { UNIDADES_SAT, UNIDADES_PRODUCTO, UNIDADES_LEGACY, getDisplayName } from
 import { useIsMobile } from "@/hooks/use-mobile";
 import ProductoCardMobile from "@/components/productos/ProductoCardMobile";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import { useCategorias } from "@/hooks/useCategorias";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(value);
@@ -62,6 +63,7 @@ const Productos = () => {
   const isMobile = useIsMobile();
   const { isAdmin, isSecretaria, isContadora } = useUserRoles();
   const canSeeCosts = isAdmin || isSecretaria || isContadora;
+  const { data: categoriasCanon } = useCategorias();
 
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
@@ -241,12 +243,16 @@ const Productos = () => {
       return false;
     }
 
+    // Resolve categoria_id from canonical categories
+    const matchedCat = categoriasCanon?.find(c => c.nombre === formData.categoria);
+
     const productData = {
       codigo: formData.codigo,
       codigo_sat: formData.codigo_sat || null,
       nombre: formData.nombre,
       marca: formData.marca || null,
       categoria: formData.categoria || null,
+      categoria_id: matchedCat?.id || null,
       especificaciones: formData.especificaciones || null,
       contenido_empaque: formData.contenido_empaque || null,
       unidad_sat: formData.unidad_sat || null,
@@ -411,9 +417,9 @@ const Productos = () => {
     });
   };
 
-  // ─── Derived filter values ───
+   // ─── Derived filter values ───
   const marcasUnicas = [...new Set(productos.filter(p => p.activo !== false && p.marca).map(p => p.marca))].sort();
-  const categoriasUnicas = [...new Set(productos.filter(p => p.activo !== false && p.categoria).map(p => p.categoria))].sort();
+  const categoriasUnicas = categoriasCanon?.map(c => c.nombre) || [];
 
   const filteredProductos = (() => {
     let filtered = productos.filter((p) => {
@@ -663,16 +669,19 @@ const Productos = () => {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="categoria">Categoría</Label>
-                        <Input
-                          id="categoria" value={formData.categoria}
-                          onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
-                          placeholder="Ej: Azúcar, Frijol, Aceite" list="categorias-existentes" spellCheck={true} lang="es-MX"
-                        />
-                        <datalist id="categorias-existentes">
-                          {[...new Set(productos.map(p => p.categoria).filter(Boolean))].sort().map(cat => (
-                            <option key={cat} value={cat} />
-                          ))}
-                        </datalist>
+                        <Select
+                          value={formData.categoria || ""}
+                          onValueChange={(value) => setFormData({ ...formData, categoria: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar categoría" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(categoriasCanon || []).map(cat => (
+                              <SelectItem key={cat.id} value={cat.nombre}>{cat.nombre}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
 
