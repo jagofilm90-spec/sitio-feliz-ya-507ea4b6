@@ -263,27 +263,6 @@
   --primary-foreground: 0 0% 100%;
 }
 
-.dark.high-contrast {
-  /* Backgrounds - Pure black */
-  --background: 0 0% 0%;
-  --foreground: 0 0% 100%;
-  
-  /* Cards */
-  --card: 0 0% 5%;
-  --card-foreground: 0 0% 100%;
-  
-  /* Borders - White for visibility */
-  --border: 0 0% 80%;
-  --input: 0 0% 80%;
-  
-  /* Muted */
-  --muted: 0 0% 10%;
-  --muted-foreground: 0 0% 85%;
-  
-  /* Primary - Brighter */
-  --primary: 352 100% 60%;
-  --primary-foreground: 0 0% 0%;
-}
 
 /* ============================================
    ERP TABLE DEFAULTS - Consistent readability
@@ -302,26 +281,6 @@
   @apply bg-muted/40;
 }
 
-/* Alternating rows in dark mode for readability */
-.dark .table-erp tbody tr:nth-child(even) {
-  @apply bg-muted/20;
-}
-
-/* ============================================
-   DARK MODE - Badge saturation boost
-   ============================================ */
-.dark .badge-status-ok {
-  @apply bg-emerald-600/90 text-emerald-50;
-}
-.dark .badge-status-warning {
-  @apply bg-amber-600/90 text-amber-50;
-}
-.dark .badge-status-critical {
-  @apply bg-orange-600/90 text-orange-50;
-}
-.dark .badge-status-error {
-  @apply bg-red-600/90 text-red-50;
-}
 
 /* Hide scrollbar for horizontal tabs */
 .scrollbar-hide {
