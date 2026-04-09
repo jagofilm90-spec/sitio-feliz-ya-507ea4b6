@@ -30,6 +30,7 @@ import {
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { formatCurrency } from "@/lib/utils";
+import { getCfdiStatusBadge } from "@/components/facturacion/shared/badges";
 
 interface Factura {
   id: string;
@@ -47,32 +48,7 @@ interface Factura {
   pedidos: { id: string; folio: string } | null;
 }
 
-const getStatusBadge = (factura: Factura) => {
-  if (factura.cfdi_uuid) {
-    return (
-      <Badge className="gap-1 bg-emerald-100 text-emerald-700">
-        <CheckCircle2 className="h-3 w-3" />
-        Timbrada
-      </Badge>
-    );
-  }
-
-  if (factura.status === "cancelada") {
-    return (
-      <Badge variant="destructive" className="gap-1">
-        <XCircle className="h-3 w-3" />
-        Cancelada
-      </Badge>
-    );
-  }
-
-  return (
-    <Badge variant="secondary" className="gap-1">
-      <Clock className="h-3 w-3" />
-      Pendiente
-    </Badge>
-  );
-};
+// CFDI status badge from shared utility — uses cfdi_estado (not cfdi_uuid)
 
 export const SecretariaFacturacionTab = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -131,7 +107,7 @@ export const SecretariaFacturacionTab = () => {
   const timbrarMutation = useMutation({
     mutationFn: async (facturaId: string) => {
       const response = await supabase.functions.invoke("timbrar-cfdi", {
-        body: { facturaId },
+        body: { factura_id: facturaId },
       });
 
       if (response.error) throw new Error(response.error.message);
@@ -308,7 +284,7 @@ export const SecretariaFacturacionTab = () => {
                       <TableCell className="hidden sm:table-cell text-sm">
                         {format(new Date(factura.fecha), "dd/MM/yy", { locale: es })}
                       </TableCell>
-                      <TableCell>{getStatusBadge(factura)}</TableCell>
+                      <TableCell>{getCfdiStatusBadge(factura.status)}</TableCell>
                       <TableCell className="text-right font-mono font-medium">
                         ${formatCurrency(factura.total)}
                       </TableCell>

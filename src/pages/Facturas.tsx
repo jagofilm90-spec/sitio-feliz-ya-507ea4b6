@@ -62,6 +62,7 @@ import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 import { NuevaFacturaDirectaDialog } from "@/components/facturas/NuevaFacturaDirectaDialog";
 import { SolicitudesAlmacenTab } from "@/components/facturas/SolicitudesAlmacenTab";
 import { useSolicitudesVenta } from "@/hooks/useSolicitudesVenta";
+import { getCfdiStatusBadge } from "@/components/facturacion/shared/badges";
 
 const FacturasContent = () => {
   const [facturas, setFacturas] = useState<any[]>([]);
@@ -222,22 +223,7 @@ const FacturasContent = () => {
     }
   };
 
-  const getCfdiStatusBadge = (factura: any) => {
-    const estado = factura.cfdi_estado;
-    
-    if (estado === 'timbrada') {
-      return <Badge className="bg-green-500 hover:bg-green-600"><CheckCircle className="h-3 w-3 mr-1" /> Timbrada</Badge>;
-    } else if (estado === 'cancelada') {
-      return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" /> Cancelada</Badge>;
-    } else if (estado === 'error') {
-      return (
-        <Badge variant="destructive" title={factura.cfdi_error}>
-          <AlertCircle className="h-3 w-3 mr-1" /> Error
-        </Badge>
-      );
-    }
-    return <Badge variant="outline">Sin timbrar</Badge>;
-  };
+  // CFDI status badge from shared utility
 
   const getPaymentStatusBadge = (factura: any) => {
     return (
@@ -345,7 +331,7 @@ const FacturasContent = () => {
                     <TableCell className="text-right font-sans font-semibold text-ink-900 tabular-nums lining-nums">
                       ${Number(factura.total).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                     </TableCell>
-                    <TableCell>{getCfdiStatusBadge(factura)}</TableCell>
+                    <TableCell>{getCfdiStatusBadge(factura.cfdi_estado, factura.cfdi_error)}</TableCell>
                     <TableCell>{getPaymentStatusBadge(factura)}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
