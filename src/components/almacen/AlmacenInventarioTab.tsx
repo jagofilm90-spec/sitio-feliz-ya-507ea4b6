@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { getDisplayName } from "@/lib/productUtils";
 import { cn } from "@/lib/utils";
+import { getCaducidadBadge, getStockStatusBadge } from "@/components/inventario/shared/badges";
 
 interface BodegaOption {
   id: string;
@@ -123,19 +124,7 @@ export const AlmacenInventarioTab = () => {
     return 0;
   });
 
-  const getStockBadge = (stockActual: number, stockMinimo: number) => {
-    if (stockActual <= 0) return <Badge variant="destructive">Sin stock</Badge>;
-    if (stockActual <= stockMinimo) return <Badge className="bg-yellow-500/20 text-yellow-700">Stock bajo</Badge>;
-    return <Badge className="bg-green-500/20 text-green-700">OK</Badge>;
-  };
-
-  const formatCaducidad = (fecha: string | null) => {
-    if (!fecha) return null;
-    const diffDays = Math.ceil((new Date(fecha).getTime() - Date.now()) / 86400000);
-    if (diffDays < 0) return <Badge variant="destructive">Vencido hace {Math.abs(diffDays)}d</Badge>;
-    if (diffDays <= 30) return <Badge className="bg-orange-500/20 text-orange-700">Vence en {diffDays}d</Badge>;
-    return <span className="text-muted-foreground text-sm">{new Date(fecha).toLocaleDateString("es-MX")}</span>;
-  };
+  // Badge utilities from shared module
 
   // Adjustment logic
   const openAjuste = (lote: Lote) => {
@@ -254,7 +243,7 @@ export const AlmacenInventarioTab = () => {
                     </div>
                     <div className="text-right">
                       <p className="text-2xl font-bold">{stockTotal}</p>
-                      {getStockBadge(stockTotal, producto.stock_minimo)}
+                      {getStockStatusBadge(stockTotal, producto.stock_minimo)}
                     </div>
                   </div>
                 </CardHeader>
@@ -268,7 +257,7 @@ export const AlmacenInventarioTab = () => {
                           {lote.bodega && <Badge variant="outline" className="text-xs">{lote.bodega.nombre}</Badge>}
                         </div>
                         <div className="flex items-center gap-2">
-                          {formatCaducidad(lote.fecha_caducidad)}
+                          {getCaducidadBadge(lote.fecha_caducidad)}
                           {canAdjust && (
                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Ajustar" onClick={() => openAjuste(lote)}>
                               <SlidersHorizontal className="h-4 w-4" />

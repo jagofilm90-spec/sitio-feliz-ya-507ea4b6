@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { getCaducidadBadge } from "@/components/inventario/shared/badges";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -134,20 +135,7 @@ export const SecretariaInventarioTab = () => {
   // Products with low stock
   const lowStockProducts = productos?.filter((p) => p.stock_actual <= p.stock_minimo) || [];
 
-  // Check if caducity is near (30 days)
-  const getCaducidadBadge = (fecha: string | null) => {
-    if (!fecha) return null;
-    const fechaCad = new Date(fecha);
-    const hoy = new Date();
-    const dias = Math.ceil((fechaCad.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
-
-    if (dias < 0) {
-      return <Badge variant="destructive">Vencido</Badge>;
-    } else if (dias <= 30) {
-      return <Badge variant="outline" className="border-orange-500 text-orange-600">Vence en {dias} días</Badge>;
-    }
-    return <Badge variant="secondary">{format(fechaCad, "dd/MM/yy")}</Badge>;
-  };
+  // Caducidad badge from shared utility
 
   const isLoading = loadingProductos || loadingLotes || loadingMovimientos;
 

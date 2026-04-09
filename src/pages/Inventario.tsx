@@ -49,6 +49,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, ArrowUp, ArrowDown, Minus, Package, List, AlertTriangle, Warehouse, Calendar, Boxes, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { getCaducidadBadge, getStockStatusBadge } from "@/components/inventario/shared/badges";
 import { NotificacionesSistema } from "@/components/NotificacionesSistema";
 import { InventarioPorCategoria } from "@/components/inventario/InventarioPorCategoria";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -487,22 +488,7 @@ const InventarioContent = () => {
   const [productosResumen, setProductosResumen] = useState<any[]>([]);
   const [searchProductos, setSearchProductos] = useState("");
 
-  // Helper para formato de caducidad
-  const getCaducidadBadge = (fechaCaducidad: string | null) => {
-    if (!fechaCaducidad) return null;
-    
-    const fecha = new Date(fechaCaducidad);
-    const hoy = new Date();
-    const diasRestantes = Math.ceil((fecha.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (diasRestantes < 0) {
-      return <Badge variant="destructive">Vencido hace {Math.abs(diasRestantes)} días</Badge>;
-    } else if (diasRestantes <= 30) {
-      return <Badge variant="outline" className="border-orange-500 text-orange-600">Vence en {diasRestantes} días</Badge>;
-    } else {
-      return <Badge variant="secondary">{fecha.toLocaleDateString('es-MX')}</Badge>;
-    }
-  };
+  // Caducidad badge from shared utility
 
   return (
     <Layout>
@@ -824,13 +810,7 @@ const InventarioContent = () => {
                               </TableCell>
                               <TableCell className="text-sm text-muted-foreground">{p.unidad}</TableCell>
                               <TableCell>
-                                {p.stockTotal === 0 ? (
-                                  <Badge variant="destructive">Sin stock</Badge>
-                                ) : p.stockMinimo > 0 && p.stockTotal <= p.stockMinimo ? (
-                                  <Badge variant="outline" className="border-amber-500 text-amber-600">Stock bajo</Badge>
-                                ) : (
-                                  <Badge variant="outline" className="border-green-500 text-green-600">Disponible</Badge>
-                                )}
+                                {getStockStatusBadge(p.stockTotal, p.stockMinimo)}
                               </TableCell>
                             </TableRow>
                           ))}
