@@ -36,9 +36,9 @@ const getAlertaColor = (nivel: AlertaMonitoreo['nivel']) => {
     case 'error':
       return 'bg-destructive/10 border-destructive/30 text-destructive';
     case 'warning':
-      return 'bg-yellow-500/10 border-yellow-500/30 text-yellow-700 dark:text-yellow-400';
+      return 'bg-yellow-500/10 border-yellow-500/30 text-yellow-700';
     case 'info':
-      return 'bg-blue-500/10 border-blue-500/30 text-blue-700 dark:text-blue-400';
+      return 'bg-blue-500/10 border-blue-500/30 text-blue-700';
     default:
       return 'bg-muted border-border text-muted-foreground';
   }
@@ -140,7 +140,7 @@ export const AlertasPanel = ({ alertas, onAlertaClick }: AlertasPanelProps) => {
             {/* Advertencias */}
             {alertasWarning.length > 0 && (
               <div className="space-y-2">
-                <h4 className="text-xs font-semibold uppercase text-yellow-600 dark:text-yellow-400 flex items-center gap-1">
+                <h4 className="text-xs font-semibold uppercase text-yellow-600 flex items-center gap-1">
                   <AlertTriangle className="h-3 w-3" />
                   Advertencias ({alertasWarning.length})
                 </h4>
@@ -159,7 +159,7 @@ export const AlertasPanel = ({ alertas, onAlertaClick }: AlertasPanelProps) => {
             {/* Informativas */}
             {alertasInfo.length > 0 && (
               <div className="space-y-2">
-                <h4 className="text-xs font-semibold uppercase text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                <h4 className="text-xs font-semibold uppercase text-blue-600 flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
                   Información ({alertasInfo.length})
                 </h4>

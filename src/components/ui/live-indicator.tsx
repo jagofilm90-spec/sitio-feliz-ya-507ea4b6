@@ -36,7 +36,7 @@ export const LiveIndicator = ({
         )} />
       </span>
       <span className={cn(
-        "font-medium text-green-600 dark:text-green-400",
+        "font-medium text-green-600",
         textSizes[size]
       )}>
         {label}

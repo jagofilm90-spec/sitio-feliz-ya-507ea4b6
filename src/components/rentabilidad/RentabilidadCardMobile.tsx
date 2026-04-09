@@ -37,7 +37,7 @@ export function RentabilidadCardMobile({ producto }: RentabilidadCardMobileProps
       );
     } else {
       return (
-        <Badge className="gap-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+        <Badge className="gap-1 bg-green-100 text-green-800">
           <TrendingUp className="h-3 w-3" />
           Alto ({porcentaje.toFixed(1)}%)
         </Badge>

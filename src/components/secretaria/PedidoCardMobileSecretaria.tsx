@@ -95,7 +95,7 @@ export function PedidoCardMobileSecretaria({
                 variant="outline"
                 className={`text-xs gap-1 ${
                   facturaStatus === "timbrada"
-                    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30"
+                    ? "bg-emerald-50 text-emerald-700"
                     : ""
                 }`}
               >

@@ -760,7 +760,7 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
                   />
 
                   {latitud && longitud ? (
-                    <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-2 rounded-md border border-green-200 dark:border-green-800">
+                    <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 p-2 rounded-md border border-green-200">
                       <CheckCircle2 className="h-4 w-4 shrink-0" />
                       <span>GPS capturado: {latitud.toFixed(5)}, {longitud.toFixed(5)}</span>
                     </div>
@@ -880,14 +880,14 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
               {/* CSF procesado — mostrar datos extraídos */}
               {csfProcessed && !parsingCsf && (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="h-5 w-5 text-green-600" />
                       <div>
-                        <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                        <p className="text-sm font-medium text-green-800">
                           Datos fiscales extraídos
                         </p>
-                        <p className="text-xs text-green-600 dark:text-green-400">
+                        <p className="text-xs text-green-600">
                           Cliente facturará automáticamente
                         </p>
                       </div>

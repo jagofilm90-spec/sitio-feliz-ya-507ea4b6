@@ -52,15 +52,15 @@ interface ProveedorCardMobileProps {
 }
 
 const CATEGORIA_COLORS: Record<string, string> = {
-  "Azúcares": "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
-  "Granos y semillas": "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
-  "Lácteos": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
-  "Aceites": "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
-  "Abarrotes secos": "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300",
-  "Botanas": "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
-  "Bebidas": "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300",
-  "Limpieza": "bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300",
-  "Mascotas": "bg-pink-100 text-pink-800 dark:bg-pink-900/40 dark:text-pink-300",
+  "Azúcares": "bg-blue-100 text-blue-800",
+  "Granos y semillas": "bg-green-100 text-green-800",
+  "Lácteos": "bg-yellow-100 text-yellow-800",
+  "Aceites": "bg-amber-100 text-amber-800",
+  "Abarrotes secos": "bg-orange-100 text-orange-800",
+  "Botanas": "bg-purple-100 text-purple-800",
+  "Bebidas": "bg-cyan-100 text-cyan-800",
+  "Limpieza": "bg-teal-100 text-teal-800",
+  "Mascotas": "bg-pink-100 text-pink-800",
 };
 
 const TERMINOS_LABELS: Record<string, string> = {
@@ -88,9 +88,9 @@ export const ProveedorCardMobile = ({
   const catColor = proveedor.categoria ? (CATEGORIA_COLORS[proveedor.categoria] || "bg-muted text-muted-foreground") : null;
 
   const getTerminoBadgeClass = (t: string | null | undefined) => {
-    if (!t || t === "contado") return "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300";
-    if (t === "anticipado") return "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300";
-    return "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300";
+    if (!t || t === "contado") return "bg-green-100 text-green-800";
+    if (t === "anticipado") return "bg-red-100 text-red-800";
+    return "bg-blue-100 text-blue-800";
   };
 
   return (

@@ -453,12 +453,12 @@ const CalendarioEntregasTab = () => {
       return (
         <div className="space-y-2">
           {esEntregaParcial && (
-            <Badge className="text-xs bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800">
+            <Badge className="text-xs bg-amber-100 text-amber-700 border-amber-300">
               Parcial ({productosRecibidos.length}/{productosOC.length} productos)
             </Badge>
           )}
           <div className="space-y-1">
-            <p className="text-sm font-medium text-green-700 dark:text-green-400 flex items-center gap-1">
+            <p className="text-sm font-medium text-green-700 flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3" />
               Productos recibidos en esta entrega:
             </p>
@@ -487,9 +487,9 @@ const CalendarioEntregasTab = () => {
     // Case 3: Faltante delivery - show from productos_faltantes
     if (entrega.esFaltante && entrega.productosFaltantes && entrega.productosFaltantes.length > 0) {
       return (
-        <Alert className="mt-2 bg-orange-50 border-orange-200 dark:bg-orange-950/30 dark:border-orange-800">
-          <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-          <AlertDescription className="text-orange-700 dark:text-orange-300">
+        <Alert className="mt-2 bg-orange-50 border-orange-200">
+          <AlertTriangle className="h-4 w-4 text-orange-600" />
+          <AlertDescription className="text-orange-700">
             <span className="font-medium">Productos de esta entrega (faltantes):</span>
             <ul className="mt-1 ml-4 list-disc">
               {entrega.productosFaltantes.map((p: any, idx: number) => (
@@ -530,7 +530,7 @@ const CalendarioEntregasTab = () => {
           {productosRecibidos.slice(0, 2).map((p, idx) => (
             <span key={idx}>
               {idx > 0 && ", "}
-              <span className="font-medium text-green-700 dark:text-green-400">{p.cantidad}</span>{" "}
+              <span className="font-medium text-green-700">{p.cantidad}</span>{" "}
               {p.nombre}
             </span>
           ))}
@@ -548,7 +548,7 @@ const CalendarioEntregasTab = () => {
           {entrega.productosFaltantes.slice(0, 2).map((p: any, idx: number) => (
             <span key={idx}>
               {idx > 0 && ", "}
-              <span className="font-medium text-orange-600 dark:text-orange-400">{p.cantidad_faltante}</span>{" "}
+              <span className="font-medium text-orange-600">{p.cantidad_faltante}</span>{" "}
               {p.nombre}
             </span>
           ))}
@@ -613,33 +613,33 @@ const CalendarioEntregasTab = () => {
 
       {/* KPIs del mes */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-        <div className="p-3 rounded-lg border bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+        <div className="p-3 rounded-lg border bg-amber-50 border-amber-200">
           <div className="flex items-center gap-2 mb-1">
             <Clock className="h-4 w-4 text-amber-600" />
-            <span className="text-xs text-amber-700 dark:text-amber-400">Pendientes</span>
+            <span className="text-xs text-amber-700">Pendientes</span>
           </div>
-          <p className="text-2xl font-bold text-amber-800 dark:text-amber-300">{kpisMes.pendientes}</p>
+          <p className="text-2xl font-bold text-amber-800">{kpisMes.pendientes}</p>
         </div>
-        <div className="p-3 rounded-lg border bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+        <div className="p-3 rounded-lg border bg-green-50 border-green-200">
           <div className="flex items-center gap-2 mb-1">
             <CheckCircle2 className="h-4 w-4 text-green-600" />
-            <span className="text-xs text-green-700 dark:text-green-400">Completadas</span>
+            <span className="text-xs text-green-700">Completadas</span>
           </div>
-          <p className="text-2xl font-bold text-green-800 dark:text-green-300">{kpisMes.completadas}</p>
+          <p className="text-2xl font-bold text-green-800">{kpisMes.completadas}</p>
         </div>
-        <div className="p-3 rounded-lg border bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800">
+        <div className="p-3 rounded-lg border bg-orange-50 border-orange-200">
           <div className="flex items-center gap-2 mb-1">
             <PackageX className="h-4 w-4 text-orange-600" />
-            <span className="text-xs text-orange-700 dark:text-orange-400">Faltantes</span>
+            <span className="text-xs text-orange-700">Faltantes</span>
           </div>
-          <p className="text-2xl font-bold text-orange-800 dark:text-orange-300">{kpisMes.faltantes}</p>
+          <p className="text-2xl font-bold text-orange-800">{kpisMes.faltantes}</p>
         </div>
-        <div className="p-3 rounded-lg border bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+        <div className="p-3 rounded-lg border bg-blue-50 border-blue-200">
           <div className="flex items-center gap-2 mb-1">
             <DollarSign className="h-4 w-4 text-blue-600" />
-            <span className="text-xs text-blue-700 dark:text-blue-400">$ Esperado</span>
+            <span className="text-xs text-blue-700">$ Esperado</span>
           </div>
-          <p className="text-2xl font-bold text-blue-800 dark:text-blue-300">{formatCurrency(kpisMes.totalEsperado)}</p>
+          <p className="text-2xl font-bold text-blue-800">{formatCurrency(kpisMes.totalEsperado)}</p>
         </div>
       </div>
 
@@ -691,7 +691,7 @@ const CalendarioEntregasTab = () => {
                 <div key={fechaKey} className={cn(
                   "border rounded-lg p-3",
                   esHoy && "border-primary bg-primary/5",
-                  holiday && "border-red-300 bg-red-50/50 dark:bg-red-950/20",
+                  holiday && "border-red-300 bg-red-50/50",
                   entregasDelDia.length === 0 && !esHoy && !holiday && "opacity-50"
                 )}>
                   <div className="flex justify-between items-center mb-1">
@@ -767,14 +767,14 @@ const CalendarioEntregasTab = () => {
                           tieneEntregas && "cursor-pointer hover:bg-accent",
                           esHoy && "ring-2 ring-primary ring-offset-2",
                           // Holiday and Sunday styling
-                          holiday && "bg-red-50 dark:bg-red-950/20",
+                          holiday && "bg-red-50",
                           esDomingo && !holiday && "bg-muted/50"
                         )}
                       >
                         <span className={cn(
                           "inline-flex items-center justify-center w-8 h-8 rounded-full text-sm",
                           esHoy && "bg-primary text-primary-foreground",
-                          holiday && !esHoy && "text-red-600 dark:text-red-400 font-medium"
+                          holiday && !esHoy && "text-red-600 font-medium"
                         )}>
                           {format(dia, "d")}
                         </span>
@@ -782,14 +782,14 @@ const CalendarioEntregasTab = () => {
                         {/* Holiday indicator */}
                         {holiday && (
                           <div className="absolute top-1 right-1">
-                            <Flag className="w-3 h-3 text-red-500 dark:text-red-400" />
+                            <Flag className="w-3 h-3 text-red-500" />
                           </div>
                         )}
                         
                         {/* Holiday name badge */}
                         {holiday && (
                           <div className="mt-0.5">
-                            <span className="text-[9px] text-red-600 dark:text-red-400 truncate block leading-tight">
+                            <span className="text-[9px] text-red-600 truncate block leading-tight">
                               {holiday.shortName}
                             </span>
                           </div>
@@ -803,23 +803,23 @@ const CalendarioEntregasTab = () => {
                                 entrega.esCompletada ? (
                                   <span
                                     key={idx}
-                                    className="w-4 h-4 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center"
+                                    className="w-4 h-4 rounded-full bg-green-100 flex items-center justify-center"
                                   >
-                                    <CheckCircle2 className="w-3 h-3 text-green-600 dark:text-green-400" />
+                                    <CheckCircle2 className="w-3 h-3 text-green-600" />
                                   </span>
                                 ) : entrega.esFaltante ? (
                                   <span
                                     key={idx}
-                                    className="w-4 h-4 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center"
+                                    className="w-4 h-4 rounded-full bg-orange-100 flex items-center justify-center"
                                   >
-                                    <PackageX className="w-3 h-3 text-orange-600 dark:text-orange-400" />
+                                    <PackageX className="w-3 h-3 text-orange-600" />
                                   </span>
                                 ) : entrega.reprogramada ? (
                                   <span
                                     key={idx}
-                                    className="w-4 h-4 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center"
+                                    className="w-4 h-4 rounded-full bg-yellow-100 flex items-center justify-center"
                                   >
-                                    <RotateCcw className="w-3 h-3 text-yellow-600 dark:text-yellow-400" />
+                                    <RotateCcw className="w-3 h-3 text-yellow-600" />
                                   </span>
                                 ) : (
                                   <span
@@ -856,20 +856,20 @@ const CalendarioEntregasTab = () => {
           {/* Legend */}
           <div className="flex items-center justify-center gap-4 pt-4 text-sm text-muted-foreground flex-wrap">
             <div className="flex items-center gap-2">
-              <span className="w-4 h-4 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <CheckCircle2 className="w-3 h-3 text-green-600 dark:text-green-400" />
+              <span className="w-4 h-4 rounded-full bg-green-100 flex items-center justify-center">
+                <CheckCircle2 className="w-3 h-3 text-green-600" />
               </span>
               <span>Recibida</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-4 h-4 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                <PackageX className="w-3 h-3 text-orange-600 dark:text-orange-400" />
+              <span className="w-4 h-4 rounded-full bg-orange-100 flex items-center justify-center">
+                <PackageX className="w-3 h-3 text-orange-600" />
               </span>
               <span>Faltante</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-4 h-4 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
-                <RotateCcw className="w-3 h-3 text-yellow-600 dark:text-yellow-400" />
+              <span className="w-4 h-4 rounded-full bg-yellow-100 flex items-center justify-center">
+                <RotateCcw className="w-3 h-3 text-yellow-600" />
               </span>
               <span>Reprog.</span>
             </div>
@@ -886,8 +886,8 @@ const CalendarioEntregasTab = () => {
               <span>Contra entrega</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-4 h-4 rounded bg-red-50 dark:bg-red-950/20 flex items-center justify-center border border-red-200 dark:border-red-800">
-                <Flag className="w-2.5 h-2.5 text-red-500 dark:text-red-400" />
+              <span className="w-4 h-4 rounded bg-red-50 flex items-center justify-center border border-red-200">
+                <Flag className="w-2.5 h-2.5 text-red-500" />
               </span>
               <span>Día festivo</span>
             </div>
@@ -932,13 +932,13 @@ const CalendarioEntregasTab = () => {
                             <div className="flex items-center gap-2 flex-wrap">
                               {entrega.folio}
                               {entrega.esCompletada && (
-                                <Badge className="text-xs bg-green-100 text-green-700 border-green-300 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800">
+                                <Badge className="text-xs bg-green-100 text-green-700 border-green-300">
                                   <CheckCircle2 className="h-3 w-3 mr-1" />
                                   Recibida
                                 </Badge>
                               )}
                               {entrega.esFaltante && (
-                                <Badge className="text-xs bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-800">
+                                <Badge className="text-xs bg-orange-100 text-orange-700 border-orange-300">
                                   <PackageX className="h-3 w-3 mr-1" />
                                   Faltante
                                 </Badge>
@@ -950,19 +950,19 @@ const CalendarioEntregasTab = () => {
                                 </Badge>
                               )}
                               {!entrega.esCompletada && entrega.estadoPago === 'anticipado_pagado' && (
-                                <Badge className="text-xs bg-green-100 text-green-700 border-green-300 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800">
+                                <Badge className="text-xs bg-green-100 text-green-700 border-green-300">
                                   <Banknote className="h-3 w-3 mr-1" />
                                   Anticipado pagado
                                 </Badge>
                               )}
                               {!entrega.esCompletada && entrega.estadoPago === 'anticipado_pendiente' && (
-                                <Badge className="text-xs bg-yellow-100 text-yellow-700 border-yellow-300 dark:bg-yellow-950/30 dark:text-yellow-400 dark:border-yellow-800">
+                                <Badge className="text-xs bg-yellow-100 text-yellow-700 border-yellow-300">
                                   <Banknote className="h-3 w-3 mr-1" />
                                   Anticipo pendiente
                                 </Badge>
                               )}
                               {entrega.reprogramada && (
-                                <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800">
+                                <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-300">
                                   <RotateCcw className="h-3 w-3 mr-1" />
                                   Reprogramada
                                 </Badge>
@@ -1044,13 +1044,13 @@ const CalendarioEntregasTab = () => {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold">{entrega.folio}</span>
                     {entrega.esCompletada && (
-                      <Badge className="text-xs bg-green-100 text-green-700 border-green-300 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800">
+                      <Badge className="text-xs bg-green-100 text-green-700 border-green-300">
                         <CheckCircle2 className="h-3 w-3 mr-1" />
                         Recibida
                       </Badge>
                     )}
                     {entrega.esFaltante && (
-                      <Badge className="text-xs bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-800">
+                      <Badge className="text-xs bg-orange-100 text-orange-700 border-orange-300">
                         <PackageX className="h-3 w-3 mr-1" />
                         Faltante
                       </Badge>
@@ -1062,19 +1062,19 @@ const CalendarioEntregasTab = () => {
                       </Badge>
                     )}
                     {!entrega.esCompletada && entrega.estadoPago === 'anticipado_pagado' && (
-                      <Badge className="text-xs bg-green-100 text-green-700 border-green-300 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800">
+                      <Badge className="text-xs bg-green-100 text-green-700 border-green-300">
                         <Banknote className="h-3 w-3 mr-1" />
                         Anticipado pagado
                       </Badge>
                     )}
                     {!entrega.esCompletada && entrega.estadoPago === 'anticipado_pendiente' && (
-                      <Badge className="text-xs bg-yellow-100 text-yellow-700 border-yellow-300 dark:bg-yellow-950/30 dark:text-yellow-400 dark:border-yellow-800">
+                      <Badge className="text-xs bg-yellow-100 text-yellow-700 border-yellow-300">
                         <Banknote className="h-3 w-3 mr-1" />
                         Anticipo pendiente
                       </Badge>
                     )}
                     {entrega.reprogramada && (
-                      <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800">
+                      <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-300">
                         <RotateCcw className="h-3 w-3 mr-1" />
                         Reprogramada
                       </Badge>

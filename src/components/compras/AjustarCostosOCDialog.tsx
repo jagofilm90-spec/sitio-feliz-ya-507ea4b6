@@ -284,9 +284,9 @@ export const AjustarCostosOCDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <Alert className="border-blue-300 bg-blue-50 dark:bg-blue-950/30">
+        <Alert className="border-blue-300 bg-blue-50">
           <AlertTriangle className="h-4 w-4 text-blue-600" />
-          <AlertDescription className="text-blue-700 dark:text-blue-400">
+          <AlertDescription className="text-blue-700">
             Los cambios actualizarán: lotes de inventario, último costo de compra
             y costo promedio ponderado de cada producto.
           </AlertDescription>
@@ -322,7 +322,7 @@ export const AjustarCostosOCDialog = ({
                   return (
                     <TableRow
                       key={producto.producto_id}
-                      className={cambiado ? (esIncremento ? "bg-red-50 dark:bg-red-950/20" : "bg-green-50 dark:bg-green-950/20") : ""}
+                      className={cambiado ? (esIncremento ? "bg-red-50" : "bg-green-50") : ""}
                     >
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -334,13 +334,13 @@ export const AjustarCostosOCDialog = ({
                           </div>
                           {/* Badge de alerta para incrementos de costo */}
                           {esIncremento && (
-                            <Badge className="bg-red-100 text-red-700 border border-red-300 dark:bg-red-950/50 dark:text-red-400 dark:border-red-700">
+                            <Badge className="bg-red-100 text-red-700 border border-red-300">
                               <TrendingUp className="w-3 h-3 mr-1" />
                               +{porcentajeCambio.toFixed(1)}%
                             </Badge>
                           )}
                           {cambiado && !esIncremento && (
-                            <Badge className="bg-green-100 text-green-700 border border-green-300 dark:bg-green-950/50 dark:text-green-400 dark:border-green-700">
+                            <Badge className="bg-green-100 text-green-700 border border-green-300">
                               <TrendingDown className="w-3 h-3 mr-1" />
                               {porcentajeCambio.toFixed(1)}%
                             </Badge>
@@ -368,7 +368,7 @@ export const AjustarCostosOCDialog = ({
                               parseFloat(e.target.value) || 0
                             )
                           }
-                          className={`w-28 text-right ml-auto ${esIncremento ? "border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-950/30" : ""}`}
+                          className={`w-28 text-right ml-auto ${esIncremento ? "border-red-300 bg-red-50" : ""}`}
                         />
                       </TableCell>
                       <TableCell className="text-right">
@@ -399,9 +399,9 @@ export const AjustarCostosOCDialog = ({
 
         {/* Warning for cost increases */}
         {productosConIncremento.length > 0 && (
-          <Alert className="border-red-300 bg-red-50 dark:bg-red-950/30">
+          <Alert className="border-red-300 bg-red-50">
             <AlertTriangle className="h-4 w-4 text-red-600" />
-            <AlertDescription className="text-red-700 dark:text-red-400">
+            <AlertDescription className="text-red-700">
               <strong>⚠️ Alerta de Costo:</strong> Se detectaron {productosConIncremento.length} producto(s) 
               con costo mayor al registrado. Se creará una notificación para el administrador al guardar.
             </AlertDescription>

@@ -182,7 +182,7 @@ export function SolicitudDescuentoDialog({
           </div>
 
           {/* Limit info */}
-          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 rounded-lg space-y-1">
+          <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg space-y-1">
             <div className="flex justify-between text-sm">
               <span>Límite autorizado:</span>
               <span className="font-medium">-{formatCurrency(producto.descuentoMaximo)}</span>
@@ -201,7 +201,7 @@ export function SolicitudDescuentoDialog({
 
           {/* Order context preview */}
           {totalPedidoEstimado && (
-            <div className="text-sm bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-3 rounded-lg">
+            <div className="text-sm bg-blue-50 border border-blue-200 p-3 rounded-lg">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total estimado del pedido:</span>
                 <span className="font-bold text-blue-600">{formatCurrency(totalPedidoEstimado)}</span>

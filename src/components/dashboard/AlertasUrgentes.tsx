@@ -20,15 +20,15 @@ const iconMap: Record<string, any> = {
 
 const colorMap: Record<string, string> = {
   pedidos_sin_autorizar: 'bg-destructive/10 border-destructive/30 text-destructive',
-  chofer_sin_gps: 'bg-orange-500/10 border-orange-500/30 text-orange-700 dark:text-orange-400',
+  chofer_sin_gps: 'bg-orange-500/10 border-orange-500/30 text-orange-700',
   stock_cero: 'bg-destructive/10 border-destructive/30 text-destructive',
   credito_excedido: 'bg-destructive/10 border-destructive/30 text-destructive',
-  pagos_por_validar: 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400',
-  precios_por_revisar: 'bg-orange-500/10 border-orange-500/30 text-orange-700 dark:text-orange-400',
+  pagos_por_validar: 'bg-amber-500/10 border-amber-500/30 text-amber-700',
+  precios_por_revisar: 'bg-orange-500/10 border-orange-500/30 text-orange-700',
   lotes_vencidos: 'bg-destructive/10 border-destructive/30 text-destructive',
   fumigaciones_vencidas: 'bg-destructive/10 border-destructive/30 text-destructive',
-  anticipos_pendientes: 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400',
-  creditos_proveedores: 'bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-400',
+  anticipos_pendientes: 'bg-amber-500/10 border-amber-500/30 text-amber-700',
+  creditos_proveedores: 'bg-green-500/10 border-green-500/30 text-green-700',
   entregas_compras_atrasadas: 'bg-destructive/10 border-destructive/30 text-destructive',
 };
 

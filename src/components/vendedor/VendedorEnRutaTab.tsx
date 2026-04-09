@@ -170,20 +170,20 @@ export function VendedorEnRutaTab({
       {rutas.map((ruta) => (
         <div key={ruta.rutaId} className="space-y-2">
           {/* Route header with vehicle, driver & helpers */}
-          <Card className="bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800">
+          <Card className="bg-blue-50 border-blue-200">
             <CardContent className="p-4 space-y-3">
               {/* Vehicle & total weight */}
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2">
                   <Truck className="h-5 w-5 text-blue-600" />
-                  <span className="font-bold text-blue-800 dark:text-blue-200">
+                  <span className="font-bold text-blue-800">
                     {ruta.vehiculo ? `${ruta.vehiculo.nombre}` : "Sin vehículo"}
                   </span>
                   {ruta.vehiculo?.placa && (
                     <Badge variant="secondary" className="text-xs">{ruta.vehiculo.placa}</Badge>
                   )}
                 </div>
-                <div className="flex items-center gap-1.5 font-bold text-blue-700 dark:text-blue-300">
+                <div className="flex items-center gap-1.5 font-bold text-blue-700">
                   <Weight className="h-4 w-4" />
                   <span>{(ruta.pesoTotalKg ?? 0).toFixed(1)} kg total</span>
                 </div>
@@ -191,7 +191,7 @@ export function VendedorEnRutaTab({
 
               {/* Driver */}
               {ruta.chofer && (
-                <div className="flex items-center justify-between bg-white/60 dark:bg-white/10 rounded-lg px-3 py-2">
+                <div className="flex items-center justify-between bg-white/60 rounded-lg px-3 py-2">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-blue-600" />
                     <div>
@@ -202,7 +202,7 @@ export function VendedorEnRutaTab({
                   {ruta.chofer.telefono && (
                     <a
                       href={`tel:${ruta.chofer.telefono}`}
-                      className="flex items-center gap-1.5 text-sm font-medium text-green-700 dark:text-green-400 hover:underline"
+                      className="flex items-center gap-1.5 text-sm font-medium text-green-700 hover:underline"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <Phone className="h-3.5 w-3.5" />
@@ -214,14 +214,14 @@ export function VendedorEnRutaTab({
 
               {/* Helpers */}
               {(ruta.ayudante || ruta.ayudanteExterno) && (
-                <div className="flex items-center gap-2 bg-white/60 dark:bg-white/10 rounded-lg px-3 py-2">
+                <div className="flex items-center gap-2 bg-white/60 rounded-lg px-3 py-2">
                   <Users className="h-4 w-4 text-blue-600 shrink-0" />
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
                     {ruta.ayudante && (
                       <div className="flex items-center gap-1.5">
                         <span>{ruta.ayudante.nombre}</span>
                         {ruta.ayudante.telefono && (
-                          <a href={`tel:${ruta.ayudante.telefono}`} className="text-green-700 dark:text-green-400 hover:underline flex items-center gap-0.5">
+                          <a href={`tel:${ruta.ayudante.telefono}`} className="text-green-700 hover:underline flex items-center gap-0.5">
                             <Phone className="h-3 w-3" /> {ruta.ayudante.telefono}
                           </a>
                         )}
@@ -231,7 +231,7 @@ export function VendedorEnRutaTab({
                       <div className="flex items-center gap-1.5">
                         <span>{ruta.ayudanteExterno.nombre} <Badge variant="outline" className="text-[10px] ml-1">Ext</Badge></span>
                         {ruta.ayudanteExterno.telefono && (
-                          <a href={`tel:${ruta.ayudanteExterno.telefono}`} className="text-green-700 dark:text-green-400 hover:underline flex items-center gap-0.5">
+                          <a href={`tel:${ruta.ayudanteExterno.telefono}`} className="text-green-700 hover:underline flex items-center gap-0.5">
                             <Phone className="h-3 w-3" /> {ruta.ayudanteExterno.telefono}
                           </a>
                         )}
@@ -241,7 +241,7 @@ export function VendedorEnRutaTab({
                 </div>
               )}
 
-              <div className="text-xs text-blue-600 dark:text-blue-400">
+              <div className="text-xs text-blue-600">
                 {ruta.pedidos.length} pedido{ruta.pedidos.length !== 1 ? "s" : ""} en esta ruta
               </div>
             </CardContent>

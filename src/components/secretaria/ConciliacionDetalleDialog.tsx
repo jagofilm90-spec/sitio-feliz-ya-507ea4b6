@@ -337,7 +337,7 @@ export function ConciliacionDetalleDialog({
         ) : (
           <div className="space-y-4">
             {tieneDevolucionesRegistradas && (
-              <Card className="border-amber-300 bg-amber-50/50 dark:bg-amber-950/10">
+              <Card className="border-amber-300 bg-amber-50/50">
                 <CardContent className="py-3 px-4">
                   <div className="flex items-center gap-2 text-sm">
                     <CheckCircle2 className="h-4 w-4 text-amber-600" />
@@ -439,8 +439,8 @@ export function ConciliacionDetalleDialog({
                 </div>
 
                 {devolucionesActivas.length > 0 && (
-                  <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 rounded-lg p-3">
-                    <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <p className="text-sm font-medium text-amber-800">
                       {devolucionesActivas.length} línea(s) con devolución
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">

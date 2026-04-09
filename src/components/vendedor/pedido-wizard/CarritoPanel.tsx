@@ -64,14 +64,14 @@ export function CarritoPanel({
           let statusColor = "border-border";
           let statusBg = "bg-muted/30";
           if (linea.autorizacionStatus === 'aprobado') {
-            statusColor = "border-green-300 dark:border-green-700";
-            statusBg = "bg-green-50 dark:bg-green-950/30";
+            statusColor = "border-green-300";
+            statusBg = "bg-green-50";
           } else if (excedeLimite && linea.autorizacionStatus === 'pendiente') {
-            statusColor = "border-amber-300 dark:border-amber-700";
-            statusBg = "bg-amber-50 dark:bg-amber-950/30";
+            statusColor = "border-amber-300";
+            statusBg = "bg-amber-50";
           } else if (excedeLimite) {
-            statusColor = "border-red-300 dark:border-red-700";
-            statusBg = "bg-red-50 dark:bg-red-950/30";
+            statusColor = "border-red-300";
+            statusBg = "bg-red-50";
           }
 
           return (
@@ -130,8 +130,8 @@ export function CarritoPanel({
 
               {/* Kilos info for precio_por_kilo */}
               {esPorKilo && presentacionKg > 0 && (
-                <div className="text-xs text-muted-foreground mb-2 bg-blue-50 dark:bg-blue-950/30 p-1.5 rounded">
-                  {linea.cantidad} × {presentacionKg}kg = <span className="font-medium text-blue-700 dark:text-blue-400">{kilosTotales}kg</span>
+                <div className="text-xs text-muted-foreground mb-2 bg-blue-50 p-1.5 rounded">
+                  {linea.cantidad} × {presentacionKg}kg = <span className="font-medium text-blue-700">{kilosTotales}kg</span>
                 </div>
               )}
 
@@ -183,7 +183,7 @@ export function CarritoPanel({
                 <div className="mt-2 pt-2 border-t space-y-2">
                   <div className="flex items-start gap-2">
                     <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                    <p className="text-xs text-amber-700 dark:text-amber-400">
+                    <p className="text-xs text-amber-700">
                       Descuento excede límite ({formatCurrency(descuentoMaximo)})
                     </p>
                   </div>
@@ -218,7 +218,7 @@ export function CarritoPanel({
 
               {/* Approved badge */}
               {linea.autorizacionStatus === 'aprobado' && (
-                <Badge variant="outline" className="text-xs mt-2 gap-1 text-green-600 border-green-400 bg-green-50 dark:bg-green-950/30">
+                <Badge variant="outline" className="text-xs mt-2 gap-1 text-green-600 border-green-400 bg-green-50">
                   ✓ Descuento aprobado
                 </Badge>
               )}

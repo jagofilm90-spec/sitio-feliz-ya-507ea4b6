@@ -92,8 +92,8 @@ export const PushNotificationSetup = ({ onComplete }: PushNotificationSetupProps
 
         <div className="space-y-3 py-4">
           <div className="flex items-start gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
-              <Smartphone className="h-4 w-4 text-green-600 dark:text-green-400" />
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100">
+              <Smartphone className="h-4 w-4 text-green-600" />
             </div>
             <div>
               <p className="text-sm font-medium">Nuevos pedidos</p>
@@ -104,8 +104,8 @@ export const PushNotificationSetup = ({ onComplete }: PushNotificationSetupProps
           </div>
 
           <div className="flex items-start gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
-              <Bell className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100">
+              <Bell className="h-4 w-4 text-blue-600" />
             </div>
             <div>
               <p className="text-sm font-medium">Autorizaciones pendientes</p>
@@ -116,8 +116,8 @@ export const PushNotificationSetup = ({ onComplete }: PushNotificationSetupProps
           </div>
 
           <div className="flex items-start gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900">
-              <BellOff className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100">
+              <BellOff className="h-4 w-4 text-amber-600" />
             </div>
             <div>
               <p className="text-sm font-medium">Alertas de inventario</p>

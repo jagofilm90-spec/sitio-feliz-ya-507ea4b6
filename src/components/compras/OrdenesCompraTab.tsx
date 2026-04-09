@@ -1569,7 +1569,7 @@ const OrdenesCompraTab = () => {
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { label: string; variant: any; className?: string }> = {
       pendiente: { label: "Pendiente", variant: "secondary" },
-      pendiente_pago: { label: "💳 Pend. Pago", variant: "outline", className: "bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800" },
+      pendiente_pago: { label: "💳 Pend. Pago", variant: "outline", className: "bg-amber-100 text-amber-700 border-amber-300" },
       pendiente_autorizacion: { label: "Por Autorizar", variant: "outline" },
       autorizada: { label: "Autorizada", variant: "default" },
       rechazada: { label: "Rechazada", variant: "destructive" },
@@ -1756,7 +1756,7 @@ const OrdenesCompraTab = () => {
                         return (
                           <div className="flex items-center gap-2 min-w-[100px]">
                             <div className="flex-1">
-                              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                              <div className="w-full bg-gray-200 rounded-full h-2">
                                 <div 
                                   className={`h-2 rounded-full transition-all ${colorClass}`}
                                   style={{ width: `${porcentaje}%` }}
@@ -1765,9 +1765,9 @@ const OrdenesCompraTab = () => {
                             </div>
                             <span className={`text-xs font-medium min-w-[32px] text-right ${
                               porcentaje === 100 
-                                ? 'text-green-600 dark:text-green-400' 
+                                ? 'text-green-600' 
                                 : porcentaje > 0 
-                                  ? 'text-blue-600 dark:text-blue-400' 
+                                  ? 'text-blue-600' 
                                   : 'text-muted-foreground'
                             }`}>
                               {porcentaje}%
@@ -1783,7 +1783,7 @@ const OrdenesCompraTab = () => {
                         {(faltantesPorOC as Record<string, number>)[orden.id] > 0 && (
                           <Badge 
                             variant="outline" 
-                            className="bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-800 text-xs"
+                            className="bg-orange-100 text-orange-700 border-orange-300 text-xs"
                             title={`${(faltantesPorOC as Record<string, number>)[orden.id]} entrega(s) de faltantes pendientes`}
                           >
                             <PackageX className="h-3 w-3 mr-1" />
@@ -1794,7 +1794,7 @@ const OrdenesCompraTab = () => {
                         {(orden as any).status_conciliacion === 'por_conciliar' && (
                           <Badge 
                             variant="outline" 
-                            className="bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800 text-xs"
+                            className="bg-amber-100 text-amber-700 border-amber-300 text-xs"
                             title="Costo pendiente de verificar con factura"
                           >
                             <Receipt className="h-3 w-3 mr-1" />
@@ -1804,7 +1804,7 @@ const OrdenesCompraTab = () => {
                         {(orden as any).status_conciliacion === 'conciliada' && (orden.status === 'parcial' || orden.status === 'completada') && (
                           <Badge 
                             variant="outline" 
-                            className="bg-green-100 text-green-700 border-green-300 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800 text-xs"
+                            className="bg-green-100 text-green-700 border-green-300 text-xs"
                             title="Costos verificados con factura"
                           >
                             <FileCheck className="h-3 w-3 mr-1" />
@@ -1816,7 +1816,7 @@ const OrdenesCompraTab = () => {
                     <TableCell>
                       {orden.tipo_pago === 'anticipado' ? (
                         orden.status_pago === 'pagado' ? (
-                          <Badge className="bg-green-100 text-green-700 border-green-300 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800">
+                          <Badge className="bg-green-100 text-green-700 border-green-300">
                             💳 Pagada
                           </Badge>
                         ) : (
@@ -1833,7 +1833,7 @@ const OrdenesCompraTab = () => {
                       ) : (
                         // Contra Entrega
                         orden.status_pago === 'pagado' ? (
-                          <Badge className="bg-green-100 text-green-700 border-green-300 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800 text-xs">
+                          <Badge className="bg-green-100 text-green-700 border-green-300 text-xs">
                             ✓ Pagado
                           </Badge>
                         ) : (orden.status === 'completada' || orden.status === 'recibida' || orden.status === 'parcial') ? (
@@ -1848,7 +1848,7 @@ const OrdenesCompraTab = () => {
                           </Button>
                         ) : orden.status_pago === 'parcial' ? (
                           <Badge 
-                            className="bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800 text-xs cursor-pointer"
+                            className="bg-amber-100 text-amber-700 border-amber-300 text-xs cursor-pointer"
                             onClick={() => navigate(`/compras?tab=adeudos&oc=${orden.id}`)}
                           >
                             🟡 Pago Parcial
@@ -2112,7 +2112,7 @@ const OrdenesCompraTab = () => {
                     <label 
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border cursor-pointer text-sm transition-all ${
                         statusPago === 'pendiente' 
-                          ? 'border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400' 
+                          ? 'border-amber-500 bg-amber-50 text-amber-700' 
                           : 'border-border hover:border-muted-foreground/50'
                       }`}
                     >
@@ -2130,7 +2130,7 @@ const OrdenesCompraTab = () => {
                     <label 
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border cursor-pointer text-sm transition-all ${
                         statusPago === 'pagado' 
-                          ? 'border-green-500 bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400' 
+                          ? 'border-green-500 bg-green-50 text-green-700' 
                           : 'border-border hover:border-muted-foreground/50'
                       }`}
                     >
@@ -2400,9 +2400,9 @@ const OrdenesCompraTab = () => {
                   {/* Config detected panel for vehicles mode */}
                   {modoCreacion === 'vehiculos' && productoSeleccionado && configTransporteProducto?.capacidad_vehiculo_bultos ? (
                     <div className="col-span-4 space-y-1">
-                      <div className="flex items-center gap-2 text-sm bg-green-50 dark:bg-green-900/20 p-2 rounded border border-green-200 dark:border-green-800">
+                      <div className="flex items-center gap-2 text-sm bg-green-50 p-2 rounded border border-green-200">
                         <Truck className="h-4 w-4 text-green-600" />
-                        <span className="text-green-700 dark:text-green-400 font-medium">
+                        <span className="text-green-700 font-medium">
                           {configTransporteProducto.tipo_vehiculo_estandar === 'trailer' ? 'Tráiler' : 
                            configTransporteProducto.tipo_vehiculo_estandar === 'torton' ? 'Tortón' : 
                            configTransporteProducto.tipo_vehiculo_estandar === 'rabon' ? 'Rabón' : 'Vehículo'} de {configTransporteProducto.capacidad_vehiculo_bultos.toLocaleString()} unidades
@@ -2429,7 +2429,7 @@ const OrdenesCompraTab = () => {
                     </div>
                   ) : modoCreacion === 'vehiculos' && productoSeleccionado ? (
                     <div className="col-span-4 flex items-center">
-                      <div className="text-sm text-amber-600 bg-amber-50 dark:bg-amber-900/20 p-2 rounded border border-amber-200 dark:border-amber-800">
+                      <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
                         ⚠️ Este producto no tiene configuración de transporte. Usa el modo manual.
                       </div>
                     </div>
@@ -2868,8 +2868,8 @@ const OrdenesCompraTab = () => {
                   {" "}del proveedor <strong>{ordenParaEliminar?.proveedores?.nombre || ordenParaEliminar?.proveedor_nombre_manual}</strong>.
                 </p>
                 {(ordenParaEliminar?.status === 'enviada' || ordenParaEliminar?.status === 'confirmada') && (
-                  <div className="bg-amber-50 dark:bg-amber-950/30 p-3 rounded-lg border border-amber-200 dark:border-amber-800">
-                    <p className="text-amber-700 dark:text-amber-400 text-sm font-medium">
+                  <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                    <p className="text-amber-700 text-sm font-medium">
                       ⚠️ Una vez eliminada, se le notificará al proveedor por correo electrónico 
                       que esta orden ha sido cancelada.
                     </p>

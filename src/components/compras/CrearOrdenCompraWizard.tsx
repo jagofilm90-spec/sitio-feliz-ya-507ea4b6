@@ -475,11 +475,11 @@ const CrearOrdenCompraWizard = ({
   };
 
   const motivoColors: Record<string, string> = {
-    'faltante': 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
-    'devolucion': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-    'danado': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-    'rechazado_calidad': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
-    'no_llego': 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'
+    'faltante': 'bg-orange-100 text-orange-800',
+    'devolucion': 'bg-blue-100 text-blue-800',
+    'danado': 'bg-red-100 text-red-800',
+    'rechazado_calidad': 'bg-purple-100 text-purple-800',
+    'no_llego': 'bg-gray-100 text-gray-800'
   };
 
   const generateNextFolio = async () => {
@@ -1866,13 +1866,13 @@ const CrearOrdenCompraWizard = ({
                     <span className="text-sm text-muted-foreground">Verificando créditos pendientes...</span>
                   </div>
                 ) : creditosPendientes.length > 0 ? (
-                  <div className="p-4 rounded-lg border-2 border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700">
+                  <div className="p-4 rounded-lg border-2 border-amber-300 bg-amber-50">
                     <div className="flex items-center gap-2 mb-3">
                       <AlertTriangle className="h-5 w-5 text-amber-600" />
-                      <span className="font-medium text-amber-800 dark:text-amber-200">
+                      <span className="font-medium text-amber-800">
                         Este proveedor tiene créditos pendientes
                       </span>
-                      <Badge variant="outline" className="text-amber-700 border-amber-400 dark:text-amber-300 dark:border-amber-600">
+                      <Badge variant="outline" className="text-amber-700 border-amber-400">
                         {formatCurrency(totalCreditosPendientes)}
                       </Badge>
                     </div>
@@ -1932,7 +1932,7 @@ const CrearOrdenCompraWizard = ({
                     
                     {/* Resumen de selección */}
                     {(totalDescuentoSeleccionado > 0 || totalReposicionBultos > 0) && (
-                      <div className="mt-3 pt-3 border-t border-amber-200 dark:border-amber-700">
+                      <div className="mt-3 pt-3 border-t border-amber-200">
                         {totalDescuentoSeleccionado > 0 && (
                           <div className="flex justify-between text-sm">
                             <span>Descuento a aplicar:</span>
@@ -2120,8 +2120,8 @@ const CrearOrdenCompraWizard = ({
 
               {/* Pregunta para configurar precio por kg - primera vez */}
               {productoSeleccionado && showPreguntaPrecioKg && tipoProveedor === 'catalogo' && (
-                <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg space-y-3">
-                  <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300 font-medium">
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-3">
+                  <div className="flex items-center gap-2 text-amber-800 font-medium">
                     ⚠️ ¿Cómo te cobra el proveedor este producto?
                   </div>
                   <div className="flex gap-3">
@@ -2167,7 +2167,7 @@ const CrearOrdenCompraWizard = ({
                   {tipoProveedor === 'catalogo' && precioPorKiloCompraConfigurado !== null && precioPorKiloCompraConfigurado !== undefined && (
                     <Badge 
                       variant="secondary" 
-                      className={precioPorKiloCompraConfigurado ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" : ""}
+                      className={precioPorKiloCompraConfigurado ? "bg-amber-100 text-amber-800" : ""}
                     >
                       {precioPorKiloCompraConfigurado ? "💰 Precio por kg" : "📦 Precio por bulto"}
                     </Badge>
@@ -2264,9 +2264,9 @@ const CrearOrdenCompraWizard = ({
 
               {/* Impuestos que grava el producto y checkboxes dinámicos */}
               {productoSeleccionado && productoSeleccionadoData && (productoSeleccionadoData.aplica_iva || productoSeleccionadoData.aplica_ieps) && (
-                <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800 space-y-3">
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200 space-y-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                    <span className="text-sm font-medium text-blue-800">
                       💰 Este producto grava: {[
                         productoSeleccionadoData.aplica_iva && "IVA (16%)",
                         productoSeleccionadoData.aplica_ieps && "IEPS (8%)"
@@ -2275,7 +2275,7 @@ const CrearOrdenCompraWizard = ({
                   </div>
                   
                   <div className="space-y-2">
-                    <p className="text-xs text-blue-700 dark:text-blue-400">El precio del proveedor YA incluye:</p>
+                    <p className="text-xs text-blue-700">El precio del proveedor YA incluye:</p>
                     <div className="flex flex-wrap gap-4">
                       {productoSeleccionadoData.aplica_iva && (
                         <label className="flex items-center gap-2 cursor-pointer">
@@ -2304,7 +2304,7 @@ const CrearOrdenCompraWizard = ({
 
                   {/* Desglose en tiempo real */}
                   {precioUnitario && parseFloat(precioUnitario) > 0 && (
-                    <div className="mt-3 p-2 bg-white dark:bg-background rounded border text-xs space-y-1">
+                    <div className="mt-3 p-2 bg-white rounded border text-xs space-y-1">
                       <p className="font-medium text-muted-foreground">📊 Desglose del precio capturado:</p>
                       {(() => {
                         const precio = parseFloat(precioUnitario);
@@ -2323,13 +2323,13 @@ const CrearOrdenCompraWizard = ({
                               <span className="font-medium">{formatCurrency(base)}</span>
                             </div>
                             {productoSeleccionadoData.aplica_iva && (
-                              <div className="flex justify-between text-blue-600 dark:text-blue-400">
+                              <div className="flex justify-between text-blue-600">
                                 <span>IVA (16%) {precioIncluyeIva ? "incluido" : ""}:</span>
                                 <span>{formatCurrency(iva)}</span>
                               </div>
                             )}
                             {productoSeleccionadoData.aplica_ieps && (
-                              <div className="flex justify-between text-amber-600 dark:text-amber-400">
+                              <div className="flex justify-between text-amber-600">
                                 <span>IEPS (8%) {precioIncluyeIeps ? "incluido" : ""}:</span>
                                 <span>{formatCurrency(ieps)}</span>
                               </div>
@@ -2368,10 +2368,10 @@ const CrearOrdenCompraWizard = ({
                               <span>{p.nombre}</span>
                               <div className="flex gap-1 flex-wrap">
                                 {p.aplica_iva && p.precio_incluye_iva && (
-                                  <Badge variant="secondary" className="text-[10px] px-1 py-0 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">IVA incl.</Badge>
+                                  <Badge variant="secondary" className="text-[10px] px-1 py-0 bg-blue-100 text-blue-700">IVA incl.</Badge>
                                 )}
                                 {p.aplica_ieps && p.precio_incluye_ieps && (
-                                  <Badge variant="secondary" className="text-[10px] px-1 py-0 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">IEPS incl.</Badge>
+                                  <Badge variant="secondary" className="text-[10px] px-1 py-0 bg-amber-100 text-amber-700">IEPS incl.</Badge>
                                 )}
                                 {p.precio_por_kilo && (
                                   <Badge variant="secondary" className="text-[10px] px-1 py-0 bg-muted">/kg</Badge>
@@ -2585,8 +2585,8 @@ const CrearOrdenCompraWizard = ({
                                   ? "border-primary bg-primary/10 ring-2 ring-primary/20" 
                                   : "border-border hover:border-muted-foreground/50",
                                 entrega.fecha_programada 
-                                  ? "bg-green-50 dark:bg-green-950/20" 
-                                  : "bg-amber-50 dark:bg-amber-950/20"
+                                  ? "bg-green-50" 
+                                  : "bg-amber-50"
                               )}
                             >
                               <div className="flex items-center gap-3">
@@ -2609,7 +2609,7 @@ const CrearOrdenCompraWizard = ({
                               </div>
                               {entrega.fecha_programada ? (
                                 <div className="flex items-center gap-2">
-                                  <span className="font-medium text-green-700 dark:text-green-400">
+                                  <span className="font-medium text-green-700">
                                     {format(parseISO(entrega.fecha_programada), "dd MMM", { locale: es })}
                                   </span>
                                   <Button
@@ -2627,7 +2627,7 @@ const CrearOrdenCompraWizard = ({
                                   </Button>
                                 </div>
                               ) : (
-                                <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                                <Badge variant="secondary" className="bg-amber-100 text-amber-700">
                                   Sin fecha
                                 </Badge>
                               )}
@@ -2636,8 +2636,8 @@ const CrearOrdenCompraWizard = ({
                           
                           {/* Pending deliveries warning */}
                           {entregasProgramadas.filter(e => !e.fecha_programada).length > 0 && (
-                            <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800">
-                              <AlertDescription className="text-amber-700 dark:text-amber-300 text-sm">
+                            <Alert className="bg-amber-50 border-amber-200">
+                              <AlertDescription className="text-amber-700 text-sm">
                                 {entregasProgramadas.filter(e => !e.fecha_programada).length} entrega(s) 
                                 quedarán pendientes de programar
                               </AlertDescription>
@@ -2713,18 +2713,18 @@ const CrearOrdenCompraWizard = ({
 
               {/* Alerta de Pago Anticipado */}
               {tipoPago === 'anticipado' && (
-                <div className="p-4 rounded-lg border-2 border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700">
+                <div className="p-4 rounded-lg border-2 border-amber-300 bg-amber-50">
                   <div className="flex items-start gap-3">
                     <CreditCard className="h-6 w-6 text-amber-600 flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
-                      <h4 className="font-semibold text-amber-800 dark:text-amber-200">
+                      <h4 className="font-semibold text-amber-800">
                         ⚠️ Orden con Pago Anticipado
                       </h4>
-                      <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                      <p className="text-sm text-amber-700 mt-1">
                         Esta orden requiere <strong>pago antes de la entrega</strong>. 
                         Las entregas quedarán <strong>pendientes de programar</strong> hasta que registres el pago en el sistema.
                       </p>
-                      <ul className="text-xs text-amber-600 dark:text-amber-400 mt-2 space-y-1">
+                      <ul className="text-xs text-amber-600 mt-2 space-y-1">
                         <li>• La OC se creará con status "Pendiente de Pago"</li>
                         <li>• Almacén no verá las entregas hasta confirmar el pago</li>
                         <li>• Al registrar el pago, podrás programar las fechas de entrega</li>
@@ -2944,8 +2944,8 @@ const CrearOrdenCompraWizard = ({
 
           {/* Promo details form */}
           <div className="space-y-4 pt-4 border-t">
-            <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
-              <p className="text-sm text-amber-800 dark:text-amber-300 font-medium mb-3">
+            <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+              <p className="text-sm text-amber-800 font-medium mb-3">
                 💡 Escribe cómo viene el producto tal cual lo pondrás en la OC:
               </p>
               <Input

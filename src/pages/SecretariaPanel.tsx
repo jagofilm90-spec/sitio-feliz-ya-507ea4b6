@@ -8,7 +8,7 @@ import { useUnreadEmails } from "@/hooks/useUnreadEmails";
 import { useSolicitudesVenta } from "@/hooks/useSolicitudesVenta";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/ThemeToggle";
+
 import { CentroNotificaciones } from "@/components/CentroNotificaciones";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { LogOut, Home } from "lucide-react";
@@ -234,7 +234,6 @@ const SecretariaPanel = () => {
             </div>
             <div className="flex items-center gap-1">
               <SidebarTrigger className="text-primary-foreground hover:bg-primary-foreground/20 rounded-full" />
-              <ThemeToggle />
               <CentroNotificaciones />
               {hasMultipleRoles && (
                 <Button
@@ -271,7 +270,6 @@ const SecretariaPanel = () => {
                 </p>
               </div>
               <div className="ml-auto flex items-center gap-3">
-                <ThemeToggle />
                 <CentroNotificaciones />
                 <span className="text-sm text-muted-foreground">{user?.email}</span>
               </div>

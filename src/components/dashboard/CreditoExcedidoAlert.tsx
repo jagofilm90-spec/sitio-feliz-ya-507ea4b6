@@ -64,7 +64,7 @@ export const CreditoExcedidoAlert = () => {
 
   if (loading) {
     return (
-      <Card className="border-orange-200 dark:border-orange-900/50">
+      <Card className="border-orange-200">
         <CardHeader>
           <Skeleton className="h-6 w-48" />
           <Skeleton className="h-4 w-64" />
@@ -82,13 +82,13 @@ export const CreditoExcedidoAlert = () => {
 
   if (clientes.length === 0) {
     return (
-      <Card className="border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/20">
+      <Card className="border-emerald-200 bg-emerald-50/50">
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-lg text-emerald-700 dark:text-emerald-400">
+          <CardTitle className="flex items-center gap-2 text-lg text-emerald-700">
             <CreditCard className="h-5 w-5" />
             Límites de Crédito
           </CardTitle>
-          <CardDescription className="text-emerald-600 dark:text-emerald-500">
+          <CardDescription className="text-emerald-600">
             ✓ Todos los clientes dentro de su límite
           </CardDescription>
         </CardHeader>
@@ -97,7 +97,7 @@ export const CreditoExcedidoAlert = () => {
   }
 
   return (
-    <Card className="border-orange-200 dark:border-orange-900/50">
+    <Card className="border-orange-200">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
           <AlertOctagon className="h-5 w-5 text-orange-500" />

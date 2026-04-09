@@ -62,10 +62,10 @@ const OCAutorizadaAlert = ({ onNavigateToOC }: OCAutorizadaAlertProps) => {
       {visibleAlerts.map((oc) => (
         <Alert 
           key={oc.id} 
-          className="border-green-300 bg-green-50 dark:bg-green-950/30 dark:border-green-800 animate-in fade-in slide-in-from-top-2"
+          className="border-green-300 bg-green-50 animate-in fade-in slide-in-from-top-2"
         >
           <CheckCircle2 className="h-5 w-5 text-green-600" />
-          <AlertTitle className="text-green-800 dark:text-green-300 font-semibold flex items-center justify-between">
+          <AlertTitle className="text-green-800 font-semibold flex items-center justify-between">
             <span>¡Orden {oc.folio} autorizada!</span>
             <Button 
               variant="ghost" 
@@ -76,7 +76,7 @@ const OCAutorizadaAlert = ({ onNavigateToOC }: OCAutorizadaAlertProps) => {
               <X className="h-4 w-4" />
             </Button>
           </AlertTitle>
-          <AlertDescription className="text-green-700 dark:text-green-400">
+          <AlertDescription className="text-green-700">
             <p className="mb-3">
               Tu orden de compra a <strong>{oc.proveedores?.nombre}</strong> por{" "}
               <strong>${oc.total?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong>{" "}

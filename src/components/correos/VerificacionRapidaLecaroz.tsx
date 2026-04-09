@@ -444,7 +444,7 @@ export function VerificacionRapidaLecaroz({ onClose }: VerificacionRapidaLecaroz
                 <TableRow 
                   key={producto.detalleId}
                   className={cn(
-                    producto.verificado && "bg-green-50 dark:bg-green-950/20"
+                    producto.verificado && "bg-green-50"
                   )}
                 >
                   <TableCell>

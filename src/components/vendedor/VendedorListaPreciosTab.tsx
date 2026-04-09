@@ -251,12 +251,12 @@ export function VendedorListaPreciosTab() {
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="text-xs">{getProductDisplayName(producto)}</span>
                               {producto.es_promocion && (
-                                <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 shrink-0">
+                                <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 shrink-0">
                                   PROMO
                                 </Badge>
                               )}
                               {producto.bloqueado_venta && (
-                                <span className="text-[8px] text-red-600 dark:text-red-400 shrink-0" title="Requiere autorización para vender">🔒</span>
+                                <span className="text-[8px] text-red-600 shrink-0" title="Requiere autorización para vender">🔒</span>
                               )}
                             </div>
                           </TableCell>
@@ -264,17 +264,17 @@ export function VendedorListaPreciosTab() {
                             <div className="flex items-center justify-end gap-1">
                               <span className="font-semibold text-xs">{formatPrecio(producto)}</span>
                               {producto.aplica_iva && (
-                                <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-blue-300 text-blue-600 dark:border-blue-700 dark:text-blue-400 shrink-0">IVA</Badge>
+                                <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-blue-300 text-blue-600 shrink-0">IVA</Badge>
                               )}
                               {producto.aplica_ieps && (
-                                <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-orange-300 text-orange-600 dark:border-orange-700 dark:text-orange-400 shrink-0">IEPS</Badge>
+                                <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-orange-300 text-orange-600 shrink-0">IEPS</Badge>
                               )}
                             </div>
                           </TableCell>
                           <TableCell className="py-1 px-2 text-right">
                             {tieneEspacio ? (
                               <span className="text-xs">
-                                <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                                <span className="text-emerald-600 font-medium">
                                   {formatCurrency(pisoMinimo)}
                                 </span>
                                 <span className="text-[9px] text-muted-foreground ml-1">(-${producto.descuento_maximo!.toFixed(0)})</span>
@@ -335,12 +335,12 @@ export function VendedorListaPreciosTab() {
                         <p className="text-sm leading-tight">
                           {getProductDisplayName(producto)}
                           {producto.es_promocion && (
-                            <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 ml-1 shrink-0 inline-flex">
+                            <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 ml-1 shrink-0 inline-flex">
                               PROMO
                             </Badge>
                           )}
                           {producto.bloqueado_venta && (
-                            <span className="text-[8px] text-red-600 dark:text-red-400 ml-1" title="Requiere autorización">🔒</span>
+                            <span className="text-[8px] text-red-600 ml-1" title="Requiere autorización">🔒</span>
                           )}
                         </p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">
@@ -351,14 +351,14 @@ export function VendedorListaPreciosTab() {
                         <p className="font-bold text-sm leading-tight">{formatPrecio(producto)}</p>
                         <div className="flex gap-0.5">
                           {producto.aplica_iva && (
-                            <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-blue-300 text-blue-600 dark:border-blue-700 dark:text-blue-400">IVA</Badge>
+                            <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-blue-300 text-blue-600">IVA</Badge>
                           )}
                           {producto.aplica_ieps && (
-                            <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-orange-300 text-orange-600 dark:border-orange-700 dark:text-orange-400">IEPS</Badge>
+                            <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-orange-300 text-orange-600">IEPS</Badge>
                           )}
                         </div>
                         {tieneEspacio && (
-                          <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                          <p className="text-[10px] text-emerald-600 font-medium">
                             Piso: {formatCurrency(pisoMinimo)}
                           </p>
                         )}

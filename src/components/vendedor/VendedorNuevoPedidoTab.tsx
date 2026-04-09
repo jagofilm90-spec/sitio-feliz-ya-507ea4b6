@@ -1189,7 +1189,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       <Dialog open={!!pedidoCreado} onOpenChange={() => setPedidoCreado(null)}>
         <DialogContent className="text-center">
           <div className="flex flex-col items-center gap-4 py-4">
-            <div className="h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+            <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
               <CheckCircle2 className="h-10 w-10 text-green-600" />
             </div>
             <DialogTitle className="text-2xl">¡Pedido Creado!</DialogTitle>

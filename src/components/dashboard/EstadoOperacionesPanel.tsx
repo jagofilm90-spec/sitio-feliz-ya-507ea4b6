@@ -64,12 +64,12 @@ export const EstadoOperacionesPanel = () => {
       <CardContent>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {/* Autorizaciones Pendientes */}
-          <Card className="border-l-4 border-l-amber-500 bg-amber-50/50 dark:bg-amber-950/20">
+          <Card className="border-l-4 border-l-amber-500 bg-amber-50/50">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/50">
-                    <Shield className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                  <div className="p-2 rounded-lg bg-amber-100">
+                    <Shield className="h-5 w-5 text-amber-600" />
                   </div>
                   <span className="font-medium text-sm">Autorizaciones</span>
                 </div>
@@ -129,12 +129,12 @@ export const EstadoOperacionesPanel = () => {
           </Card>
 
           {/* Recepciones del Día */}
-          <Card className="border-l-4 border-l-blue-500 bg-blue-50/50 dark:bg-blue-950/20">
+          <Card className="border-l-4 border-l-blue-500 bg-blue-50/50">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/50">
-                    <Package className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <div className="p-2 rounded-lg bg-blue-100">
+                    <Package className="h-5 w-5 text-blue-600" />
                   </div>
                   <span className="font-medium text-sm">Recepciones</span>
                 </div>
@@ -184,12 +184,12 @@ export const EstadoOperacionesPanel = () => {
           </Card>
 
           {/* Rutas Activas */}
-          <Card className="border-l-4 border-l-green-500 bg-green-50/50 dark:bg-green-950/20">
+          <Card className="border-l-4 border-l-green-500 bg-green-50/50">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/50">
-                    <Truck className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <div className="p-2 rounded-lg bg-green-100">
+                    <Truck className="h-5 w-5 text-green-600" />
                   </div>
                   <span className="font-medium text-sm">Rutas</span>
                 </div>
@@ -239,12 +239,12 @@ export const EstadoOperacionesPanel = () => {
           </Card>
 
           {/* Alertas Críticas */}
-          <Card className={`border-l-4 ${alertas.total > 0 ? 'border-l-red-500 bg-red-50/50 dark:bg-red-950/20' : 'border-l-gray-300 bg-gray-50/50 dark:bg-gray-900/20'}`}>
+          <Card className={`border-l-4 ${alertas.total > 0 ? 'border-l-red-500 bg-red-50/50' : 'border-l-gray-300 bg-gray-50/50'}`}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <div className={`p-2 rounded-lg ${alertas.total > 0 ? 'bg-red-100 dark:bg-red-900/50' : 'bg-gray-100 dark:bg-gray-800'}`}>
-                    <AlertTriangle className={`h-5 w-5 ${alertas.total > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500'}`} />
+                  <div className={`p-2 rounded-lg ${alertas.total > 0 ? 'bg-red-100' : 'bg-gray-100'}`}>
+                    <AlertTriangle className={`h-5 w-5 ${alertas.total > 0 ? 'text-red-600' : 'text-gray-500'}`} />
                   </div>
                   <span className="font-medium text-sm">Alertas</span>
                 </div>

@@ -37,15 +37,15 @@ export function FumigacionCardMobile({ producto, onUpdateFecha }: FumigacionCard
     if (dias < 0) {
       return <Badge variant="destructive">Vencida ({Math.abs(dias)} días)</Badge>;
     } else if (dias <= 7) {
-      return <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+      return <Badge className="bg-yellow-100 text-yellow-800">
         Próxima ({dias} días)
       </Badge>;
     } else if (dias <= 30) {
-      return <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+      return <Badge className="bg-blue-100 text-blue-800">
         Programada ({dias} días)
       </Badge>;
     } else {
-      return <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+      return <Badge className="bg-green-100 text-green-800">
         Vigente ({dias} días)
       </Badge>;
     }

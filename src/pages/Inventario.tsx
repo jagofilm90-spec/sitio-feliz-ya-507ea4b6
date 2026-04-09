@@ -785,7 +785,7 @@ const InventarioContent = () => {
                             <p className="text-xs text-muted-foreground">{p.codigo || "—"} · {p.categoria}</p>
                           </div>
                           <div className="text-right flex-shrink-0 ml-2">
-                            <p className={`font-bold text-lg ${p.stockTotal === 0 ? "text-destructive" : p.stockTotal <= p.stockMinimo && p.stockMinimo > 0 ? "text-amber-600 dark:text-amber-400" : ""}`}>
+                            <p className={`font-bold text-lg ${p.stockTotal === 0 ? "text-destructive" : p.stockTotal <= p.stockMinimo && p.stockMinimo > 0 ? "text-amber-600" : ""}`}>
                               {p.stockTotal.toLocaleString()}
                             </p>
                             <p className="text-xs text-muted-foreground">{p.unidad}</p>
@@ -818,7 +818,7 @@ const InventarioContent = () => {
                               </TableCell>
                               <TableCell className="text-sm text-muted-foreground">{p.categoria}</TableCell>
                               <TableCell className="text-right">
-                                <span className={`font-bold ${p.stockTotal === 0 ? "text-destructive" : p.stockTotal <= p.stockMinimo && p.stockMinimo > 0 ? "text-amber-600 dark:text-amber-400" : ""}`}>
+                                <span className={`font-bold ${p.stockTotal === 0 ? "text-destructive" : p.stockTotal <= p.stockMinimo && p.stockMinimo > 0 ? "text-amber-600" : ""}`}>
                                   {p.stockTotal.toLocaleString()}
                                 </span>
                               </TableCell>
@@ -827,9 +827,9 @@ const InventarioContent = () => {
                                 {p.stockTotal === 0 ? (
                                   <Badge variant="destructive">Sin stock</Badge>
                                 ) : p.stockMinimo > 0 && p.stockTotal <= p.stockMinimo ? (
-                                  <Badge variant="outline" className="border-amber-500 text-amber-600 dark:text-amber-400">Stock bajo</Badge>
+                                  <Badge variant="outline" className="border-amber-500 text-amber-600">Stock bajo</Badge>
                                 ) : (
-                                  <Badge variant="outline" className="border-green-500 text-green-600 dark:text-green-400">Disponible</Badge>
+                                  <Badge variant="outline" className="border-green-500 text-green-600">Disponible</Badge>
                                 )}
                               </TableCell>
                             </TableRow>

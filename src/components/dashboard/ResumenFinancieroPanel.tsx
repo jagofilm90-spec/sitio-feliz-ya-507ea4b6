@@ -19,19 +19,19 @@ export const ResumenFinancieroPanel = ({ data }: Props) => {
       label: "Clientes Nuevos",
       value: data.clientesNuevosMes.toString(),
       icon: UserPlus,
-      color: "text-emerald-600 dark:text-emerald-400",
+      color: "text-emerald-600",
     },
     {
       label: "Clientes Inactivos",
       value: data.clientesInactivos.toString(),
       icon: UserX,
-      color: "text-amber-600 dark:text-amber-400",
+      color: "text-amber-600",
     },
     {
       label: "Tasa Entregas",
       value: `${data.tasaEntregasExitosas.toFixed(0)}%`,
       icon: Target,
-      color: data.tasaEntregasExitosas >= 80 ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400",
+      color: data.tasaEntregasExitosas >= 80 ? "text-emerald-600" : "text-amber-600",
     },
   ];
 

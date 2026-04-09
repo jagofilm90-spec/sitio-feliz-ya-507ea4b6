@@ -555,9 +555,9 @@ export default function VincularFacturaDialog({
 
             {/* Match por Número de Talón */}
             {cfdiData?.numeroTalonExtraido && entregaPorTalon && (
-              <Alert className="border-green-500 bg-green-50 dark:bg-green-950/30">
+              <Alert className="border-green-500 bg-green-50">
                 <CheckCircle className="h-4 w-4 text-green-600" />
-                <AlertDescription className="text-green-800 dark:text-green-300">
+                <AlertDescription className="text-green-800">
                   <strong>Match por Número de Talón:</strong> La factura menciona talón "{cfdiData.numeroTalonExtraido}" 
                   que coincide con la recepción de <strong>{entregaPorTalon.orden_compra.folio}</strong>
                   {entregaPorTalon.fecha_entrega_real && (
@@ -571,9 +571,9 @@ export default function VincularFacturaDialog({
 
             {/* Talón no encontrado warning */}
             {cfdiData?.numeroTalonExtraido && !entregaPorTalon && !loadingTalon && (
-              <Alert variant="default" className="border-amber-400 bg-amber-50 dark:bg-amber-950/30">
+              <Alert variant="default" className="border-amber-400 bg-amber-50">
                 <AlertTriangle className="h-4 w-4 text-amber-600" />
-                <AlertDescription className="text-amber-800 dark:text-amber-300">
+                <AlertDescription className="text-amber-800">
                   Se detectó número de talón "{cfdiData.numeroTalonExtraido}" pero no se encontró 
                   ninguna recepción con ese número. Selecciona la OC manualmente.
                 </AlertDescription>

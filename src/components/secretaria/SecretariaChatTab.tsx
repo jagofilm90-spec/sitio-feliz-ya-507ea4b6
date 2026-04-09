@@ -239,7 +239,7 @@ export const SecretariaChatTab = () => {
                     onClick={() => setConversacionActiva(conv)}
                     className={cn(
                       "w-full p-4 border-b hover:bg-muted/50 text-left transition-colors",
-                      conversacionActiva?.id === conv.id && "bg-pink-50 dark:bg-pink-950/20"
+                      conversacionActiva?.id === conv.id && "bg-pink-50"
                     )}
                   >
                     <div className="flex items-center gap-3">

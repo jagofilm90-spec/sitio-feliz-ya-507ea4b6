@@ -1055,7 +1055,7 @@ export const CargaHojaInteractiva = ({
                         : isActive
                           ? "bg-primary text-primary-foreground border-primary"
                           : todosCheck
-                            ? "bg-green-100 dark:bg-green-950/30 border-green-500 text-green-700 dark:text-green-400"
+                            ? "bg-green-100 border-green-500 text-green-700"
                             : "bg-muted/50 border-border text-muted-foreground hover:bg-muted"
                     }`}
                   >
@@ -1152,7 +1152,7 @@ export const CargaHojaInteractiva = ({
                     return (
                       <div key={item.cargaProductoId}
                         className={`grid grid-cols-[auto_90px_1fr_90px_36px] gap-1 px-2 py-2 items-center ${
-                          item.confirmado ? "bg-green-50/50 dark:bg-green-950/20" : ""
+                          item.confirmado ? "bg-green-50/50" : ""
                         }`}>
                         <Checkbox
                           checked={item.confirmado}
@@ -1190,7 +1190,7 @@ export const CargaHojaInteractiva = ({
                                   }}
                                   className={`h-8 w-full text-center text-sm font-semibold ${
                                     excede ? "border-destructive bg-destructive/10" :
-                                    cantidadDifiere ? "border-amber-400 bg-amber-50 dark:bg-amber-950/30" : ""
+                                    cantidadDifiere ? "border-amber-400 bg-amber-50" : ""
                                   }`}
                                   disabled={item.confirmado}
                                 />

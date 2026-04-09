@@ -96,11 +96,11 @@ export const SecretariaPedidosTab = () => {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {[
-          { status: "por_autorizar", label: "Por autorizar", color: "bg-amber-100 dark:bg-amber-950/30 text-amber-700" },
-          { status: "pendiente", label: "Pendientes", color: "bg-blue-100 dark:bg-blue-950/30 text-blue-700" },
-          { status: "en_ruta", label: "En ruta", color: "bg-violet-100 dark:bg-violet-950/30 text-violet-700" },
-          { status: "entregado", label: "Entregados", color: "bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700" },
-          { status: "cancelado", label: "Cancelados", color: "bg-rose-100 dark:bg-rose-950/30 text-rose-700" },
+          { status: "por_autorizar", label: "Por autorizar", color: "bg-amber-100 text-amber-700" },
+          { status: "pendiente", label: "Pendientes", color: "bg-blue-100 text-blue-700" },
+          { status: "en_ruta", label: "En ruta", color: "bg-violet-100 text-violet-700" },
+          { status: "entregado", label: "Entregados", color: "bg-emerald-100 text-emerald-700" },
+          { status: "cancelado", label: "Cancelados", color: "bg-rose-100 text-rose-700" },
         ].map(item => (
           <Card key={item.status} className={`cursor-pointer transition-all hover:shadow-md ${statusFilter === item.status ? "ring-2 ring-primary" : ""} ${item.color}`}
             onClick={() => setStatusFilter(statusFilter === item.status ? "all" : item.status)}>

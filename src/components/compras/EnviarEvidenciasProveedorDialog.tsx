@@ -328,10 +328,10 @@ const EnviarEvidenciasProveedorDialog = ({
 
         <div className="space-y-4 max-h-[60vh] overflow-y-auto">
           {/* Resumen de la devolución */}
-          <div className="bg-amber-50 dark:bg-amber-950/30 p-4 rounded-lg space-y-2">
+          <div className="bg-amber-50 p-4 rounded-lg space-y-2">
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-600" />
-              <span className="font-medium text-amber-800 dark:text-amber-400">
+              <span className="font-medium text-amber-800">
                 Devolución de {devolucion.cantidad_devuelta} unidades
               </span>
             </div>

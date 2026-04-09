@@ -31,7 +31,7 @@ export const ChecklistItemRow = ({
       className={cn(
         "flex items-center justify-between py-2.5 px-3 rounded-lg border transition-all",
         isFailedNN
-          ? "bg-red-100 border-red-300 dark:bg-red-950 dark:border-red-800"
+          ? "bg-red-100 border-red-300"
           : "bg-background border-border hover:bg-muted/50"
       )}
     >
@@ -43,7 +43,7 @@ export const ChecklistItemRow = ({
               "text-[10px] font-bold px-1.5 py-0.5 rounded",
               isFailedNN
                 ? "bg-red-600 text-white animate-pulse"
-                : "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
+                : "bg-amber-100 text-amber-700"
             )}
           >
             NN

@@ -170,7 +170,7 @@ export const SecretariaClientesTab = () => {
         <Card
           className={`cursor-pointer transition-all hover:shadow-md ${
             vendedorFilter === "casa" ? "ring-2 ring-pink-500" : ""
-          } bg-slate-50 dark:bg-slate-950/30`}
+          } bg-slate-50`}
           onClick={() => setVendedorFilter("casa")}
         >
           <CardContent className="p-3 text-center">

@@ -344,10 +344,10 @@ export function AuditoriaFiscalSheet({ open, onOpenChange }: Props) {
                       const status = getCompletionStatus(sucursal);
                       const statusIcon = status === "completo" ? "✓" : status === "parcial" ? "⚠" : "✗";
                       const statusColor = status === "completo" 
-                        ? "border-green-300 bg-green-50 dark:bg-green-950/20" 
+                        ? "border-green-300 bg-green-50" 
                         : status === "parcial" 
-                          ? "border-yellow-300 bg-yellow-50 dark:bg-yellow-950/20" 
-                          : "border-red-300 bg-red-50 dark:bg-red-950/20";
+                          ? "border-yellow-300 bg-yellow-50" 
+                          : "border-red-300 bg-red-50";
 
                       return (
                         <div

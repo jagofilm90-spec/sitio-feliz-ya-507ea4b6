@@ -244,8 +244,8 @@ const EntregasDetallePopover = ({ ordenId, entregasResumen }: EntregasDetallePop
                             key={dev.id}
                             className={`text-xs p-1.5 rounded ${
                               dev.status === "pendiente" 
-                                ? "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400" 
-                                : "bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400"
+                                ? "bg-amber-50 text-amber-700" 
+                                : "bg-green-50 text-green-700"
                             }`}
                           >
                             <div className="flex items-center gap-1">

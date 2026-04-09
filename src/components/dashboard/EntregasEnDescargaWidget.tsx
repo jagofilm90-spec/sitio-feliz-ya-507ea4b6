@@ -59,9 +59,9 @@ const MAX_VISIBLE = 5;
 
 const getTimerColor = (segundos: number) => {
   const min = segundos / 60;
-  if (min > 120) return "text-red-600 dark:text-red-400";
-  if (min > 60) return "text-amber-600 dark:text-amber-400";
-  return "text-green-600 dark:text-green-400";
+  if (min > 120) return "text-red-600";
+  if (min > 60) return "text-amber-600";
+  return "text-green-600";
 };
 
 const formatMinutos = (minutos: number) => {
@@ -134,9 +134,9 @@ export const EntregasEnDescargaWidget = ({ entregas, completadasHoy = [] }: Prop
     <>
       {/* En descarga */}
       {entregas.length > 0 && (
-        <Card className="border-orange-500/50 bg-orange-50/50 dark:bg-orange-950/20">
+        <Card className="border-orange-500/50 bg-orange-50/50">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-orange-700 dark:text-orange-400 text-base">
+            <CardTitle className="flex items-center gap-2 text-orange-700 text-base">
               <Truck className="h-5 w-5 animate-pulse" />
               {entregas.length} descarga{entregas.length > 1 ? "s" : ""} en curso
             </CardTitle>
@@ -148,7 +148,7 @@ export const EntregasEnDescargaWidget = ({ entregas, completadasHoy = [] }: Prop
                 const minutos = Math.floor((Date.now() - inicio.getTime()) / 60000);
                 const colorTiempo = getTimerColor(minutos * 60);
                 return (
-                  <div key={e.id} className="flex items-center justify-between py-2.5 border-b last:border-0 border-orange-200/50 dark:border-orange-800/30 cursor-pointer hover:bg-orange-100/50 dark:hover:bg-orange-900/20 rounded transition-colors -mx-2 px-2" onClick={() => setSelectedEntrega(e)}>
+                  <div key={e.id} className="flex items-center justify-between py-2.5 border-b last:border-0 border-orange-200/50 cursor-pointer hover:bg-orange-100/50 rounded transition-colors -mx-2 px-2" onClick={() => setSelectedEntrega(e)}>
                     <div className="min-w-0">
                       <p className="font-medium text-sm truncate">{e.orden_compra?.proveedor?.nombre || "Sin proveedor"}</p>
                       <p className="text-xs text-muted-foreground">{e.orden_compra?.folio} · Entrega #{e.numero_entrega} · {e.cantidad_bultos} bultos</p>
@@ -168,7 +168,7 @@ export const EntregasEnDescargaWidget = ({ entregas, completadasHoy = [] }: Prop
               })}
             </div>
             {entregas.length > MAX_VISIBLE && (
-              <Button variant="ghost" size="sm" className="w-full mt-2 text-orange-700 dark:text-orange-400" onClick={() => setShowAllEnCurso(!showAllEnCurso)}>
+              <Button variant="ghost" size="sm" className="w-full mt-2 text-orange-700" onClick={() => setShowAllEnCurso(!showAllEnCurso)}>
                 <ChevronDown className={cn("h-4 w-4 mr-1 transition-transform", showAllEnCurso && "rotate-180")} />
                 {showAllEnCurso ? "Mostrar menos" : `Ver todas (${entregas.length})`}
               </Button>
@@ -187,7 +187,7 @@ export const EntregasEnDescargaWidget = ({ entregas, completadasHoy = [] }: Prop
           {selectedEntrega && (
             <>
               {/* Header — fijo */}
-              <div className="p-5 border-b bg-orange-50 dark:bg-orange-950/20 flex-shrink-0">
+              <div className="p-5 border-b bg-orange-50 flex-shrink-0">
                 <div className="flex items-center justify-between mb-3">
                   <img src={logoAlmasa} alt="ALMASA" className="h-7 object-contain" />
                   <Badge className="bg-orange-500 text-white gap-1">
@@ -290,9 +290,9 @@ export const EntregasEnDescargaWidget = ({ entregas, completadasHoy = [] }: Prop
 
       {/* Completadas hoy */}
       {completadasHoy.length > 0 && (
-        <Card className="border-green-500/50 bg-green-50/50 dark:bg-green-950/20">
+        <Card className="border-green-500/50 bg-green-50/50">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-green-700 dark:text-green-400 text-base">
+            <CardTitle className="flex items-center gap-2 text-green-700 text-base">
               <CheckCircle2 className="h-5 w-5" />
               {completadasHoy.length} recepción{completadasHoy.length > 1 ? "es" : ""} completada{completadasHoy.length > 1 ? "s" : ""} hoy
             </CardTitle>
@@ -305,13 +305,13 @@ export const EntregasEnDescargaWidget = ({ entregas, completadasHoy = [] }: Prop
                 const minutos = inicio && fin ? Math.floor((fin - inicio) / 60000) : 0;
                 const duracion = minutos >= 60 ? `${Math.floor(minutos / 60)}h ${minutos % 60}min` : `${minutos} min`;
                 return (
-                  <div key={e.id} className="flex items-center justify-between py-2.5 border-b last:border-0 border-green-200/50 dark:border-green-800/30">
+                  <div key={e.id} className="flex items-center justify-between py-2.5 border-b last:border-0 border-green-200/50">
                     <div className="min-w-0">
                       <p className="font-medium text-sm truncate">{e.orden_compra?.proveedor?.nombre || "Sin proveedor"}</p>
                       <p className="text-xs text-muted-foreground">{e.orden_compra?.folio} · Entrega #{e.numero_entrega} · {e.cantidad_bultos} bultos</p>
                     </div>
                     <div className="text-right flex-shrink-0 ml-3">
-                      <p className="text-sm font-bold text-green-600 dark:text-green-400">{duracion}</p>
+                      <p className="text-sm font-bold text-green-600">{duracion}</p>
                       <p className="text-xs text-muted-foreground">descarga</p>
                     </div>
                   </div>
@@ -319,7 +319,7 @@ export const EntregasEnDescargaWidget = ({ entregas, completadasHoy = [] }: Prop
               })}
             </div>
             {completadasHoy.length > MAX_VISIBLE && (
-              <Button variant="ghost" size="sm" className="w-full mt-2 text-green-700 dark:text-green-400" onClick={() => setShowAllCompletadas(!showAllCompletadas)}>
+              <Button variant="ghost" size="sm" className="w-full mt-2 text-green-700" onClick={() => setShowAllCompletadas(!showAllCompletadas)}>
                 <ChevronDown className={cn("h-4 w-4 mr-1 transition-transform", showAllCompletadas && "rotate-180")} />
                 {showAllCompletadas ? "Mostrar menos" : `Ver todas (${completadasHoy.length})`}
               </Button>

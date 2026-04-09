@@ -15,47 +15,47 @@ const tipoConfig: Record<string, { label: string; icon: React.ReactNode; color: 
   orden_compra: { 
     label: "Envío OC", 
     icon: <Send className="h-3 w-3" />, 
-    color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" 
+    color: "bg-blue-100 text-blue-800" 
   },
   reenvio_oc: { 
     label: "Reenvío OC", 
     icon: <RefreshCw className="h-3 w-3" />, 
-    color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200" 
+    color: "bg-cyan-100 text-cyan-800" 
   },
   orden_compra_confirmacion: { 
     label: "Confirmación", 
     icon: <Check className="h-3 w-3" />, 
-    color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" 
+    color: "bg-green-100 text-green-800" 
   },
   pago_proveedor: { 
     label: "Pago", 
     icon: <CreditCard className="h-3 w-3" />, 
-    color: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200" 
+    color: "bg-purple-100 text-purple-800" 
   },
   recordatorio_oc: { 
     label: "Recordatorio", 
     icon: <Bell className="h-3 w-3" />, 
-    color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" 
+    color: "bg-orange-100 text-orange-800" 
   },
   reprogramacion: { 
     label: "Reprogramación", 
     icon: <RefreshCw className="h-3 w-3" />, 
-    color: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" 
+    color: "bg-amber-100 text-amber-800" 
   },
   recepcion_confirmada: { 
     label: "Recepción", 
     icon: <Check className="h-3 w-3" />, 
-    color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200" 
+    color: "bg-emerald-100 text-emerald-800" 
   },
   logistica_inicio: { 
     label: "Inicio descarga", 
     icon: <Truck className="h-3 w-3" />, 
-    color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" 
+    color: "bg-orange-100 text-orange-800" 
   },
   logistica_fin: { 
     label: "Fin descarga", 
     icon: <Check className="h-3 w-3" />, 
-    color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" 
+    color: "bg-green-100 text-green-800" 
   },
 };
 
@@ -133,7 +133,7 @@ export function HistorialCorreosOC({ ordenId }: HistorialCorreosOCProps) {
                         </TooltipContent>
                       </Tooltip>
                     ) : (
-                      <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                      <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
                         <Check className="h-3 w-3 mr-1" />
                         Enviado
                       </Badge>

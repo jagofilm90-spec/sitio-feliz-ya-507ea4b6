@@ -39,11 +39,11 @@ export function VehiculoCardMobile({
   const getStatusBadge = (status: string | null) => {
     switch (status) {
       case "disponible":
-        return <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Disponible</Badge>;
+        return <Badge className="bg-green-100 text-green-800">Disponible</Badge>;
       case "en_ruta":
-        return <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">En Ruta</Badge>;
+        return <Badge className="bg-blue-100 text-blue-800">En Ruta</Badge>;
       case "mantenimiento":
-        return <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">Mantenimiento</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800">Mantenimiento</Badge>;
       default:
         return <Badge variant="secondary">{status || "Sin estado"}</Badge>;
     }
@@ -63,7 +63,7 @@ export function VehiculoCardMobile({
     }
     if (dias <= 30) {
       return (
-        <div className="flex items-center gap-1 text-xs text-yellow-600 dark:text-yellow-400">
+        <div className="flex items-center gap-1 text-xs text-yellow-600">
           <AlertTriangle className="h-3 w-3" />
           <span>{tipo} vence en {dias} días</span>
         </div>

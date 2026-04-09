@@ -579,13 +579,13 @@ const ClienteNuevoPedido = ({ clienteId, limiteCredito, saldoPendiente }: Client
       </div>
 
       {sucursales.length === 0 && (
-        <Card className="border-amber-500 bg-amber-50 dark:bg-amber-950/20">
+        <Card className="border-amber-500 bg-amber-50">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <MapPin className="h-5 w-5 text-amber-600" />
               <div>
-                <p className="font-medium text-amber-800 dark:text-amber-200">Sin dirección de entrega</p>
-                <p className="text-sm text-amber-700 dark:text-amber-300">
+                <p className="font-medium text-amber-800">Sin dirección de entrega</p>
+                <p className="text-sm text-amber-700">
                   Contacta a tu vendedor para configurar tu dirección de entrega
                 </p>
               </div>
@@ -690,8 +690,8 @@ const ClienteNuevoPedido = ({ clienteId, limiteCredito, saldoPendiente }: Client
                       return (
                         <div 
                           key={item.id} 
-                          className={`p-3 border rounded-lg border-amber-200 dark:border-amber-800 transition-colors ${
-                            cantidadActual > 0 ? 'bg-amber-50 dark:bg-amber-950/30' : 'hover:bg-amber-50/50 dark:hover:bg-amber-950/20'
+                          className={`p-3 border rounded-lg border-amber-200 transition-colors ${
+                            cantidadActual > 0 ? 'bg-amber-50' : 'hover:bg-amber-50/50'
                           }`}
                         >
                           <div className="flex justify-between items-start mb-2">
@@ -907,8 +907,8 @@ const ClienteNuevoPedido = ({ clienteId, limiteCredito, saldoPendiente }: Client
 
               {/* Alerta si excede 15,500 kg */}
               {calcularPesoTotal() > 15500 && (
-                <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700 rounded-lg">
-                  <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+                <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg">
+                  <div className="flex items-center gap-2 text-amber-700">
                     <AlertTriangle className="h-5 w-5 flex-shrink-0" />
                     <div>
                       <p className="font-medium">Pedido requiere autorización especial</p>

@@ -109,61 +109,6 @@
     --chart-5: 220 8% 80%;
   }
 
-  .dark {
-    /* Backgrounds */
-    --background: 220 20% 6%;
-    --foreground: 220 10% 93%;
-
-    /* Cards */
-    --card: 220 18% 11%;
-    --card-foreground: 220 10% 93%;
-
-    /* Popovers */
-    --popover: 220 18% 11%;
-    --popover-foreground: 220 10% 93%;
-
-    /* Primary - Crimson (brighter for dark mode) */
-    --primary: 350 74% 52%;
-    --primary-foreground: 0 0% 100%;
-
-    /* Secondary */
-    --secondary: 220 15% 16%;
-    --secondary-foreground: 220 10% 88%;
-
-    /* Muted */
-    --muted: 220 15% 14%;
-    --muted-foreground: 220 10% 58%;
-
-    /* Accent */
-    --accent: 350 40% 14%;
-    --accent-foreground: 350 74% 72%;
-
-    /* Destructive */
-    --destructive: 0 62% 52%;
-    --destructive-foreground: 0 0% 100%;
-
-    /* Borders */
-    --border: 220 15% 20%;
-    --input: 220 15% 20%;
-    --ring: 350 74% 52%;
-
-    /* Sidebar */
-    --sidebar-background: 220 20% 4%;
-    --sidebar-foreground: 220 10% 88%;
-    --sidebar-primary: 350 74% 52%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 350 40% 13%;
-    --sidebar-accent-foreground: 350 74% 72%;
-    --sidebar-border: 220 15% 14%;
-    --sidebar-ring: 350 74% 52%;
-
-    /* Chart colors - dark mode */
-    --chart-1: 350 72% 58%;
-    --chart-2: 350 55% 68%;
-    --chart-3: 220 20% 62%;
-    --chart-4: 220 12% 52%;
-    --chart-5: 220 10% 42%;
-  }
 }
 
 @layer base {
@@ -318,27 +263,6 @@
   --primary-foreground: 0 0% 100%;
 }
 
-.dark.high-contrast {
-  /* Backgrounds - Pure black */
-  --background: 0 0% 0%;
-  --foreground: 0 0% 100%;
-  
-  /* Cards */
-  --card: 0 0% 5%;
-  --card-foreground: 0 0% 100%;
-  
-  /* Borders - White for visibility */
-  --border: 0 0% 80%;
-  --input: 0 0% 80%;
-  
-  /* Muted */
-  --muted: 0 0% 10%;
-  --muted-foreground: 0 0% 85%;
-  
-  /* Primary - Brighter */
-  --primary: 352 100% 60%;
-  --primary-foreground: 0 0% 0%;
-}
 
 /* ============================================
    ERP TABLE DEFAULTS - Consistent readability
@@ -357,26 +281,6 @@
   @apply bg-muted/40;
 }
 
-/* Alternating rows in dark mode for readability */
-.dark .table-erp tbody tr:nth-child(even) {
-  @apply bg-muted/20;
-}
-
-/* ============================================
-   DARK MODE - Badge saturation boost
-   ============================================ */
-.dark .badge-status-ok {
-  @apply bg-emerald-600/90 text-emerald-50;
-}
-.dark .badge-status-warning {
-  @apply bg-amber-600/90 text-amber-50;
-}
-.dark .badge-status-critical {
-  @apply bg-orange-600/90 text-orange-50;
-}
-.dark .badge-status-error {
-  @apply bg-red-600/90 text-red-50;
-}
 
 /* Hide scrollbar for horizontal tabs */
 .scrollbar-hide {
@@ -456,15 +360,6 @@
   box-shadow: 0 4px 12px rgba(10, 10, 10, 0.12) !important;
 }
 
-/* Dark mode auth overrides */
-.dark .auth-input {
-  background: hsl(220 18% 11%) !important;
-  border-color: hsl(220 15% 20%) !important;
-  color: hsl(220 10% 93%) !important;
-}
-.dark .auth-input:focus {
-  background: hsl(220 18% 14%) !important;
-  border-color: #c41e3a !important;
   box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.1) !important;
 }
 

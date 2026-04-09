@@ -302,7 +302,7 @@ export function VendedorSaldosTab() {
                             {formatCurrency(cliente.montoVencido)} vencido
                           </Badge>
                         ) : (
-                          <Badge variant="secondary" className="text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                          <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
                             Al corriente
                           </Badge>
                         )}

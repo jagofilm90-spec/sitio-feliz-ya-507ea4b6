@@ -354,7 +354,7 @@ export function ClienteProductosTab({ clienteId }: ClienteProductosTabProps) {
             </TableHeader>
             <TableBody>
               {productosEspeciales.map((item) => (
-                <TableRow key={item.id} className="bg-amber-50/50 dark:bg-amber-950/20">
+                <TableRow key={item.id} className="bg-amber-50/50">
                   <TableCell className="font-medium">{item.producto.nombre}</TableCell>
                   <TableCell className="text-muted-foreground">{item.producto.codigo}</TableCell>
                   <TableCell>${item.producto.precio_venta.toFixed(2)}</TableCell>

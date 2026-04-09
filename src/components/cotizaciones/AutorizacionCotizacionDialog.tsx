@@ -227,7 +227,7 @@ const AutorizacionCotizacionDialog = ({ open, onOpenChange, cotizacion }: Autori
           </div>
 
           {/* Solicitante */}
-          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+          <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
             <p className="text-sm flex items-center gap-2">
               <User className="h-4 w-4" />
               <span className="text-muted-foreground">Solicitado por:</span>{" "}
@@ -236,8 +236,8 @@ const AutorizacionCotizacionDialog = ({ open, onOpenChange, cotizacion }: Autori
           </div>
 
           {soloPrecios && (
-            <div className="mb-4 p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
-              <p className="text-sm text-purple-700 dark:text-purple-300 font-medium">
+            <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
+              <p className="text-sm text-purple-700 font-medium">
                 📋 Cotización de solo precios (sin cantidades)
               </p>
             </div>
@@ -304,7 +304,7 @@ const AutorizacionCotizacionDialog = ({ open, onOpenChange, cotizacion }: Autori
 
           {/* Notas */}
           {cotizacion.notas && !cotizacion.notas.includes("[Solo precios]") && (
-            <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+            <div className="mb-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
               <p className="text-sm">
                 <span className="font-medium">Notas:</span> {cotizacion.notas.replace(/\[.*?\]/g, "").trim()}
               </p>
@@ -313,8 +313,8 @@ const AutorizacionCotizacionDialog = ({ open, onOpenChange, cotizacion }: Autori
 
           {/* Rechazo Form */}
           {showRechazoForm && (
-            <div className="mt-4 p-4 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
-              <Label className="text-red-700 dark:text-red-400">Motivo del rechazo</Label>
+            <div className="mt-4 p-4 bg-red-50 rounded-lg border border-red-200">
+              <Label className="text-red-700">Motivo del rechazo</Label>
               <Textarea
                 value={motivoRechazo}
                 onChange={(e) => setMotivoRechazo(e.target.value)}

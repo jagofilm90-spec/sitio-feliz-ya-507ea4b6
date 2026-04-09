@@ -696,7 +696,7 @@ export const RegistrarLlegadaSheet = ({
 
           {/* Indicador borrador guardado */}
           {borradorGuardado && (
-            <div className="px-4 py-1.5 bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 text-xs flex items-center gap-1">
+            <div className="px-4 py-1.5 bg-green-50 text-green-700 text-xs flex items-center gap-1">
               <Save className="w-3 h-3" /> Borrador guardado
             </div>
           )}
@@ -723,7 +723,7 @@ export const RegistrarLlegadaSheet = ({
                 <Car className="w-4 h-4" />
                 Foto de placas/camión *
               </Label>
-              <div className={cn("p-3 border rounded-lg", fotoPlacas ? "border-green-500 bg-green-50 dark:bg-green-950/20" : "border-destructive bg-destructive/5")}>
+              <div className={cn("p-3 border rounded-lg", fotoPlacas ? "border-green-500 bg-green-50" : "border-destructive bg-destructive/5")}>
                 {fotoPlacas ? (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
@@ -750,7 +750,7 @@ export const RegistrarLlegadaSheet = ({
             </div>
 
             {/* Foto de identificación */}
-            <div className={cn("flex items-center justify-between p-3 border rounded-lg", fotoIdentificacion ? "border-green-500 bg-green-50 dark:bg-green-950/20" : "border-destructive bg-destructive/5")}>
+            <div className={cn("flex items-center justify-between p-3 border rounded-lg", fotoIdentificacion ? "border-green-500 bg-green-50" : "border-destructive bg-destructive/5")}>
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4" />
                 <span className="font-medium">Identificación del chofer *</span>
@@ -778,7 +778,7 @@ export const RegistrarLlegadaSheet = ({
               {!sinSellos && (
                 <div className="space-y-2">
                   {sellos.map((sello, idx) => (
-                    <div key={idx} className={cn("flex items-center gap-3 p-3 border rounded-lg", sello.foto ? "border-green-500 bg-green-50 dark:bg-green-950/20" : idx === 0 ? "border-destructive bg-destructive/5" : "border-border")}>
+                    <div key={idx} className={cn("flex items-center gap-3 p-3 border rounded-lg", sello.foto ? "border-green-500 bg-green-50" : idx === 0 ? "border-destructive bg-destructive/5" : "border-border")}>
                       <span className="font-medium text-sm w-16 flex-shrink-0">Sello {idx + 1}</span>
                       {sello.foto ? (
                         <div className="flex items-center gap-2">
@@ -809,7 +809,7 @@ export const RegistrarLlegadaSheet = ({
               )}
 
               {/* Opción sin sellos */}
-              <div className={cn("p-4 border rounded-lg", sinSellos ? "border-amber-500 bg-amber-50 dark:bg-amber-950/20" : "border-border")}>
+              <div className={cn("p-4 border rounded-lg", sinSellos ? "border-amber-500 bg-amber-50" : "border-border")}>
                 <div className="flex items-center gap-4 touch-manipulation">
                   <Checkbox id="sin-sellos" checked={sinSellos} onCheckedChange={(checked) => handleSinSellosChange(!!checked)} disabled={tieneAlgunSello} className="h-6 w-6 border-2" />
                   <label htmlFor="sin-sellos" className="text-base font-medium leading-none flex items-center gap-2 cursor-pointer py-2">
@@ -819,14 +819,14 @@ export const RegistrarLlegadaSheet = ({
                 </div>
                 {sinSellos && (
                   <div className="mt-3 space-y-3">
-                    <div className="flex items-start gap-2 text-amber-700 dark:text-amber-400 text-sm">
+                    <div className="flex items-start gap-2 text-amber-700 text-sm">
                       <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
                       <span>Se requiere firma del chofer confirmando que entrega sin sellos</span>
                     </div>
                     {firmaChoferSinSellos ? (
-                      <div className="flex items-center gap-3 p-2 bg-green-100 dark:bg-green-900/30 rounded">
+                      <div className="flex items-center gap-3 p-2 bg-green-100 rounded">
                         <img src={firmaChoferSinSellos} alt="Firma" className="h-12 border rounded bg-white" />
-                        <div className="flex items-center gap-1 text-green-700 dark:text-green-400 text-sm">
+                        <div className="flex items-center gap-1 text-green-700 text-sm">
                           <CheckCircle2 className="w-4 h-4" /> Firmado
                         </div>
                         <Button variant="ghost" size="lg" className="touch-manipulation" onClick={() => setFirmaChoferSinSellos(null)}>
@@ -845,10 +845,10 @@ export const RegistrarLlegadaSheet = ({
             </div>
 
             {/* Rechazo total */}
-            <div className={cn("p-4 border rounded-lg", rechazoTotal ? "border-red-500 bg-red-50 dark:bg-red-950/20" : "border-border")}>
+            <div className={cn("p-4 border rounded-lg", rechazoTotal ? "border-red-500 bg-red-50" : "border-border")}>
               <div className="flex items-center gap-4 touch-manipulation">
                 <Checkbox id="rechazo-total" checked={rechazoTotal} onCheckedChange={(checked) => handleRechazoTotalChange(!!checked)} disabled={sinSellos || tieneAlgunSello} className="h-6 w-6 border-2" />
-                <label htmlFor="rechazo-total" className="text-base font-medium leading-none flex items-center gap-2 text-red-700 dark:text-red-400 cursor-pointer py-2">
+                <label htmlFor="rechazo-total" className="text-base font-medium leading-none flex items-center gap-2 text-red-700 cursor-pointer py-2">
                   <Ban className="w-5 h-5" />
                   Rechazar entrega completa
                 </label>
@@ -882,9 +882,9 @@ export const RegistrarLlegadaSheet = ({
                     )}
                   </div>
                   {firmaChoferRechazo ? (
-                    <div className="flex items-center gap-3 p-2 bg-green-100 dark:bg-green-900/30 rounded">
+                    <div className="flex items-center gap-3 p-2 bg-green-100 rounded">
                       <img src={firmaChoferRechazo} alt="Firma" className="h-12 border rounded bg-white" />
-                      <div className="flex items-center gap-1 text-green-700 dark:text-green-400 text-sm"><CheckCircle2 className="w-4 h-4" /> Chofer firmó rechazo</div>
+                      <div className="flex items-center gap-1 text-green-700 text-sm"><CheckCircle2 className="w-4 h-4" /> Chofer firmó rechazo</div>
                       <Button variant="ghost" size="lg" className="touch-manipulation" onClick={() => setFirmaChoferRechazo(null)}><X className="h-5 w-5" /></Button>
                     </div>
                   ) : (
@@ -899,12 +899,12 @@ export const RegistrarLlegadaSheet = ({
 
             {/* Aviso */}
             {!rechazoTotal && (
-              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
-                <div className="flex items-start gap-2 text-amber-700 dark:text-amber-400">
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-start gap-2 text-amber-700">
                   <AlertTriangle className="w-5 h-5 mt-0.5 shrink-0" />
                   <div className="text-sm">
                     <p className="font-medium">Después de confirmar:</p>
-                    <p className="text-amber-600 dark:text-amber-300">
+                    <p className="text-amber-600">
                       La entrega pasará a estado "En descarga". Cuando termines de descargar, regresa para completar la recepción con las cantidades recibidas.
                     </p>
                   </div>

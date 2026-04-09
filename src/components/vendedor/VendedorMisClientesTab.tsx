@@ -393,7 +393,7 @@ export function VendedorMisClientesTab({ onClienteCreado, onNavigateNuevoPedido 
                       </div>
                     </div>
                     {(cliente.saldo_pendiente || 0) > 0 && (
-                      <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 shrink-0">
+                      <Badge variant="secondary" className="bg-amber-100 text-amber-800 shrink-0">
                         {formatCurrency(cliente.saldo_pendiente || 0)}
                       </Badge>
                     )}
@@ -435,8 +435,8 @@ export function VendedorMisClientesTab({ onClienteCreado, onNavigateNuevoPedido 
 
                   {/* Sucursales con GPS - Botón para ver en Google Maps */}
                   {cliente.sucursales?.some(s => s.latitud && s.longitud) && (
-                    <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                      <p className="text-xs text-green-700 dark:text-green-300 mb-2">
+                    <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                      <p className="text-xs text-green-700 mb-2">
                         🗺️ Ver en Google Maps:
                       </p>
                       <div className="flex flex-wrap gap-2">
@@ -447,7 +447,7 @@ export function VendedorMisClientesTab({ onClienteCreado, onNavigateNuevoPedido 
                               key={sucursal.id}
                               variant="outline"
                               size="sm"
-                              className="h-8 text-xs bg-white dark:bg-background"
+                              className="h-8 text-xs bg-white"
                               onClick={() => {
                                 window.open(
                                   `https://www.google.com/maps?q=${sucursal.latitud},${sucursal.longitud}`,

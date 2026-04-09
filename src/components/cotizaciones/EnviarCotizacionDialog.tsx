@@ -430,7 +430,7 @@ Tel: (55) 56-00-77-81`);
             </div>
 
             {/* Attachment info */}
-            <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md text-sm">
+            <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-md text-sm">
               <FileText className="h-4 w-4 text-blue-600" />
               <span>Se adjuntará: <strong>Cotizacion_{folio}.html</strong></span>
             </div>

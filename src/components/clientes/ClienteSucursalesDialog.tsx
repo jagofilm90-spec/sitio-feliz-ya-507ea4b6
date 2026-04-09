@@ -909,7 +909,7 @@ const ClienteSucursalesDialog = ({
                             )}
                             <span className="font-medium">{sucursal.nombre}</span>
                             {sucursal.es_rosticeria && (
-                              <Badge className="text-xs bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30">
+                              <Badge className="text-xs bg-amber-500/20 text-amber-700 border-amber-500/30">
                                 🍗
                               </Badge>
                             )}
@@ -936,7 +936,7 @@ const ClienteSucursalesDialog = ({
                               <>
                                 <Badge variant="outline">{sucursal.zona.nombre}</Badge>
                                 {sucursal.zona.es_foranea && (
-                                  <Badge className="text-xs bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30">
+                                  <Badge className="text-xs bg-blue-500/20 text-blue-700 border-blue-500/30">
                                     🚛 Foránea
                                   </Badge>
                                 )}
@@ -1046,7 +1046,7 @@ const ClienteSucursalesDialog = ({
                               )}
                               {sucursal.nombre}
                               {sucursal.es_rosticeria && (
-                                <Badge className="text-xs bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30">
+                                <Badge className="text-xs bg-amber-500/20 text-amber-700 border-amber-500/30">
                                   🍗
                                 </Badge>
                               )}
@@ -1067,7 +1067,7 @@ const ClienteSucursalesDialog = ({
                             <div className="flex items-center gap-1 flex-wrap">
                               <Badge variant="outline">{sucursal.zona.nombre}</Badge>
                               {sucursal.zona.es_foranea && (
-                                <Badge className="text-xs bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30">
+                                <Badge className="text-xs bg-blue-500/20 text-blue-700 border-blue-500/30">
                                   🚛 Foránea
                                 </Badge>
                               )}

@@ -173,9 +173,9 @@ export const ConciliacionRapidaDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/30">
+        <Alert className="border-amber-300 bg-amber-50">
           <AlertTriangle className="h-4 w-4 text-amber-600" />
-          <AlertDescription className="text-amber-700 dark:text-amber-400">
+          <AlertDescription className="text-amber-700">
             <strong>Importante:</strong> Esta acción marcará los costos de la OC como finales y actualizará el catálogo de productos. 
             Usa esta opción solo si no recibirás factura del proveedor o el costo de la OC es el definitivo.
           </AlertDescription>

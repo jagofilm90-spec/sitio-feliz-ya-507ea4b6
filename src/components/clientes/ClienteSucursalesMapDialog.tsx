@@ -326,19 +326,19 @@ export function ClienteSucursalesMapDialog({
 
           {/* List of branches without coordinates */}
           {sucursalesWithoutCoords.length > 0 && (
-            <div className="border rounded-lg p-4 bg-amber-50 dark:bg-amber-950/20">
-              <h4 className="font-medium text-amber-700 dark:text-amber-400 mb-2 flex items-center gap-2">
+            <div className="border rounded-lg p-4 bg-amber-50">
+              <h4 className="font-medium text-amber-700 mb-2 flex items-center gap-2">
                 <AlertCircle className="h-4 w-4" />
                 Sucursales sin coordenadas ({sucursalesWithoutCoords.length})
               </h4>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
                 {sucursalesWithoutCoords.map((sucursal) => (
-                  <div key={sucursal.id} className="text-amber-600 dark:text-amber-500">
+                  <div key={sucursal.id} className="text-amber-600">
                     • {sucursal.codigo_sucursal ? `${sucursal.codigo_sucursal} - ` : ""}{sucursal.nombre}
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-amber-600 dark:text-amber-500 mt-2">
+              <p className="text-xs text-amber-600 mt-2">
                 Geocodifica estas sucursales desde el diálogo de sucursales para verlas en el mapa.
               </p>
             </div>

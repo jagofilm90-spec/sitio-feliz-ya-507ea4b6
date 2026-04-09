@@ -417,8 +417,8 @@ export function RegistrarPagoDialog({
               {formaPago && (
                 <div className={`flex items-center gap-2 p-3 rounded-lg text-sm ${
                   requiereValidacion 
-                    ? "bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800" 
-                    : "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800"
+                    ? "bg-amber-50 text-amber-700 border border-amber-200" 
+                    : "bg-emerald-50 text-emerald-700 border border-emerald-200"
                 }`}>
                   {requiereValidacion ? (
                     <>
@@ -553,11 +553,11 @@ export function RegistrarPagoDialog({
                                   Vencido {factura.dias_vencido}d
                                 </Badge>
                               ) : factura.dias_vencido >= -7 ? (
-                                <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                                <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800">
                                   Por vencer
                                 </Badge>
                               ) : (
-                                <Badge variant="outline" className="text-xs text-emerald-600 dark:text-emerald-400">
+                                <Badge variant="outline" className="text-xs text-emerald-600">
                                   <CheckCircle className="h-3 w-3 mr-1" />
                                   Al corriente
                                 </Badge>

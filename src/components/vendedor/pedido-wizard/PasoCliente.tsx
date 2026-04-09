@@ -180,25 +180,25 @@ export function PasoCliente({
     switch (color) {
       case 'verde':
         return {
-          bg: 'bg-emerald-50 dark:bg-emerald-950/30',
-          border: 'border-emerald-200 dark:border-emerald-800',
-          text: 'text-emerald-700 dark:text-emerald-400',
+          bg: 'bg-emerald-50',
+          border: 'border-emerald-200',
+          text: 'text-emerald-700',
           icon: <CheckCircle className="h-5 w-5" />,
           dot: '🟢',
         };
       case 'amarillo':
         return {
-          bg: 'bg-amber-50 dark:bg-amber-950/30',
-          border: 'border-amber-200 dark:border-amber-800',
-          text: 'text-amber-700 dark:text-amber-400',
+          bg: 'bg-amber-50',
+          border: 'border-amber-200',
+          text: 'text-amber-700',
           icon: <Clock className="h-5 w-5" />,
           dot: '🟡',
         };
       case 'rojo':
         return {
-          bg: 'bg-red-50 dark:bg-red-950/30',
-          border: 'border-red-200 dark:border-red-800',
-          text: 'text-red-700 dark:text-red-400',
+          bg: 'bg-red-50',
+          border: 'border-red-200',
+          text: 'text-red-700',
           icon: <AlertTriangle className="h-5 w-5" />,
           dot: '🔴',
         };
@@ -297,7 +297,7 @@ export function PasoCliente({
                   </div>
 
                   {semaforo.color === 'rojo' && (
-                    <div className="mt-3 p-2 rounded bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300 text-sm flex items-start gap-2">
+                    <div className="mt-3 p-2 rounded bg-red-100 text-red-800 text-sm flex items-start gap-2">
                       <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                       <span>Este cliente tiene saldo vencido. Considera solicitar pago antes de continuar.</span>
                     </div>

@@ -28,14 +28,14 @@ const StockBadgeMobile = ({ producto }: { producto: Producto }) => {
 
   if (producto.stock_actual <= stockMinimo) {
     return (
-      <Badge variant="outline" className="text-xs text-amber-600 border-amber-400 bg-amber-50 dark:bg-amber-950/30">
+      <Badge variant="outline" className="text-xs text-amber-600 border-amber-400 bg-amber-50">
         Stock bajo
       </Badge>
     );
   }
 
   return (
-    <Badge variant="outline" className="text-xs text-green-600 border-green-400 bg-green-50 dark:bg-green-950/30">
+    <Badge variant="outline" className="text-xs text-green-600 border-green-400 bg-green-50">
       {producto.stock_actual} disp.
     </Badge>
   );

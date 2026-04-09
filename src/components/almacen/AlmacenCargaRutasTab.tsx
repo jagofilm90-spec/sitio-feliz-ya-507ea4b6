@@ -645,9 +645,9 @@ export const AlmacenCargaRutasTab = ({ onStatsUpdate, empleadoId }: AlmacenCarga
               const mins = Math.floor(segsTranscurridos / 60);
               const tiempoStr = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
               return (
-                <Card key={r.id} className="border-amber-300 dark:border-amber-700 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedRuta(r)}>
+                <Card key={r.id} className="border-amber-300 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedRuta(r)}>
                   <CardContent className="py-3 flex items-center gap-3">
-                    <div className="bg-amber-100 dark:bg-amber-900/30 rounded-lg p-2 shrink-0">
+                    <div className="bg-amber-100 rounded-lg p-2 shrink-0">
                       <Package className="h-5 w-5 text-amber-600" />
                     </div>
                     <div className="flex-1 min-w-0">

@@ -114,13 +114,13 @@ export function PasoCredito({
 
       {/* Different from default warning */}
       {isDifferentFromDefault && (
-        <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+        <div className="flex items-start gap-3 p-4 rounded-lg bg-amber-50 border border-amber-200">
           <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
           <div>
-            <p className="font-medium text-amber-800 dark:text-amber-200">
+            <p className="font-medium text-amber-800">
               Plazo diferente al configurado
             </p>
-            <p className="text-sm text-amber-700 dark:text-amber-300">
+            <p className="text-sm text-amber-700">
               El cliente tiene "{clienteDefaultCredito.replace('_', ' ')}" como plazo predeterminado. 
               Este pedido usará "{terminoCredito.replace('_', ' ')}".
             </p>

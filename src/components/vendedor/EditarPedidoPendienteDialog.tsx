@@ -389,7 +389,7 @@ export const EditarPedidoPendienteDialog = ({ open, onOpenChange, pedidoId, foli
                       const sub = calcSubtotal(n.cantidad, n.precio, n.producto.precio_por_kilo, n.producto.peso_kg);
                       const below = isBelowMin(n.precio, n.producto.precio_venta, n.producto.descuento_maximo);
                       return (
-                        <TableRow key={`n-${i}`} className="bg-green-50/50 dark:bg-green-950/10">
+                        <TableRow key={`n-${i}`} className="bg-green-50/50">
                           <TableCell><Input type="number" min="1" value={n.cantidad} onChange={e => setNuevos(prev => prev.map((p, j) => j === i ? { ...p, cantidad: parseFloat(e.target.value) || 0 } : p))} className="h-7 w-16 text-xs text-center" /></TableCell>
                           <TableCell className="text-xs text-muted-foreground">{n.producto.unidad}</TableCell>
                           <TableCell className="text-xs font-medium"><Badge className="text-[9px] bg-green-600 mr-1">Nuevo</Badge>{n.producto.nombre}</TableCell>
@@ -414,7 +414,7 @@ export const EditarPedidoPendienteDialog = ({ open, onOpenChange, pedidoId, foli
               </div>
 
               {anyBelowMin && (
-                <div className="border border-amber-300 rounded p-2 bg-amber-50 dark:bg-amber-950/30 text-xs text-amber-800 dark:text-amber-200 mt-2">
+                <div className="border border-amber-300 rounded p-2 bg-amber-50 text-xs text-amber-800 mt-2">
                   <AlertTriangle className="h-3.5 w-3.5 inline mr-1" />
                   Hay precios bajo mínimo — se enviará para autorización.
                 </div>

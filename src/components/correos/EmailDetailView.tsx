@@ -377,7 +377,7 @@ const EmailDetailView = ({
                     variant="outline" 
                     size="sm" 
                     onClick={() => setVincularFacturaOpen(true)}
-                    className="border-amber-500 text-amber-700 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-400 dark:hover:bg-amber-950"
+                    className="border-amber-500 text-amber-700 hover:bg-amber-50"
                   >
                     <Receipt className="h-4 w-4 mr-2" />
                     Vincular Factura
@@ -445,10 +445,10 @@ const EmailDetailView = ({
 
         {/* Alerta si el correo ya tiene pedido acumulativo activo */}
         {acumulativoActivo && (
-          <Alert variant="default" className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20">
+          <Alert variant="default" className="border-yellow-500 bg-yellow-50">
             <AlertTriangle className="h-4 w-4 text-yellow-600" />
-            <AlertTitle className="text-yellow-800 dark:text-yellow-200">Correo ya procesado</AlertTitle>
-            <AlertDescription className="text-yellow-700 dark:text-yellow-300">
+            <AlertTitle className="text-yellow-800">Correo ya procesado</AlertTitle>
+            <AlertDescription className="text-yellow-700">
               Este correo ya tiene un pedido acumulativo activo para{" "}
               <strong>
                 {(acumulativoActivo as any).clientes?.nombre}
@@ -526,7 +526,7 @@ const EmailDetailView = ({
           <Separator />
           <CardContent className="pt-4">
             <div
-              className="prose prose-sm max-w-none dark:prose-invert"
+              className="prose prose-sm max-w-none"
               dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(email.body) }}
             />
           </CardContent>

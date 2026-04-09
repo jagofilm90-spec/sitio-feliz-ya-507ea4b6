@@ -482,8 +482,8 @@ const DividirEntregaDialog = ({ open, onOpenChange, orden }: DividirEntregaDialo
                 <div className={cn(
                   "p-3 rounded-lg text-sm",
                   sumaPartes === entregaSeleccionada.cantidad_bultos 
-                    ? "bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400"
-                    : "bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400"
+                    ? "bg-green-50 text-green-700"
+                    : "bg-amber-50 text-amber-700"
                 )}>
                   <div className="flex items-center justify-between">
                     <span>Suma de partes:</span>

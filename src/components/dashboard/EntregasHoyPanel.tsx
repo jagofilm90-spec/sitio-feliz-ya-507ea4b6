@@ -152,16 +152,16 @@ export const EntregasHoyPanel = () => {
 
         {/* Stats grid */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-lg p-3 text-center">
-            <div className="flex items-center justify-center gap-1 text-emerald-600 dark:text-emerald-400 mb-1">
+          <div className="bg-emerald-50 rounded-lg p-3 text-center">
+            <div className="flex items-center justify-center gap-1 text-emerald-600 mb-1">
               <CheckCircle2 className="h-4 w-4" />
               <span className="text-xs font-medium">Entregadas</span>
             </div>
             <span className="text-2xl font-bold">{stats.entregadas}</span>
           </div>
           
-          <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-3 text-center">
-            <div className="flex items-center justify-center gap-1 text-amber-600 dark:text-amber-400 mb-1">
+          <div className="bg-amber-50 rounded-lg p-3 text-center">
+            <div className="flex items-center justify-center gap-1 text-amber-600 mb-1">
               <Clock className="h-4 w-4" />
               <span className="text-xs font-medium">Pendientes</span>
             </div>

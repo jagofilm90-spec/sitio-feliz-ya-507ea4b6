@@ -656,13 +656,13 @@ const ReenviarOCDialog = ({ open, onOpenChange, orden }: ReenviarOCDialogProps) 
           </AlertDialogHeader>
           
           {/* Success summary */}
-          <div className="flex items-start gap-3 p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
-            <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
+          <div className="flex items-start gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
             <div className="text-sm">
-              <p className="font-medium text-green-800 dark:text-green-300">
+              <p className="font-medium text-green-800">
                 Orden enviada exitosamente
               </p>
-              <p className="text-green-600 dark:text-green-400 text-xs mt-1">
+              <p className="text-green-600 text-xs mt-1">
                 Se envió a: {correosEnviados.join(", ")}
               </p>
             </div>

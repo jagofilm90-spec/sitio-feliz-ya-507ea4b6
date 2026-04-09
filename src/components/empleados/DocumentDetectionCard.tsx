@@ -80,9 +80,9 @@ const FIELD_LABELS: Record<string, string> = {
 };
 
 const CONFIANZA_COLORS = {
-  alta: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  media: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-  baja: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+  alta: "bg-green-100 text-green-800",
+  media: "bg-yellow-100 text-yellow-800",
+  baja: "bg-red-100 text-red-800",
 };
 
 export default function DocumentDetectionCard({

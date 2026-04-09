@@ -312,7 +312,7 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
                         </Badge>
                       )}
                       {config?.costo_proveedor && (
-                        <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                        <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
                           ${config.costo_proveedor.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                         </Badge>
                       )}
@@ -634,8 +634,8 @@ const CrearProductoDialog = ({ open, onOpenChange, proveedorId, proveedorNombre,
           {margen && parseFloat(margen) > 0 && (
             <div className={`p-2 rounded text-sm ${
               parseFloat(margen) >= 15 
-                ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" 
-                : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                ? "bg-green-100 text-green-800" 
+                : "bg-amber-100 text-amber-800"
             }`}>
               Margen estimado: <strong>{margen}%</strong>
             </div>
@@ -738,7 +738,7 @@ const TransportConfigPanel = ({ productoId, unidadComercial, config, onUpdate }:
     <div className="mt-3 space-y-4 p-3 bg-muted/30 rounded-lg">
       {/* Unidad de Compra - First and most important */}
       <div className="space-y-2 pb-3 border-b">
-        <div className="flex items-center gap-2 text-sm font-medium text-amber-600 dark:text-amber-400">
+        <div className="flex items-center gap-2 text-sm font-medium text-amber-600">
           💰 Unidad de Compra
         </div>
         <p className="text-xs text-muted-foreground mb-2">
@@ -910,8 +910,8 @@ const TransportConfigPanel = ({ productoId, unidadComercial, config, onUpdate }:
             {localConfig.cantidad_lotes_default && localConfig.unidades_por_lote_default && (
               <div className={`p-2 rounded text-sm ${
                 coincideConCapacidad 
-                  ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" 
-                  : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                  ? "bg-green-100 text-green-800" 
+                  : "bg-amber-100 text-amber-800"
               }`}>
                 <span className="font-medium">Total calculado: </span>
                 {localConfig.cantidad_lotes_default} lotes × {localConfig.unidades_por_lote_default} = {totalCalculado.toLocaleString()} {unidadComercial}

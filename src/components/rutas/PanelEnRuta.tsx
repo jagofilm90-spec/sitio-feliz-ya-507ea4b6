@@ -179,11 +179,11 @@ export const PanelEnRuta = ({
           <div className="p-3 space-y-4">
             
             {/* Bodega origen */}
-            <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-900">
+            <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
               <Warehouse className="h-5 w-5 text-blue-600" />
               <div>
-                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">Bodega Principal</p>
-                <p className="text-xs text-blue-600 dark:text-blue-400">Punto de partida</p>
+                <p className="text-sm font-medium text-blue-900">Bodega Principal</p>
+                <p className="text-xs text-blue-600">Punto de partida</p>
               </div>
             </div>
 
@@ -192,21 +192,21 @@ export const PanelEnRuta = ({
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <ArrowUp className="h-4 w-4 text-green-600" />
-                  <h4 className="text-sm font-semibold text-green-700 dark:text-green-400">DE IDA</h4>
+                  <h4 className="text-sm font-semibold text-green-700">DE IDA</h4>
                   <span className="text-xs text-muted-foreground">hacia {ancla.nombre}</span>
                 </div>
-                <div className="space-y-1 pl-2 border-l-2 border-green-300 dark:border-green-800">
+                <div className="space-y-1 pl-2 border-l-2 border-green-300">
                   {idaFiltradas.map(s => renderSucursalItem(s))}
                 </div>
               </div>
             )}
 
             {/* Ancla (destino) */}
-            <div className="flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-300 dark:border-amber-800">
+            <div className="flex items-center gap-2 p-2 bg-amber-50 rounded-lg border border-amber-300">
               <span className="text-lg">⭐</span>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-amber-900 dark:text-amber-100 truncate">{ancla.nombre}</p>
-                <p className="text-xs text-amber-600 dark:text-amber-400">ANCLA - Punto más lejano</p>
+                <p className="text-sm font-medium text-amber-900 truncate">{ancla.nombre}</p>
+                <p className="text-xs text-amber-600">ANCLA - Punto más lejano</p>
               </div>
             </div>
 
@@ -215,21 +215,21 @@ export const PanelEnRuta = ({
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <ArrowDown className="h-4 w-4 text-blue-600" />
-                  <h4 className="text-sm font-semibold text-blue-700 dark:text-blue-400">DE REGRESO</h4>
+                  <h4 className="text-sm font-semibold text-blue-700">DE REGRESO</h4>
                   <span className="text-xs text-muted-foreground">hacia bodega</span>
                 </div>
-                <div className="space-y-1 pl-2 border-l-2 border-blue-300 dark:border-blue-800">
+                <div className="space-y-1 pl-2 border-l-2 border-blue-300">
                   {regresoFiltradas.map(s => renderSucursalItem(s))}
                 </div>
               </div>
             )}
 
             {/* Bodega destino */}
-            <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-900">
+            <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
               <Warehouse className="h-5 w-5 text-blue-600" />
               <div>
-                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">Bodega Principal</p>
-                <p className="text-xs text-blue-600 dark:text-blue-400">Punto de retorno</p>
+                <p className="text-sm font-medium text-blue-900">Bodega Principal</p>
+                <p className="text-xs text-blue-600">Punto de retorno</p>
               </div>
             </div>
 
