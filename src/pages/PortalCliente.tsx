@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogOut, ShoppingCart, FileText, TrendingUp, Truck, MapPin, User, Package, Calendar } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { CentroNotificaciones } from "@/components/CentroNotificaciones";
 import ClientePedidos from "@/components/cliente/ClientePedidos";
 import ClienteEstadoCuenta from "@/components/cliente/ClienteEstadoCuenta";
 import ClienteNuevoPedido from "@/components/cliente/ClienteNuevoPedido";
@@ -251,6 +252,7 @@ const PortalCliente = () => {
                   </div>
                 </div>
               )}
+              <CentroNotificaciones />
               <Button variant="outline" size="icon" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4" />
               </Button>

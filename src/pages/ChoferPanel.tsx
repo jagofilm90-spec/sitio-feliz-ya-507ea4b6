@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Truck, MapPin, Package, User, LogOut, Navigation, RefreshCw } from "lucide-react";
 import { AlmasaLogo } from "@/components/brand/AlmasaLogo";
+import { CentroNotificaciones } from "@/components/CentroNotificaciones";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -203,6 +204,7 @@ export default function ChoferPanel() {
             {isRutaActiva && (
               <GpsTrackingIndicator isTracking={isTracking} accuracy={accuracy} error={gpsError} />
             )}
+            <CentroNotificaciones />
             <LiveIndicator label="En vivo" className="text-ink-500" />
             <Button variant="ghost" size="icon" onClick={() => setShowLogoutDialog(true)} className="text-ink-500 hover:bg-ink-50">
               <LogOut className="h-5 w-5" />

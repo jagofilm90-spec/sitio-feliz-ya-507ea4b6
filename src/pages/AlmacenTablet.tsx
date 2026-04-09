@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
+import { CentroNotificaciones } from "@/components/CentroNotificaciones";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -381,6 +382,7 @@ const AlmacenTablet = () => {
                   {isOnline ? "Online" : "Offline"}
                 </Badge>
               )}
+              <CentroNotificaciones />
               <UserPreferencesPopover />
               <Button variant="outline" size="lg" onClick={handleRefresh} className="h-12 px-4 text-base">
                 <RefreshCw className="w-5 h-5 mr-2" /> Actualizar

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRoles } from "@/hooks/useUserRoles";
 import { useSystemPresence } from "@/hooks/useSystemPresence";
+import { CentroNotificaciones } from "@/components/CentroNotificaciones";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -340,9 +341,10 @@ export default function VendedorPanel() {
             </div>
             <div className="flex items-center gap-1">
               <SidebarTrigger className="text-primary-foreground hover:bg-primary-foreground/20 rounded-full" />
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <CentroNotificaciones />
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => navigate("/tarjeta")}
                 className="text-primary-foreground hover:bg-primary-foreground/20 rounded-full"
                 title="Mi Tarjeta"
@@ -364,9 +366,12 @@ export default function VendedorPanel() {
         {/* Contenido principal */}
         <main className="flex-1" onClick={() => sidebarOpen && setSidebarOpen(false)}>
           <div className="p-4 lg:p-8 pb-32 md:pb-8">
-            {/* SidebarTrigger desktop */}
+            {/* SidebarTrigger desktop + notificaciones */}
             <div className="hidden md:flex items-center mb-4">
               <SidebarTrigger className="h-8 w-8 shrink-0" />
+              <div className="ml-auto flex items-center gap-3">
+                <CentroNotificaciones />
+              </div>
             </div>
 
             {/* Stats Dashboard - 5 KPIs — solo en tab Clientes */}
