@@ -23,6 +23,7 @@ import { CargaEvidenciasSection } from "./CargaEvidenciasSection";
 import { SellosSection } from "./SellosSection";
 import { FirmaChoferDialog } from "./FirmaChoferDialog";
 import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
+import { useCargaOperations } from "@/hooks/useCargaOperations";
 
 interface PedidoEnCola {
   pedidoId: string;
@@ -89,6 +90,7 @@ interface CargaHojaInteractivaProps {
 export const CargaHojaInteractiva = ({
   rutaId, rutaFolio, pedidos, tiempoSeg, formatTiempo, onFinalizar, onCancelar, onClose, cancelling, personal,
 }: CargaHojaInteractivaProps) => {
+  const cargaOps = useCargaOperations();
   const [productos, setProductos] = useState<ProductoHoja[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -347,15 +349,18 @@ export const CargaHojaInteractiva = ({
   const updateProducto = (idx: number, updates: Partial<ProductoHoja>) => {
     setProductos(prev => {
       const updated = prev.map((p, i) => i === idx ? { ...p, ...updates } : p);
-      // Auto-save to DB so progress persists
       const item = updated[idx];
-      const dbUpdates: Record<string, any> = {};
-      // Don't auto-save confirmado here — handled by handleToggleConfirmado
-      if ('cantidadACargar' in updates) dbUpdates.cantidad_cargada = updates.cantidadACargar;
-      if ('pesoRealKg' in updates) dbUpdates.peso_real_kg = updates.pesoRealKg;
-      if ('loteId' in updates) dbUpdates.lote_id = updates.loteId;
-      if (Object.keys(dbUpdates).length > 0) {
-        supabase.from("carga_productos").update(dbUpdates).eq("id", item.cargaProductoId).then();
+      // Persist via the hook (no inventario_movimientos write).
+      if ('cantidadACargar' in updates && updates.cantidadACargar !== undefined) {
+        cargaOps.setCantidadCargada(item.cargaProductoId, updates.cantidadACargar);
+      }
+      if ('pesoRealKg' in updates) {
+        cargaOps.setPesoReal(item.cargaProductoId, updates.pesoRealKg ?? null);
+      }
+      if ('loteId' in updates) {
+        // lote_id update is not exposed by the hook (it gets set when toggling cargado).
+        // For now keep the inline update — no inventory side effect.
+        supabase.from("carga_productos").update({ lote_id: updates.loteId }).eq("id", item.cargaProductoId).then();
       }
       return updated;
     });
@@ -403,10 +408,10 @@ export const CargaHojaInteractiva = ({
     ));
   };
 
-  // Toggle checkbox with immediate inventory adjustment
-  // IMPORTANT: Only uses decrementar_lote/incrementar_lote (which trigger sync_stock_from_lotes).
-  // Do NOT insert into inventario_movimientos here — its trigger (update_product_stock)
-  // would cause a DOUBLE stock deduction.
+  // Toggle checkbox with immediate inventory adjustment.
+  // Delegates to useCargaOperations which guarantees:
+  //   - Only RPC decrementar_lote / incrementar_lote (no inventario_movimientos INSERT)
+  //   - peso_real_kg persisted alongside cargado state
   const handleToggleConfirmado = async (idx: number, checked: boolean) => {
     const item = productos[idx];
     if (!item || !item.loteId) {
@@ -414,88 +419,42 @@ export const CargaHojaInteractiva = ({
       return;
     }
 
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
+    const result = await cargaOps.toggleProductoCargado({
+      cargaProductoId: item.cargaProductoId,
+      productoId: item.productoId,
+      rutaFolio,
+      cargado: checked,
+      cantidadCargada: item.cantidadACargar,
+      loteId: item.loteId,
+      pesoRealKg: item.pesoRealKg,
+    });
 
-      if (checked) {
-        // MARKING AS LOADED
-        const { data: cargaActual } = await supabase
-          .from("carga_productos")
-          .select("cargado, cantidad_cargada")
-          .eq("id", item.cargaProductoId)
-          .single();
-
-        if (cargaActual?.cargado && cargaActual?.cantidad_cargada) {
-          // Was previously marked — adjust difference only
-          const diferencia = item.cantidadACargar - cargaActual.cantidad_cargada;
-          if (diferencia !== 0) {
-            if (diferencia > 0) {
-              await supabase.rpc("decrementar_lote", { p_lote_id: item.loteId, p_cantidad: diferencia });
-            } else {
-              await supabase.rpc("incrementar_lote", { p_lote_id: item.loteId, p_cantidad: Math.abs(diferencia) });
-            }
-          }
-        } else {
-          // First time or was unchecked — full decrement
-          await supabase.rpc("decrementar_lote", { p_lote_id: item.loteId, p_cantidad: item.cantidadACargar });
-        }
-
-        // Save cargado state
-        await supabase.from("carga_productos").update({
-          cargado: true,
-          cantidad_cargada: item.cantidadACargar,
-          lote_id: item.loteId,
-          peso_real_kg: item.pesoRealKg,
-          cargado_en: new Date().toISOString(),
-          cargado_por: user?.id,
-        }).eq("id", item.cargaProductoId);
-
-        toast.success(`${item.codigo} cargado — inventario actualizado`);
-      } else {
-        // UNCHECKING — revert inventory using DB values (not local state)
-        const { data: cargaActual } = await supabase
-          .from("carga_productos")
-          .select("cantidad_cargada, lote_id")
-          .eq("id", item.cargaProductoId)
-          .single();
-
-        if (cargaActual?.lote_id && cargaActual?.cantidad_cargada) {
-          await supabase.rpc("incrementar_lote", {
-            p_lote_id: cargaActual.lote_id,
-            p_cantidad: cargaActual.cantidad_cargada,
-          });
-        }
-
-        await supabase.from("carga_productos").update({
-          cargado: false,
-          cargado_en: null,
-          cargado_por: null,
-        }).eq("id", item.cargaProductoId);
-
-        toast.info(`${item.codigo} desmarcado — inventario restaurado`);
-      }
-
-      // Update local confirmado state
-      setProductos(prev => {
-        const updated = prev.map((p, i) => i === idx ? { ...p, confirmado: checked } : p);
-        // MEJORA 4: Save porcentaje_carga to DB for real-time visibility
-        const activos = updated.filter(p => !p.eliminado);
-        const confirmados = activos.filter(p => p.confirmado).length;
-        const pct = activos.length > 0 ? Math.round((confirmados / activos.length) * 100) : 0;
-        supabase.from("rutas").update({ porcentaje_carga: pct }).eq("id", rutaId).then(() => {});
-        return updated;
-      });
-    } catch (err: any) {
-      console.error(err);
-      // Refresh stock to show current availability
+    if (!result.ok) {
       refreshLoteStock(idx);
-      const msg = err?.message || "";
+      const msg = result.error || "";
       if (msg.includes("Stock insuficiente")) {
         toast.error("Stock insuficiente — otro almacenista ya cargó de este lote. Se actualizó el disponible.");
       } else {
         toast.error("Error al actualizar inventario: " + msg);
       }
+      return;
     }
+
+    if (checked) {
+      toast.success(`${item.codigo} cargado — inventario actualizado`);
+    } else {
+      toast.info(`${item.codigo} desmarcado — inventario restaurado`);
+    }
+
+    // Update local confirmado state + porcentaje_carga in rutas
+    setProductos(prev => {
+      const updated = prev.map((p, i) => i === idx ? { ...p, confirmado: checked } : p);
+      const activos = updated.filter(p => !p.eliminado);
+      const confirmados = activos.filter(p => p.confirmado).length;
+      const pct = activos.length > 0 ? Math.round((confirmados / activos.length) * 100) : 0;
+      supabase.from("rutas").update({ porcentaje_carga: pct }).eq("id", rutaId).then(() => {});
+      return updated;
+    });
   };
 
   // Load evidencias
@@ -653,8 +612,6 @@ export const CargaHojaInteractiva = ({
 
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-
       for (const prod of productosActivos) {
         if (!prod.loteId) {
           toast.error(`Selecciona lote para ${prod.codigo}`);
@@ -662,43 +619,36 @@ export const CargaHojaInteractiva = ({
           return;
         }
 
-        // If not yet confirmed/loaded via checkbox, handle inventory now
-        if (!prod.confirmado || !prod.movimientoInventarioId) {
-          // Check DB state to avoid double-processing
-          const { data: cargaActual } = await supabase
-            .from("carga_productos")
-            .select("movimiento_inventario_id, cantidad_cargada")
-            .eq("id", prod.cargaProductoId)
-            .single();
+        // Fallback: if the user didn't tick the checkbox individually,
+        // ensure inventory is decremented and state is persisted.
+        // Goes through the hook so we never insert inventario_movimientos.
+        const { data: cargaActual } = await supabase
+          .from("carga_productos")
+          .select("cargado, cantidad_cargada")
+          .eq("id", prod.cargaProductoId)
+          .single();
 
-          if (!cargaActual?.movimiento_inventario_id) {
-            await supabase.rpc("decrementar_lote", { p_lote_id: prod.loteId, p_cantidad: prod.cantidadACargar });
-
-            const { data: movimiento } = await supabase.from("inventario_movimientos").insert({
-              producto_id: prod.productoId,
-              tipo_movimiento: "salida",
-              cantidad: prod.cantidadACargar,
-              motivo: "Carga de pedido",
-              lote_id: prod.loteId,
-              referencia_id: prod.entregaId,
-              usuario_id: user?.id,
-            }).select("id").single();
-
-            if (movimiento) {
-              await supabase.from("carga_productos").update({ movimiento_inventario_id: movimiento.id }).eq("id", prod.cargaProductoId);
-            }
+        if (!cargaActual?.cargado) {
+          const result = await cargaOps.toggleProductoCargado({
+            cargaProductoId: prod.cargaProductoId,
+            productoId: prod.productoId,
+            rutaFolio,
+            cargado: true,
+            cantidadCargada: prod.cantidadACargar,
+            loteId: prod.loteId,
+            pesoRealKg: prod.pesoRealKg,
+          });
+          if (!result.ok) {
+            toast.error(`Error cargando ${prod.codigo}: ${result.error || ""}`);
+            setSaving(false);
+            return;
+          }
+        } else {
+          // Already cargado — just persist any peso/lote tweaks
+          if (prod.pesoRealKg !== null && prod.pesoRealKg !== undefined) {
+            await cargaOps.setPesoReal(prod.cargaProductoId, prod.pesoRealKg);
           }
         }
-
-        // Ensure final state is saved
-        await supabase.from("carga_productos").update({
-          cargado: true,
-          cantidad_cargada: prod.cantidadACargar,
-          lote_id: prod.loteId,
-          peso_real_kg: prod.pesoRealKg,
-          cargado_en: new Date().toISOString(),
-          cargado_por: user?.id,
-        }).eq("id", prod.cargaProductoId);
       }
 
       const eliminados = productos.filter(p => p.eliminado);
@@ -708,11 +658,7 @@ export const CargaHojaInteractiva = ({
 
       const entregaIds = [...new Set(productosActivos.map(p => p.entregaId))];
       for (const eId of entregaIds) {
-        await supabase.from("entregas").update({
-          carga_confirmada: true,
-          carga_confirmada_por: user?.id,
-          carga_confirmada_en: new Date().toISOString(),
-        }).eq("id", eId);
+        await cargaOps.confirmEntrega(eId);
       }
 
       toast.success("Carga confirmada — ahora captura evidencias");

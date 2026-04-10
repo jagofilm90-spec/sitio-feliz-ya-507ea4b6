@@ -3,7 +3,7 @@ import { AlmasaLoading } from "@/components/brand/AlmasaLoading";
 import { CameraQrScanner } from "@/components/almacen/CameraQrScanner";
 import { CargaHojaInteractiva } from "@/components/almacen/CargaHojaInteractiva";
 import { supabase } from "@/integrations/supabase/client";
-import { recalcularTotalesPedido } from "@/lib/recalcularTotalesPedido";
+import { useCargaOperations } from "@/hooks/useCargaOperations";
 import { calcularTotalesConImpuestos } from "@/lib/calculos";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,7 @@ interface CargaRutaInlineFlowProps {
 }
 
 export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFlowProps) => {
+  const cargaOps = useCargaOperations();
   const [paso, setPaso] = useState<"escaneo" | "seleccion" | "hoja_carga" | "finalizado">("escaneo");
 
   // Paso 1: Selección
@@ -323,31 +324,13 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
     }
     setCancelling(true);
     try {
-      const { data: entregasRuta } = await supabase.from("entregas").select("id").eq("ruta_id", rutaId);
-      if (entregasRuta && entregasRuta.length > 0) {
-        const eIds = entregasRuta.map(e => e.id);
-        const { data: cargaProds } = await supabase
-          .from("carga_productos").select("id, cargado, lote_id, cantidad_cargada").in("entrega_id", eIds);
-        for (const cp of cargaProds || []) {
-          if (cp.cargado && cp.lote_id && cp.cantidad_cargada) {
-            await supabase.rpc("incrementar_lote", { p_lote_id: cp.lote_id, p_cantidad: cp.cantidad_cargada });
-          }
-        }
-        await supabase.from("carga_productos").delete().in("entrega_id", eIds);
+      const result = await cargaOps.cancelarRuta(rutaId, vehiculoId || null);
+      if (!result.ok) {
+        toast.error("Error: " + (result.error || ""));
+        return;
       }
-      await supabase.from("entregas").delete().eq("ruta_id", rutaId);
-      if (vehiculoId) await supabase.from("vehiculos").update({ status: "disponible" }).eq("id", vehiculoId);
-      
-      // Regresar pedidos a status "proceso_entrega" para que queden disponibles de nuevo
-      for (const item of cola) {
-        await supabase.from("pedidos").update({ status: "pendiente" as any, updated_at: new Date().toISOString() }).eq("id", item.pedidoId);
-      }
-      
-      await supabase.from("rutas").delete().eq("id", rutaId);
       toast.success("Ruta eliminada — los pedidos volvieron a quedar disponibles");
       onClose();
-    } catch (err: any) {
-      toast.error("Error: " + (err?.message || ""));
     } finally {
       setCancelling(false);
     }
@@ -356,131 +339,52 @@ export const CargaRutaInlineFlow = ({ onClose, onRutaCreada }: CargaRutaInlineFl
   // Finalize
   const handleFinalizarCarga = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       const chofer = choferes.find(c => c.id === choferId);
 
+      // Hook handles: rutas → cargada, resync of every pedido, totals
+      // recalc, audit trail, status → en_ruta, [MODIFICADO EN CARGA] notas,
+      // and vendedor/admin notifications.
+      let cambiosPorPedido: Record<string, { modificaciones: { producto: string; cantidadOriginal: number; cantidadNueva: number }[]; totalAnterior: number; totalNuevo: number }> = {};
       if (rutaId) {
-        await supabase.from("rutas").update({
-          carga_completada: true,
-          carga_completada_por: user?.id,
-          carga_completada_en: new Date().toISOString(),
-          status: "cargada",
-        }).eq("id", rutaId);
-      }
+        const result = await cargaOps.finalizarCargaRuta({
+          rutaId,
+          pedidos: cola.map(c => ({
+            pedidoId: c.pedidoId,
+            folio: c.folio,
+            clienteId: c.clienteId,
+            clienteNombre: c.clienteNombre,
+          })),
+        });
 
-      // Sync carga → pedidos and detect modifications before notifying
-      const cambiosPorPedido: Record<string, { modificaciones: { producto: string; cantidadOriginal: number; cantidadNueva: number }[]; totalAnterior: number; totalNuevo: number }> = {};
-
-      if (rutaId) {
-        // Get entregas for this ruta
-        const { data: entregasRuta } = await supabase
-          .from("entregas")
-          .select("id, pedido_id")
-          .eq("ruta_id", rutaId);
-
-        for (const entrega of entregasRuta || []) {
-          const pedidoId = entrega.pedido_id;
-          const modificaciones: { producto: string; cantidadOriginal: number; cantidadNueva: number }[] = [];
-
-          const { data: pedidoAnterior } = await supabase
-            .from("pedidos")
-            .select("total")
-            .eq("id", pedidoId)
-            .single();
-          const totalAnterior = pedidoAnterior?.total || 0;
-
-          const { data: cargaItems } = await supabase
-            .from("carga_productos")
-            .select("pedido_detalle_id, cantidad_cargada, peso_real_kg, cargado")
-            .eq("entrega_id", entrega.id);
-
-          for (const cp of cargaItems || []) {
-            if (!cp.cargado || !cp.cantidad_cargada) continue;
-
-            const { data: detalle } = await supabase
-              .from("pedidos_detalles")
-              .select("precio_unitario, cantidad, kilos_totales, producto:productos(peso_kg, precio_por_kilo, nombre)")
-              .eq("id", cp.pedido_detalle_id)
-              .single();
-
-            if (!detalle) continue;
-            const prod = detalle.producto as any;
-
-            const cantidadCambio = detalle.cantidad !== cp.cantidad_cargada;
-            const pesoTeoricoKg = prod?.peso_kg ? cp.cantidad_cargada * prod.peso_kg : null;
-            const pesoCambio = cp.peso_real_kg && pesoTeoricoKg && Math.abs(cp.peso_real_kg - pesoTeoricoKg) > 0.1;
-
-            if (cantidadCambio || pesoCambio) {
-              if (cantidadCambio) {
-                modificaciones.push({
-                  producto: prod?.nombre || "Producto",
-                  cantidadOriginal: detalle.cantidad,
-                  cantidadNueva: cp.cantidad_cargada,
-                });
-              }
-
-              const newSubtotal = prod?.precio_por_kilo && cp.peso_real_kg
-                ? cp.peso_real_kg * detalle.precio_unitario
-                : prod?.precio_por_kilo && prod?.peso_kg
-                ? cp.cantidad_cargada * prod.peso_kg * detalle.precio_unitario
-                : cp.cantidad_cargada * detalle.precio_unitario;
-
-              await supabase.from("pedidos_detalles").update({
-                cantidad: cp.cantidad_cargada,
-                subtotal: newSubtotal,
-                kilos_totales: cp.peso_real_kg || pesoTeoricoKg || detalle.kilos_totales,
-              }).eq("id", cp.pedido_detalle_id);
-            }
-          }
-
-          // Recalculate pedido totals with proper tax breakdown
-          const { data: { user } } = await supabase.auth.getUser();
-          const result = await recalcularTotalesPedido(pedidoId, modificaciones.length > 0 ? {
-            tipoCambio: "almacen_carga",
-            cambiosJson: { modificaciones },
-            totalAnterior,
-            usuarioId: user?.id,
-          } : undefined);
-
-          if (modificaciones.length > 0) {
-            cambiosPorPedido[pedidoId] = { modificaciones, totalAnterior, totalNuevo: result.total };
-          }
+        if (!result.ok) {
+          toast.error("Error al finalizar: " + (result.error || ""));
+          return;
         }
-      }
 
-      // Track which pedidos were modified for the finalizado screen
-      const modifiedIds = new Set(Object.keys(cambiosPorPedido));
-      setPedidosModificados(modifiedIds);
-
-      // Notify admin/vendedor for modified pedidos
-      for (const [pedidoId, cambios] of Object.entries(cambiosPorPedido)) {
-        const item = cola.find(c => c.pedidoId === pedidoId);
-        if (!item) continue;
-        try {
-          // Get vendedor_id to notify
-          const { data: pedidoData } = await supabase.from("pedidos").select("vendedor_id").eq("id", pedidoId).single();
-          const desc = cambios.modificaciones.map(m => `${m.producto}: ${m.cantidadOriginal}→${m.cantidadNueva}`).join(", ");
-          // Notify vendedor
-          if (pedidoData?.vendedor_id) {
-            await supabase.from("notificaciones").insert({ tipo: "pedido_autorizado", titulo: `⚠️ Pedido ${item.folio} modificado en carga`, descripcion: desc, pedido_id: pedidoId, leida: false });
-            await supabase.functions.invoke("send-push-notification", { body: { user_ids: [pedidoData.vendedor_id], title: `⚠️ ${item.folio} modificado en carga`, body: desc } }).catch(() => {});
-          }
-          // Notify admins
-          await supabase.functions.invoke("send-push-notification", { body: { roles: ["admin"], title: `⚠️ ${item.folio} modificado en carga`, body: desc } }).catch(() => {});
-          // Mark pedido as modified in carga via notas
-          const { data: pedidoNotas } = await supabase.from("pedidos").select("notas").eq("id", pedidoId).single();
-          const notasActuales = pedidoNotas?.notas || "";
-          await supabase.from("pedidos").update({ notas: `[MODIFICADO EN CARGA] ${desc}\n${notasActuales}`.trim() }).eq("id", pedidoId);
-        } catch {}
+        // Adapt hook output to local cambiosPorPedido shape
+        cambiosPorPedido = Object.fromEntries(
+          Object.entries(result.cambiosPorPedido).map(([pedidoId, c]) => [
+            pedidoId,
+            {
+              modificaciones: c.modificaciones.map(m => ({
+                producto: m.productoNombre,
+                cantidadOriginal: m.cantidadOriginal,
+                cantidadNueva: m.cantidadNueva,
+              })),
+              totalAnterior: c.totalAnterior,
+              totalNuevo: c.totalNuevo,
+            },
+          ])
+        );
+        setPedidosModificados(new Set(Object.keys(cambiosPorPedido)));
       }
 
       const vehiculoObj = vehiculos.find(v => v.id === vehiculoId);
       const ayudantesNombres = ayudantesIds.map(aId => ayudantes.find(a => a.id === aId)?.nombre_completo || "").filter(Boolean);
 
+      // Generate PDFs + send client emails (UI-specific, not in the hook)
       const whatsappPendientes: { folio: string; clienteNombre: string; phones: string[]; message: string }[] = [];
       for (const item of cola) {
-        await supabase.from("pedidos").update({ status: "en_ruta", updated_at: new Date().toISOString() }).eq("id", item.pedidoId);
-
         // Generate PDF with real quantities for the client
         let pdfBase64: string | undefined;
         let pdfFilename: string | undefined;

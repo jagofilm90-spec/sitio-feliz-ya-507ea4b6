@@ -39,7 +39,7 @@ import {
   Camera,
   X,
 } from "lucide-react";
-import { CargaProductosChecklist } from "@/components/almacen/CargaProductosChecklist";
+import { useCargaOperations } from "@/hooks/useCargaOperations";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { format } from "date-fns";
@@ -127,6 +127,8 @@ export default function AlmacenCargaScan() {
   const [entregaId, setEntregaId] = useState<string | null>(null);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const cargaOps = useCargaOperations();
 
   // Load choferes and vehículos for selection step
   // ONLY show employees with ZKTeco attendance today + exclude those already on a route
@@ -466,125 +468,38 @@ export default function AlmacenCargaScan() {
     }
   };
 
-  // ─── Handle toggle from checklist ───
+  // ─── Handle toggle from checklist (delegates to useCargaOperations) ───
   const handleToggle = async (cargaId: string, cargado: boolean, cantidadCargada: number, loteId: string | null) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
+    const prod = productos.find((p) => p.id === cargaId);
+    if (cargado && !prod) return;
 
-      if (cargado && loteId) {
-        const prod = productos.find((p) => p.id === cargaId);
-        if (!prod) return;
+    const result = await cargaOps.toggleProductoCargado({
+      cargaProductoId: cargaId,
+      productoId: prod?.producto.id || "",
+      rutaFolio: "", // not used by hook for inventory ops
+      cargado,
+      cantidadCargada,
+      loteId,
+      pesoRealKg: prod?.peso_real_kg ?? null,
+    });
 
-        // Guard: check DB to prevent double-decrement
-        const { data: cargaActual } = await supabase
-          .from("carga_productos")
-          .select("cargado, movimiento_inventario_id, cantidad_cargada")
-          .eq("id", cargaId)
-          .single();
-
-        if (cargaActual?.cargado) {
-          // Already loaded — adjust difference
-          const cantidadPrevia = cargaActual.cantidad_cargada || 0;
-          const diferencia = cantidadCargada - cantidadPrevia;
-
-          if (diferencia === 0) {
-            toast.info("Sin cambios en la cantidad");
-            return;
-          }
-
-          // Adjust lot stock by difference
-          if (diferencia > 0) {
-            await supabase.rpc("decrementar_lote", { p_lote_id: loteId, p_cantidad: diferencia });
-          } else {
-            await supabase.rpc("incrementar_lote", { p_lote_id: loteId, p_cantidad: Math.abs(diferencia) });
-          }
-
-          if (cargaActual.movimiento_inventario_id) {
-            // Update existing movement
-            await supabase.from("inventario_movimientos").update({
-              cantidad: cantidadCargada,
-            }).eq("id", cargaActual.movimiento_inventario_id);
-          } else {
-            // Create movement that was missing
-            const { data: movimiento } = await supabase.from("inventario_movimientos").insert({
-              producto_id: prod.producto.id,
-              tipo_movimiento: "salida",
-              cantidad: cantidadCargada,
-              motivo: "Carga de pedido (corrección)",
-              lote_id: loteId,
-              referencia_id: entregaId,
-              usuario_id: user?.id,
-            }).select("id").single();
-
-            await supabase.from("carga_productos").update({
-              movimiento_inventario_id: movimiento?.id || null,
-            }).eq("id", cargaId);
-          }
-
-          await supabase.from("carga_productos").update({
-            cantidad_cargada: cantidadCargada,
-            corregido_en: new Date().toISOString(),
-          }).eq("id", cargaId);
-
-          setProductos((prev) =>
-            prev.map((p) => p.id === cargaId ? { ...p, cantidad_cargada: cantidadCargada } : p)
-          );
-
-          toast.success(`Cantidad corregida: ${cantidadPrevia} → ${cantidadCargada}`);
-          return;
-        }
-
-        await supabase.rpc("decrementar_lote", { p_lote_id: loteId, p_cantidad: cantidadCargada });
-
-        const { data: movimiento } = await supabase.from("inventario_movimientos").insert({
-          producto_id: prod.producto.id,
-          tipo_movimiento: "salida",
-          cantidad: cantidadCargada,
-          motivo: "Carga de pedido (escaneo QR)",
-          lote_id: loteId,
-          referencia_id: entregaId,
-          usuario_id: user?.id,
-        }).select("id").single();
-
-        await supabase.from("carga_productos").update({
-          cargado: true,
-          cantidad_cargada: cantidadCargada,
-          lote_id: loteId,
-          cargado_en: new Date().toISOString(),
-          cargado_por: user?.id,
-          movimiento_inventario_id: movimiento?.id || null,
-        }).eq("id", cargaId);
-      } else if (!cargado) {
-        const prod = productos.find((p) => p.id === cargaId);
-        if (prod?.lote_id && prod.cantidad_cargada) {
-          await supabase.rpc("incrementar_lote", { p_lote_id: prod.lote_id, p_cantidad: prod.cantidad_cargada });
-        }
-
-        await supabase.from("carga_productos").update({
-          cargado: false,
-          cantidad_cargada: 0,
-          lote_id: null,
-          cargado_en: null,
-          cargado_por: null,
-        }).eq("id", cargaId);
-      }
-
-      setProductos((prev) =>
-        prev.map((p) =>
-          p.id === cargaId
-            ? { ...p, cargado, cantidad_cargada: cargado ? cantidadCargada : 0, lote_id: cargado ? loteId : null }
-            : p
-        )
-      );
-    } catch (err) {
-      console.error(err);
-      toast.error("Error al actualizar producto");
+    if (!result.ok) {
+      toast.error(result.error || "Error al actualizar producto");
+      return;
     }
+
+    setProductos((prev) =>
+      prev.map((p) =>
+        p.id === cargaId
+          ? { ...p, cargado, cantidad_cargada: cargado ? cantidadCargada : 0, lote_id: cargado ? loteId : null }
+          : p
+      )
+    );
   };
 
-  // ─── Handle peso real change ───
+  // ─── Handle peso real change (delegates to useCargaOperations) ───
   const handlePesoRealChange = async (cargaId: string, pesoReal: number | null) => {
-    await supabase.from("carga_productos").update({ peso_real_kg: pesoReal }).eq("id", cargaId);
+    await cargaOps.setPesoReal(cargaId, pesoReal);
     setProductos((prev) =>
       prev.map((p) => (p.id === cargaId ? { ...p, peso_real_kg: pesoReal } : p))
     );
@@ -594,13 +509,8 @@ export default function AlmacenCargaScan() {
   const guardarYSiguiente = async () => {
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       if (entregaId) {
-        await supabase.from("entregas").update({
-          carga_confirmada: true,
-          carga_confirmada_por: user?.id,
-          carga_confirmada_en: new Date().toISOString(),
-        }).eq("id", entregaId);
+        await cargaOps.confirmEntrega(entregaId);
       }
 
       // Mark current item as complete
@@ -633,32 +543,30 @@ export default function AlmacenCargaScan() {
     if (timerRef.current) clearInterval(timerRef.current);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      // Get chofer name for email
       const chofer = choferes.find(c => c.id === choferId);
       const choferNombre = chofer?.nombre_completo || "Chofer";
 
-      // Mark route as loaded
+      // Hook: route status, totals resync, pedido status, modification notifications
       if (rutaId) {
-        await supabase.from("rutas").update({
-          carga_completada: true,
-          carga_completada_por: user?.id,
-          carga_completada_en: new Date().toISOString(),
-          status: "cargada",
-        }).eq("id", rutaId);
+        const result = await cargaOps.finalizarCargaRuta({
+          rutaId,
+          pedidos: cola.map((c) => ({
+            pedidoId: c.pedidoId,
+            folio: c.folio,
+            clienteId: c.clienteId,
+            clienteNombre: c.clienteNombre,
+          })),
+        });
+
+        if (!result.ok) {
+          toast.error(result.error || "Error al finalizar la carga");
+          return;
+        }
       }
 
-      // Update each pedido to "en_ruta" and send notification
+      // Send "en_ruta" client emails (UI-specific, kept here)
       const whatsappPendientes: { folio: string; clienteNombre: string; phones: string[]; message: string }[] = [];
       for (const item of cola) {
-        // Update pedido status
-        await supabase
-          .from("pedidos")
-          .update({ status: "en_ruta", updated_at: new Date().toISOString() })
-          .eq("id", item.pedidoId);
-
-        // Send "en_ruta" notification email to client
         try {
           const { data: notifResponse } = await supabase.functions.invoke("send-client-notification", {
             body: {
