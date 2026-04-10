@@ -43,6 +43,7 @@ import SecretariaPanel from "./pages/SecretariaPanel";
 import AppMobileGuide from "./pages/AppMobileGuide";
 import TestFirma from "./pages/TestFirma";
 import Precios from "./pages/Precios";
+import ProductosModoCobro from "./pages/ProductosModoCobro";
 import LandingAlmasa from "./pages/LandingAlmasa";
 import Configuracion from "./pages/Configuracion";
 import Asistencia from "./pages/Asistencia";
@@ -143,6 +144,11 @@ const App = () => (
               <Route path="/productos" element={
                 <ProtectedRoute allowedRoles={['admin', 'secretaria', 'contadora']} redirectTo="/auth">
                   <Productos />
+                </ProtectedRoute>
+              } />
+              <Route path="/productos/modo-cobro" element={
+                <ProtectedRoute allowedRoles={['admin']} redirectTo="/auth">
+                  <ProductosModoCobro />
                 </ProtectedRoute>
               } />
               <Route path="/clientes" element={

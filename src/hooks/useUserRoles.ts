@@ -93,6 +93,7 @@ export const useUserRoles = (): UseUserRolesReturn => {
 export const MODULE_PERMISSIONS: Record<string, AppRole[]> = {
   '/dashboard': ['admin', 'secretaria', 'vendedor', 'contadora'],
   '/productos': ['admin', 'secretaria', 'contadora'],
+  '/productos/modo-cobro': ['admin'],
   '/fumigaciones': ['admin', 'secretaria', 'almacen', 'gerente_almacen'],
   '/clientes': ['admin', 'secretaria', 'vendedor'],
   '/pedidos': ['admin', 'secretaria', 'vendedor'],
