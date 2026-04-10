@@ -76,6 +76,7 @@ export interface NotificacionesData {
   notificacionesCaducidadPush: NotificacionGeneral[];
   notificacionesFumigacionPush: NotificacionGeneral[];
   notificacionesPreciosVendedor: NotificacionGeneral[];
+  notificacionesPreciosAdmin: NotificacionGeneral[];
   notificacionesProductoNuevo: NotificacionGeneral[];
   totalCount: number;
 }
@@ -94,6 +95,7 @@ export const useNotificaciones = () => {
     notificacionesCaducidadPush: [],
     notificacionesFumigacionPush: [],
     notificacionesPreciosVendedor: [],
+    notificacionesPreciosAdmin: [],
     notificacionesProductoNuevo: [],
     totalCount: 0,
   });
@@ -116,7 +118,7 @@ export const useNotificaciones = () => {
 
   const cargarNotificaciones = async () => {
     try {
-      const [caducidad, stock, licencias, autorizaciones, autorizacionesCot, confirmaciones, precios, pedidos, rechazos, caducidadPush, fumigacionPush, preciosVendedor, productoNuevo] = await Promise.all([
+      const [caducidad, stock, licencias, autorizaciones, autorizacionesCot, confirmaciones, precios, pedidos, rechazos, caducidadPush, fumigacionPush, preciosVendedor, preciosAdmin, productoNuevo] = await Promise.all([
         cargarAlertasCaducidad(),
         cargarNotificacionesStock(),
         cargarAlertasLicencias(),
@@ -129,10 +131,11 @@ export const useNotificaciones = () => {
         cargarNotificacionesCaducidadPush(),
         cargarNotificacionesFumigacionPush(),
         cargarNotificacionesVendedorPrecios(),
+        isAdmin ? cargarNotificacionesAdminPrecios() : Promise.resolve([]),
         cargarNotificacionesProductoNuevo(),
       ]);
 
-      const total = caducidad.length + stock.length + licencias.length + autorizaciones.length + autorizacionesCot.length + confirmaciones.length + precios.length + pedidos.length + rechazos.length + caducidadPush.length + fumigacionPush.length + preciosVendedor.length + productoNuevo.length;
+      const total = caducidad.length + stock.length + licencias.length + autorizaciones.length + autorizacionesCot.length + confirmaciones.length + precios.length + pedidos.length + rechazos.length + caducidadPush.length + fumigacionPush.length + preciosVendedor.length + preciosAdmin.length + productoNuevo.length;
       setNotificaciones({
         alertasCaducidad: caducidad,
         notificacionesStock: stock,
@@ -146,6 +149,7 @@ export const useNotificaciones = () => {
         notificacionesCaducidadPush: caducidadPush,
         notificacionesFumigacionPush: fumigacionPush,
         notificacionesPreciosVendedor: preciosVendedor,
+        notificacionesPreciosAdmin: preciosAdmin,
         notificacionesProductoNuevo: productoNuevo,
         totalCount: total,
       });
@@ -541,6 +545,26 @@ export const useNotificaciones = () => {
         .from("notificaciones")
         .select("id, tipo, titulo, descripcion, created_at")
         .eq("tipo", "precio_actualizado")
+        .eq("leida", false)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) return [];
+      return (data || []) as NotificacionGeneral[];
+    } catch { return []; }
+  };
+
+  const cargarNotificacionesAdminPrecios = async (): Promise<NotificacionGeneral[]> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
+      const hasAccess = roles?.some(r => r.role === 'admin') || false;
+      if (!hasAccess) return [];
+
+      const { data, error } = await supabase
+        .from("notificaciones")
+        .select("id, tipo, titulo, descripcion, created_at")
+        .eq("tipo", "precio_modificado_admin")
         .eq("leida", false)
         .order("created_at", { ascending: false })
         .limit(20);

@@ -246,15 +246,30 @@ export const SecretariaProductosTab = () => {
           throw new Error("No se pudo actualizar el producto. Verifica que tienes permisos suficientes.");
         }
 
-        // Registrar historial si el precio cambió (mismo patrón que admin)
+        // Si el precio cambió, notificar al admin para auditoría.
+        // Nota: el historial en productos_historial_precios lo registra
+        // automáticamente el trigger DB on_producto_precio_change.
         if (precioAnterior !== precioVentaNum) {
-          const { data: { user } } = await supabase.auth.getUser();
-          await supabase.from("productos_historial_precios").insert({
-            producto_id: editingProduct.id,
-            precio_anterior: precioAnterior,
-            precio_nuevo: precioVentaNum,
-            usuario_id: user?.id ?? null,
-          });
+          try {
+            const { data: { user } } = await supabase.auth.getUser();
+            let userName = "Un usuario";
+            if (user?.id) {
+              const { data: profile } = await supabase
+                .from("profiles")
+                .select("full_name, email")
+                .eq("id", user.id)
+                .maybeSingle();
+              userName = profile?.full_name || profile?.email || "Un usuario";
+            }
+            await supabase.from("notificaciones").insert({
+              tipo: "precio_modificado_admin",
+              titulo: `Precio actualizado: ${editingProduct.nombre}`,
+              descripcion: `${userName} cambió de $${precioAnterior.toFixed(2)} a $${precioVentaNum.toFixed(2)}`,
+              leida: false,
+            });
+          } catch (e) {
+            console.error("Error creando notificación admin de precio:", e);
+          }
         }
       } else {
         const { data: insertedData, error } = await supabase

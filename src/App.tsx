@@ -44,6 +44,7 @@ import AppMobileGuide from "./pages/AppMobileGuide";
 import TestFirma from "./pages/TestFirma";
 import Precios from "./pages/Precios";
 import ProductosModoCobro from "./pages/ProductosModoCobro";
+import ProductosHistorialPrecios from "./pages/ProductosHistorialPrecios";
 import LandingAlmasa from "./pages/LandingAlmasa";
 import Configuracion from "./pages/Configuracion";
 import Asistencia from "./pages/Asistencia";
@@ -149,6 +150,11 @@ const App = () => (
               <Route path="/productos/modo-cobro" element={
                 <ProtectedRoute allowedRoles={['admin']} redirectTo="/auth">
                   <ProductosModoCobro />
+                </ProtectedRoute>
+              } />
+              <Route path="/productos/historial-precios" element={
+                <ProtectedRoute allowedRoles={['admin']} redirectTo="/auth">
+                  <ProductosHistorialPrecios />
                 </ProtectedRoute>
               } />
               <Route path="/clientes" element={

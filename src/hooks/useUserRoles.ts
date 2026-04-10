@@ -94,6 +94,7 @@ export const MODULE_PERMISSIONS: Record<string, AppRole[]> = {
   '/dashboard': ['admin', 'secretaria', 'vendedor', 'contadora'],
   '/productos': ['admin', 'secretaria', 'contadora'],
   '/productos/modo-cobro': ['admin'],
+  '/productos/historial-precios': ['admin'],
   '/fumigaciones': ['admin', 'secretaria', 'almacen', 'gerente_almacen'],
   '/clientes': ['admin', 'secretaria', 'vendedor'],
   '/pedidos': ['admin', 'secretaria', 'vendedor'],
@@ -193,15 +194,20 @@ export const useUserModulePermissions = (): {
           .in('role', roles)
           .eq('tiene_acceso', true);
 
+        // Static paths from MODULE_PERMISSIONS for the user's roles.
+        // Always merged in as a baseline so new routes added in code work
+        // without requiring a DB seed migration to module_permissions.
+        const staticPaths = Object.entries(MODULE_PERMISSIONS)
+          .filter(([_, allowedRoles]) => roles.some(r => allowedRoles.includes(r)))
+          .map(([path]) => path);
+
         if (error) {
-          // Fallback to static permissions
-          const paths = Object.entries(MODULE_PERMISSIONS)
-            .filter(([_, allowedRoles]) => roles.some(r => allowedRoles.includes(r)))
-            .map(([path]) => path);
-          setAllowedPaths(paths);
+          // Fallback to static permissions only
+          setAllowedPaths(staticPaths);
         } else {
-          // Use unique paths from DB
-          const uniquePaths = [...new Set(data?.map(p => p.module_path) || [])];
+          // Merge DB paths with static baseline
+          const dbPaths = data?.map(p => p.module_path) || [];
+          const uniquePaths = [...new Set([...dbPaths, ...staticPaths])];
           setAllowedPaths(uniquePaths);
         }
       } catch (err) {

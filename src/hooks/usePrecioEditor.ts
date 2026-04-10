@@ -66,20 +66,40 @@ export function usePrecioEditor(options: UsePrecioEditorOptions = {}) {
       if (error) throw error;
 
       if (precio_anterior !== precio_venta) {
-        await supabase.from("productos_historial_precios").insert({
-          producto_id: id,
-          precio_anterior,
-          precio_nuevo: precio_venta,
-          usuario_id: user?.id ?? null,
-        });
+        // Nota: el trigger DB on_producto_precio_change registra automáticamente
+        // el cambio en productos_historial_precios. No insertamos manualmente
+        // para evitar duplicación.
 
         const productoNombre = editingProduct?.nombre || "";
+
+        // Notificación a vendedores (flujo existente)
         notificarCambioPrecio({
           productoNombre,
           precioAnterior: precio_anterior,
           precioNuevo: precio_venta,
           roles: notifyRoles,
         });
+
+        // Notificación a admin (auditoría: quién cambió qué)
+        try {
+          let userName = "Un usuario";
+          if (user?.id) {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("full_name, email")
+              .eq("id", user.id)
+              .maybeSingle();
+            userName = profile?.full_name || profile?.email || "Un usuario";
+          }
+          await supabase.from("notificaciones").insert({
+            tipo: "precio_modificado_admin",
+            titulo: `Precio actualizado: ${productoNombre}`,
+            descripcion: `${userName} cambió de $${precio_anterior.toFixed(2)} a $${precio_venta.toFixed(2)}`,
+            leida: false,
+          });
+        } catch (e) {
+          console.error("Error creando notificación admin de precio:", e);
+        }
       }
     },
     onSuccess: () => {

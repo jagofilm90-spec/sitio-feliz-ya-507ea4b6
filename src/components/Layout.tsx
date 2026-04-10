@@ -47,6 +47,7 @@ import {
   LucideIcon,
   Store,
   Scale,
+  History,
 } from "lucide-react";
 
 interface LayoutProps {
@@ -216,6 +217,7 @@ const Layout = ({ children }: LayoutProps) => {
       items: [
         { icon: Package, label: "Productos", path: "/productos" },
         { icon: Scale, label: "Modo de cobro", path: "/productos/modo-cobro" },
+        { icon: History, label: "Historial precios", path: "/productos/historial-precios" },
         { icon: DollarSign, label: "Lista de Precios", path: "/precios" },
         { icon: Bug, label: "Fumigaciones", path: "/fumigaciones" },
       ]
