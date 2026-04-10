@@ -92,6 +92,7 @@ export const SecretariaProductosTab = () => {
     unidad_sat: "",
     peso_kg: "",
     unidad: "bulto" as const,
+    precio_venta: "",
     stock_minimo: "",
     maneja_caducidad: false,
     aplica_iva: false,
@@ -143,6 +144,7 @@ export const SecretariaProductosTab = () => {
       unidad_sat: "",
       peso_kg: "",
       unidad: "bulto",
+      precio_venta: "",
       stock_minimo: "",
       maneja_caducidad: false,
       aplica_iva: false,
@@ -174,6 +176,7 @@ export const SecretariaProductosTab = () => {
       unidad_sat: producto.unidad_sat || "",
       peso_kg: producto.peso_kg?.toString() || "",
       unidad: producto.unidad as any,
+      precio_venta: producto.precio_venta?.toString() || "",
       stock_minimo: producto.stock_minimo.toString(),
       maneja_caducidad: producto.maneja_caducidad,
       aplica_iva: producto.aplica_iva,
@@ -203,6 +206,7 @@ export const SecretariaProductosTab = () => {
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const matchedCat = categoriasCanon?.find(c => c.nombre === data.categoria);
+      const precioVentaNum = parseFloat(data.precio_venta);
 
       const productData = {
         codigo: data.codigo,
@@ -215,6 +219,7 @@ export const SecretariaProductosTab = () => {
         unidad_sat: data.unidad_sat || null,
         peso_kg: data.peso_kg ? parseFloat(data.peso_kg) : null,
         unidad: data.unidad,
+        precio_venta: precioVentaNum,
         stock_minimo: parseInt(data.stock_minimo) || 0,
         maneja_caducidad: data.maneja_caducidad,
         aplica_iva: data.aplica_iva,
@@ -227,16 +232,29 @@ export const SecretariaProductosTab = () => {
       };
 
       if (editingProduct) {
+        const precioAnterior = editingProduct.precio_venta ?? 0;
+
         const { data: updatedData, error } = await supabase
           .from("productos")
           .update(productData)
           .eq("id", editingProduct.id)
           .select("id");
-        
+
         if (error) throw error;
-        
+
         if (!updatedData || updatedData.length === 0) {
           throw new Error("No se pudo actualizar el producto. Verifica que tienes permisos suficientes.");
+        }
+
+        // Registrar historial si el precio cambió (mismo patrón que admin)
+        if (precioAnterior !== precioVentaNum) {
+          const { data: { user } } = await supabase.auth.getUser();
+          await supabase.from("productos_historial_precios").insert({
+            producto_id: editingProduct.id,
+            precio_anterior: precioAnterior,
+            precio_nuevo: precioVentaNum,
+            usuario_id: user?.id ?? null,
+          });
         }
       } else {
         const { data: insertedData, error } = await supabase
@@ -266,6 +284,15 @@ export const SecretariaProductosTab = () => {
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    const precioVenta = parseFloat(formData.precio_venta);
+    if (!precioVenta || precioVenta <= 0) {
+      toast({
+        title: "Precio requerido",
+        description: "El precio de venta es obligatorio y debe ser mayor a $0",
+        variant: "destructive",
+      });
+      return;
+    }
     saveMutation.mutate(formData, {
       onSuccess: () => {
         if (editingProduct) {
@@ -697,7 +724,36 @@ export const SecretariaProductosTab = () => {
               </div>
             </div>
 
-            {/* Sección 3: Impuestos */}
+            {/* Sección 3: Precio */}
+            <div className="space-y-4">
+              <h3 className="font-serif italic text-[15px] text-ink-500 mt-8 mb-3">
+                Precio
+              </h3>
+              <div className="space-y-1.5">
+                <Label htmlFor="precio_venta" className={eLabel}>
+                  Precio de venta <span className="text-crimson-500">*</span>
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 text-ink-400 text-[15px]">$</span>
+                  <Input
+                    id="precio_venta"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.precio_venta}
+                    onChange={(e) => setFormData({ ...formData, precio_venta: e.target.value })}
+                    placeholder="0.00"
+                    required
+                    className={cn(eInput, "pl-5")}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Precio de lista que verán los vendedores. Obligatorio para que el producto sea funcional.
+                </p>
+              </div>
+            </div>
+
+            {/* Sección 4: Impuestos */}
             <div className="space-y-4">
               <h3 className="font-serif italic text-[15px] text-ink-500 mt-8 mb-3">
                 Impuestos
@@ -815,7 +871,9 @@ export const SecretariaProductosTab = () => {
                   (isSaved || showSuccessAnimation) && editingProduct
                     ? "border-green-500 text-green-600 hover:bg-green-50 bg-transparent"
                     : "bg-crimson-500 text-white hover:bg-crimson-600",
-                  showSuccessAnimation && editingProduct && "animate-success-pulse bg-green-50"
+                  showSuccessAnimation && editingProduct && "animate-success-pulse bg-green-50",
+                  (!formData.precio_venta || parseFloat(formData.precio_venta) <= 0) &&
+                    "opacity-50 cursor-not-allowed"
                 )}
               >
                 <span className="flex items-center justify-center">
