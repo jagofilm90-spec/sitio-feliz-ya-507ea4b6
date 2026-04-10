@@ -314,11 +314,8 @@ export default function ProductosModoCobro() {
       </p>
 
       {/* ── Table ───────────────────────────────────── */}
-      <div
-        className="rounded-xl border border-ink-100 bg-white overflow-hidden"
-        style={{ maxHeight: 600 }}
-      >
-        <div className="overflow-auto" style={{ maxHeight: 600 }}>
+      <div className="rounded-xl border border-ink-100 bg-white overflow-hidden">
+        <div className="overflow-y-scroll" style={{ maxHeight: 600 }}>
           <Table>
             <TableHeader>
               <TableRow className="bg-ink-50/50">
