@@ -29,7 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Search, ShoppingCart, Building2, AlertTriangle, Gift } from "lucide-react";
+import { Plus, Trash2, Search, ShoppingCart, Building2, AlertTriangle, Gift, MapPin, User, CreditCard, Truck } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { calcularSubtotal, calcularDesgloseImpuestos, validarAntesDeGuardar, redondear, LineaPedido, obtenerPrecioUnitarioVenta } from "@/lib/calculos";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -46,8 +46,25 @@ interface Cliente {
   id: string;
   codigo: string;
   nombre: string;
+  direccion: string | null;
   preferencia_facturacion: string;
+  termino_credito: string | null;
 }
+
+interface VendedorOption {
+  id: string;
+  full_name: string;
+}
+
+const CREDIT_OPTIONS = [
+  { value: "contado", label: "Contado" },
+  { value: "8_dias", label: "8 días" },
+  { value: "15_dias", label: "15 días" },
+  { value: "30_dias", label: "30 días" },
+  { value: "60_dias", label: "60 días" },
+];
+
+const DIRECTO_VALUE = "__directo__";
 
 interface Sucursal {
   id: string;
@@ -100,6 +117,10 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
   const [selectedSucursalId, setSelectedSucursalId] = useState<string>("");
   const [requiereFactura, setRequiereFactura] = useState(false);
   const [notas, setNotas] = useState("");
+  const [notasEntrega, setNotasEntrega] = useState("");
+  const [terminoCredito, setTerminoCredito] = useState<string>("contado");
+  const [vendedores, setVendedores] = useState<VendedorOption[]>([]);
+  const [selectedVendedorId, setSelectedVendedorId] = useState<string>(DIRECTO_VALUE);
   const [detalles, setDetalles] = useState<DetallePedido[]>([]);
   const [cortesias, setCortesias] = useState<DetallePedido[]>([]);
   const [searchProducto, setSearchProducto] = useState("");
@@ -112,6 +133,7 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
     if (open) {
       loadClientes();
       loadProductos();
+      loadVendedores();
     }
   }, [open]);
 
@@ -119,10 +141,11 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
     if (selectedClienteId) {
       loadSucursales(selectedClienteId);
       loadCortesiasDefault(selectedClienteId);
-      // Set default factura preference based on client
+      // Set default factura preference + plazo based on client
       const cliente = clientes.find(c => c.id === selectedClienteId);
       if (cliente) {
         setRequiereFactura(cliente.preferencia_facturacion === "siempre_factura");
+        setTerminoCredito(cliente.termino_credito || "contado");
       }
     } else {
       setSucursales([]);
@@ -134,12 +157,29 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
   const loadClientes = async () => {
     const { data, error } = await supabase
       .from("clientes")
-      .select("id, codigo, nombre, preferencia_facturacion")
+      .select("id, codigo, nombre, direccion, preferencia_facturacion, termino_credito")
       .eq("activo", true)
       .order("nombre");
 
     if (!error && data) {
-      setClientes(data);
+      setClientes(data as Cliente[]);
+    }
+  };
+
+  const loadVendedores = async () => {
+    // All users with role 'vendedor' (active)
+    const { data, error } = await supabase
+      .from("user_roles")
+      .select("user_id, profiles:user_id(id, full_name)")
+      .eq("role", "vendedor");
+
+    if (!error && data) {
+      const list: VendedorOption[] = (data as any[])
+        .map(r => r.profiles)
+        .filter(p => p && p.id && p.full_name)
+        .map(p => ({ id: p.id, full_name: p.full_name }))
+        .sort((a, b) => a.full_name.localeCompare(b.full_name));
+      setVendedores(list);
     }
   };
 
@@ -385,6 +425,10 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
       const timestamp = Date.now();
       const folio = `PED-${timestamp}`;
 
+      // Resolve vendor + es_directo flag
+      const esDirecto = selectedVendedorId === DIRECTO_VALUE;
+      const vendedorIdFinal = esDirecto ? userData.user.id : selectedVendedorId;
+
       // Create pedido
       const { data: pedido, error: pedidoError } = await supabase
         .from("pedidos")
@@ -392,15 +436,18 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
           folio,
           cliente_id: selectedClienteId,
           sucursal_id: selectedSucursalId || null,
-          vendedor_id: userData.user.id,
+          vendedor_id: vendedorIdFinal,
           subtotal: totales.subtotal,
           impuestos: totales.iva + totales.ieps,
           total: totales.total,
           peso_total_kg: pesoTotal > 0 ? pesoTotal : null,
           requiere_factura: requiereFactura,
           notas: notas || null,
+          notas_entrega: notasEntrega || null,
+          es_directo: esDirecto,
+          termino_credito: terminoCredito as any,
           status: "pendiente",
-        })
+        } as any)
         .select()
         .single();
 
@@ -453,6 +500,9 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
     setDetalles([]);
     setCortesias([]);
     setNotas("");
+    setNotasEntrega("");
+    setTerminoCredito("contado");
+    setSelectedVendedorId(DIRECTO_VALUE);
     setRequiereFactura(false);
     setSearchProducto("");
     setSearchCortesia("");
@@ -461,6 +511,8 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
 
   const totales = calcularTotales();
   const selectedSucursal = sucursales.find(s => s.id === selectedSucursalId);
+  const selectedClienteData = clientes.find(c => c.id === selectedClienteId);
+  const direccionEntrega = selectedSucursal?.direccion || selectedClienteData?.direccion || null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -532,11 +584,73 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
             </div>
           </div>
 
+          {/* Dirección de entrega visible */}
+          {selectedClienteId && direccionEntrega && (
+            <div className="rounded-lg border border-ink-100 bg-ink-50/50 p-3">
+              <div className="flex items-start gap-2 text-sm">
+                <MapPin className="h-4 w-4 text-ink-500 mt-0.5 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-[11px] uppercase tracking-wider text-ink-400 font-medium mb-0.5">
+                    Dirección de entrega
+                  </p>
+                  <p className="text-ink-800">{direccionEntrega}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Vendedor + Plazo */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <User className="h-4 w-4" />
+                Vendedor asignado
+              </Label>
+              <Select value={selectedVendedorId} onValueChange={setSelectedVendedorId}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={DIRECTO_VALUE}>
+                    <span className="font-semibold">DIRECTO</span>
+                    <span className="text-xs text-muted-foreground ml-1">(sin vendedor)</span>
+                  </SelectItem>
+                  {vendedores.map(v => (
+                    <SelectItem key={v.id} value={v.id}>
+                      {v.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <CreditCard className="h-4 w-4" />
+                Plazo de pago
+              </Label>
+              <Select value={terminoCredito} onValueChange={setTerminoCredito}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CREDIT_OPTIONS.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                      {selectedClienteData?.termino_credito === opt.value && (
+                        <span className="text-xs text-muted-foreground ml-2">(default)</span>
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           {/* Opciones */}
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
-              <Switch 
-                checked={requiereFactura} 
+              <Switch
+                checked={requiereFactura}
                 onCheckedChange={setRequiereFactura}
                 id="requiere-factura"
               />
@@ -829,13 +943,28 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
             )}
           </div>
 
-          {/* Notas */}
+          {/* Notas internas */}
           <div className="space-y-2">
-            <Label>Notas (opcional)</Label>
+            <Label>Notas internas (oficina)</Label>
             <Textarea
               value={notas}
               onChange={(e) => setNotas(e.target.value)}
-              placeholder="Notas adicionales para el pedido..."
+              placeholder="Comentarios para la oficina (no llegan al chofer)..."
+              rows={2}
+            />
+          </div>
+
+          {/* Notas de entrega (chofer) */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-1.5">
+              <Truck className="h-4 w-4 text-primary" />
+              Notas de entrega
+              <span className="text-xs text-muted-foreground font-normal">— las verá el chofer</span>
+            </Label>
+            <Textarea
+              value={notasEntrega}
+              onChange={(e) => setNotasEntrega(e.target.value)}
+              placeholder="Instrucciones para el chofer (ej. Recibe de 3 a 4 pm, no recibe viernes por tianguis)"
               rows={2}
             />
           </div>

@@ -34,6 +34,7 @@ export interface Cliente {
   id: string;
   codigo: string;
   nombre: string;
+  direccion?: string | null;
   termino_credito: string;
   preferencia_facturacion?: string | null;
   csf_archivo_url?: string | null;

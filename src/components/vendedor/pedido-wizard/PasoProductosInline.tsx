@@ -566,10 +566,10 @@ export function PasoProductosInline({
           <div className="space-y-1.5">
             <Label className="text-sm flex items-center gap-1.5">
               <FileText className="h-3.5 w-3.5" />
-              Notas de entrega
+              Notas internas
             </Label>
             <Textarea
-              placeholder="Instrucciones especiales..."
+              placeholder="Comentarios para la oficina (no llegan al chofer)..."
               value={notas}
               onChange={(e) => onNotasChange(e.target.value)}
               className="min-h-[60px] resize-none text-sm"

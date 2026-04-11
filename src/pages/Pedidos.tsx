@@ -731,8 +731,8 @@ const PedidosContent = () => {
                   />
                 </div>
                 {selectedPedidos.size > 0 && (
-                  <Button 
-                    variant="destructive" 
+                  <Button
+                    variant="destructive"
                     size={isMobile ? "icon" : "default"}
                     onClick={() => setDeleteDialogOpen(true)}
                   >
@@ -741,10 +741,6 @@ const PedidosContent = () => {
                   </Button>
                 )}
               </div>
-              <Button onClick={() => setNuevoPedidoDialogOpen(true)} className={isMobile ? "w-full" : ""}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuevo Pedido
-              </Button>
             </div>
 
             {/* Vista móvil: cards */}

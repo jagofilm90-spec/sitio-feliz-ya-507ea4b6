@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Store, ChevronRight, Users, MapPin, Loader2, AlertTriangle, CheckCircle, Clock } from "lucide-react";
+import { Store, ChevronRight, Users, MapPin, Loader2, AlertTriangle, CheckCircle, Clock, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,14 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/lib/utils";
 import { Cliente, Sucursal } from "./types";
+
+const CREDIT_OPTIONS = [
+  { value: "contado", label: "Contado" },
+  { value: "8_dias", label: "8 días" },
+  { value: "15_dias", label: "15 días" },
+  { value: "30_dias", label: "30 días" },
+  { value: "60_dias", label: "60 días" },
+];
 
 // Regions that belong to Valle de México (metropolitan area)
 const VALLE_MEXICO_REGIONS = [
@@ -53,9 +61,11 @@ interface PasoClienteProps {
   sucursales: Sucursal[];
   selectedClienteId: string;
   selectedSucursalId: string;
+  terminoCredito: string;
   loading: boolean;
   onClienteChange: (clienteId: string) => void;
   onSucursalChange: (sucursalId: string) => void;
+  onTerminoCreditoChange: (term: string) => void;
   onNext: () => void;
 }
 
@@ -64,13 +74,17 @@ export function PasoCliente({
   sucursales,
   selectedClienteId,
   selectedSucursalId,
+  terminoCredito,
   loading,
   onClienteChange,
   onSucursalChange,
+  onTerminoCreditoChange,
   onNext,
 }: PasoClienteProps) {
   const selectedCliente = clientes.find(c => c.id === selectedClienteId);
-  const canContinue = selectedClienteId && (sucursales.length === 0 || selectedSucursalId);
+  const selectedSucursal = sucursales.find(s => s.id === selectedSucursalId);
+  const canContinue = selectedClienteId && (sucursales.length === 0 || selectedSucursalId) && !!terminoCredito;
+  const direccionEntrega = selectedSucursal?.direccion || selectedCliente?.direccion || null;
 
   const [semaforo, setSemaforo] = useState<SemaforoData | null>(null);
   const [loadingSemaforo, setLoadingSemaforo] = useState(false);
@@ -312,6 +326,46 @@ export function PasoCliente({
             <div className="flex items-center justify-center py-4">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
               <span className="ml-2 text-muted-foreground">Cargando sucursales...</span>
+            </div>
+          )}
+
+          {/* Plazo de pago */}
+          {selectedClienteId && (
+            <div className="space-y-2">
+              <Label className="text-base font-medium flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                Plazo de pago
+              </Label>
+              <Select value={terminoCredito} onValueChange={onTerminoCreditoChange}>
+                <SelectTrigger className="h-12 text-base">
+                  <SelectValue placeholder="Seleccionar plazo..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {CREDIT_OPTIONS.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value} className="text-base py-2">
+                      {opt.label}
+                      {selectedCliente?.termino_credito === opt.value && (
+                        <span className="text-xs text-muted-foreground ml-2">(default del cliente)</span>
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Delivery address (visible confirmation) */}
+          {selectedClienteId && direccionEntrega && (
+            <div className="rounded-lg border border-ink-100 bg-ink-50/50 p-3">
+              <div className="flex items-start gap-2 text-sm">
+                <MapPin className="h-4 w-4 text-ink-500 mt-0.5 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-[11px] uppercase tracking-wider text-ink-400 font-medium mb-0.5">
+                    Dirección de entrega
+                  </p>
+                  <p className="text-ink-800">{direccionEntrega}</p>
+                </div>
+              </div>
             </div>
           )}
 

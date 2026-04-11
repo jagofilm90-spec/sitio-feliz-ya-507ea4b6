@@ -63,6 +63,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
   const [lineas, setLineas] = useState<LineaPedido[]>([]);
   const [terminoCredito, setTerminoCredito] = useState("");
   const [notas, setNotas] = useState("");
+  const [notasEntrega, setNotasEntrega] = useState("");
   const [requiereFactura, setRequiereFactura] = useState(false);
   const [vendedorNombre, setVendedorNombre] = useState("Vendedor");
   const confirmPrintRef = useRef<HTMLDivElement>(null);
@@ -331,6 +332,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       setLineas([]);
       setTerminoCredito("contado");
       setNotas("");
+      setNotasEntrega("");
       setRequiereFactura(false);
       setStep(1);
       setCompletedSteps([]);
@@ -407,7 +409,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
 
       const { data: clientesData } = await supabase
         .from("clientes")
-        .select("id, codigo, nombre, termino_credito, preferencia_facturacion, csf_archivo_url, zona:zonas(nombre, region)")
+        .select("id, codigo, nombre, direccion, termino_credito, preferencia_facturacion, csf_archivo_url, zona:zonas(nombre, region)")
         .eq("vendedor_asignado", user.id)
         .eq("activo", true)
         .order("nombre");
@@ -753,10 +755,12 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
             ? "por_autorizar"
             : "pendiente",
           notas: notas || null,
+          notas_entrega: notasEntrega || null,
+          es_directo: false,
           termino_credito: terminoCredito as any,
           requiere_factura: requiereFactura,
           peso_total_kg: totales.pesoTotalKg > 0 ? totales.pesoTotalKg : null,
-        })
+        } as any)
         .select()
         .single();
 
@@ -1007,6 +1011,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       setLineas([]);
       setTerminoCredito("contado");
       setNotas("");
+      setNotasEntrega("");
       setRequiereFactura(false);
       setStep(1);
       setCompletedSteps([]);
@@ -1085,9 +1090,11 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
             sucursales={sucursales}
             selectedClienteId={selectedClienteId}
             selectedSucursalId={selectedSucursalId}
+            terminoCredito={terminoCredito}
             loading={loadingSucursales}
             onClienteChange={setSelectedClienteId}
             onSucursalChange={setSelectedSucursalId}
+            onTerminoCreditoChange={setTerminoCredito}
             onNext={handleNextStep}
           />
 
@@ -1166,6 +1173,8 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
           lineas={lineas}
           terminoCredito={terminoCredito}
           notas={notas}
+          notasEntrega={notasEntrega}
+          onNotasEntregaChange={setNotasEntrega}
           totales={totales}
           submitting={submitting}
           requiereFactura={requiereFactura}

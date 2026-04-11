@@ -1,8 +1,10 @@
 import { useRef, useState } from "react";
-import { ChevronLeft, Loader2, AlertTriangle, Clock, CheckCircle2, FileText, Receipt, Send, Download, Printer } from "lucide-react";
+import { ChevronLeft, Loader2, AlertTriangle, Clock, CheckCircle2, FileText, Receipt, Send, Download, Printer, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { PedidoPrintTemplate, DatosPedidoPrint } from "@/components/pedidos/PedidoPrintTemplate";
 import { getDisplayName } from "@/lib/productUtils";
 import { LineaPedido, Cliente, Sucursal, TotalesCalculados } from "./types";
@@ -59,6 +61,8 @@ interface PasoConfirmarProps {
   lineas: LineaPedido[];
   terminoCredito: string;
   notas: string;
+  notasEntrega: string;
+  onNotasEntregaChange: (value: string) => void;
   totales: TotalesCalculados;
   submitting: boolean;
   requiereFactura: boolean;
@@ -75,6 +79,8 @@ export function PasoConfirmar({
   lineas,
   terminoCredito,
   notas,
+  notasEntrega,
+  onNotasEntregaChange,
   totales,
   submitting,
   requiereFactura,
@@ -233,6 +239,24 @@ export function PasoConfirmar({
           </div>
         </div>
       </div>
+
+      {/* Notas de entrega (para el chofer) */}
+      <Card>
+        <CardContent className="py-3 space-y-2">
+          <Label htmlFor="notas-entrega" className="text-sm flex items-center gap-1.5 font-medium">
+            <Truck className="h-3.5 w-3.5 text-primary" />
+            Notas de entrega
+            <span className="text-xs text-muted-foreground font-normal">— las verá el chofer</span>
+          </Label>
+          <Textarea
+            id="notas-entrega"
+            value={notasEntrega}
+            onChange={(e) => onNotasEntregaChange(e.target.value)}
+            placeholder="Instrucciones para el chofer (ej. Recibe de 3 a 4 pm, no recibe viernes por tianguis)"
+            className="min-h-[60px] resize-none text-sm"
+          />
+        </CardContent>
+      </Card>
 
       {/* Action Buttons */}
       <div className="flex gap-3 pt-1">
