@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { Search, Star, Check, Plus, ChevronLeft, ChevronRight, MapPin, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,10 +31,42 @@ export function PasoProductosInline({
   onCancelar,
 }: PasoProductosInlineProps) {
   const [search, setSearch] = useState("");
+  const [peekedProductId, setPeekedProductId] = useState<string | null>(null);
+  const [showPeekHint, setShowPeekHint] = useState(true);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const selectedIds = useMemo(() => new Set(lineas.map((l) => l.producto.id)), [lineas]);
   const frecuenteIds = useMemo(() => new Set(productosFrecuentes.map((p) => p.id)), [productosFrecuentes]);
   const isSearching = search.trim().length > 0;
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    };
+  }, []);
+
+  const handleTouchStart = useCallback((productId: string) => {
+    longPressTimerRef.current = setTimeout(() => {
+      setPeekedProductId(productId);
+      if (navigator.vibrate) navigator.vibrate(10);
+    }, 450);
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    setPeekedProductId(null);
+  }, []);
+
+  const handleTouchMove = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
 
   // Filtered products for search mode
   const searchResults = useMemo(() => {
@@ -60,7 +92,6 @@ export function PasoProductosInline({
 
   // Products grouped by category (only used when NOT searching)
   const productosPorCategoria = useMemo(() => {
-    // Exclude frecuentes from the category view
     const rest = productos.filter((p) => !frecuenteIds.has(p.id));
     const grupos = new Map<string, Producto[]>();
 
@@ -70,7 +101,6 @@ export function PasoProductosInline({
       grupos.get(cat)!.push(prod);
     }
 
-    // Sort categories alphabetically, "Sin categoría" last
     const sorted = [...grupos.entries()].sort(([a], [b]) => {
       if (a === "Sin categoría") return 1;
       if (b === "Sin categoría") return -1;
@@ -85,40 +115,97 @@ export function PasoProductosInline({
   const renderProductRow = (producto: Producto, isFrecuente: boolean) => {
     const isSelected = selectedIds.has(producto.id);
     const esPorKilo = producto.precio_por_kilo;
+    const isPeeked = peekedProductId === producto.id;
 
     return (
-      <button
+      <div
         key={producto.id}
-        type="button"
-        onClick={() => onToggleProducto(producto)}
         className={cn(
-          "w-full text-left flex items-center gap-3 px-3 py-2.5 border-b border-ink-100 last:border-b-0 transition-colors",
-          isSelected ? "bg-crimson-50/50" : "hover:bg-ink-50/50"
+          "w-full flex items-start gap-3 px-3 py-2.5 border-b border-ink-100 last:border-b-0 transition-all duration-200",
+          isPeeked
+            ? "bg-crimson-50"
+            : isSelected
+            ? "bg-crimson-50/50"
+            : "hover:bg-ink-50/50"
         )}
+        onTouchStart={() => handleTouchStart(producto.id)}
+        onTouchEnd={handleTouchEnd}
+        onTouchMove={handleTouchMove}
+        onMouseEnter={() => handleTouchStart(producto.id)}
+        onMouseLeave={handleTouchEnd}
       >
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 min-w-0">
+        <div className="flex-1 min-w-0 pt-1">
+          <div className={cn("flex items-center gap-1.5 min-w-0")}>
             {isFrecuente && <Star className="h-3 w-3 text-amber-500 fill-amber-500 shrink-0" />}
-            <span className="text-sm font-medium text-ink-800 truncate block min-w-0">{getDisplayName(producto)}</span>
+            <span
+              className={cn(
+                "text-sm font-medium text-ink-800 block min-w-0",
+                !isPeeked && "truncate"
+              )}
+            >
+              {getDisplayName(producto)}
+            </span>
           </div>
           <div className="flex items-center gap-2 mt-0.5 text-xs text-ink-400">
             <span className="font-mono">{producto.codigo}</span>
             <span className="tabular-nums">
-              {formatCurrency(producto.precio_venta)}{esPorKilo ? "/kg" : `/${producto.unidad}`}
+              {formatCurrency(producto.precio_venta)}
+              {esPorKilo ? "/kg" : `/${producto.unidad}`}
             </span>
           </div>
+
+          {/* Expanded peek info */}
+          {isPeeked && (
+            <div className="mt-2 pt-2 border-t border-crimson-100 space-y-1 text-xs text-ink-500">
+              {producto.marca && (
+                <div>
+                  Marca: <span className="font-medium text-ink-700">{producto.marca}</span>
+                </div>
+              )}
+              {producto.contenido_empaque && (
+                <div>
+                  Empaque: <span className="font-medium text-ink-700">{producto.contenido_empaque}</span>
+                </div>
+              )}
+              {producto.peso_kg != null && producto.peso_kg > 0 && (
+                <div>
+                  Peso: <span className="font-medium text-ink-700">{producto.peso_kg} kg</span>
+                </div>
+              )}
+              {producto.stock_actual != null && (
+                <div>
+                  Stock:{" "}
+                  <span
+                    className={cn(
+                      "font-medium",
+                      producto.stock_actual <= (producto.stock_minimo || 0)
+                        ? "text-red-600"
+                        : "text-ink-700"
+                    )}
+                  >
+                    {producto.stock_actual} {producto.unidad}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-        <div
+
+        {/* Toggle button — stopPropagation prevents long-press interference */}
+        <button
+          type="button"
+          onClick={() => onToggleProducto(producto)}
+          onTouchStart={(e) => e.stopPropagation()}
           className={cn(
-            "w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors",
+            "w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors mt-0.5",
             isSelected
               ? "bg-crimson-500 text-white"
               : "border-2 border-ink-200 text-ink-400 hover:border-ink-300"
           )}
         >
           {isSelected ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-        </div>
-      </button>
+        </button>
+      </div>
     );
   };
 
@@ -132,7 +219,12 @@ export function PasoProductosInline({
           <span className="text-ink-400 truncate hidden sm:inline">— {direccion}</span>
         )}
         {onCancelar && (
-          <Button variant="ghost" size="icon" className="ml-auto h-7 w-7 text-ink-400 hover:text-red-500 shrink-0" onClick={onCancelar}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="ml-auto h-7 w-7 text-ink-400 hover:text-red-500 shrink-0"
+            onClick={onCancelar}
+          >
             <X className="h-4 w-4" />
           </Button>
         )}
@@ -150,6 +242,19 @@ export function PasoProductosInline({
           />
         </div>
       </div>
+
+      {/* Peek hint (dismissible, session only) */}
+      {showPeekHint && (
+        <div className="flex items-center justify-between px-3 py-2 bg-blue-50 border-b border-blue-200 text-xs text-blue-700 shrink-0">
+          <span>Mantén presionado un producto para ver detalles</span>
+          <button
+            onClick={() => setShowPeekHint(false)}
+            className="text-blue-400 hover:text-blue-600 ml-2"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Product lists */}
       <div className="flex-1 min-h-0 overflow-y-auto">
@@ -172,7 +277,9 @@ export function PasoProductosInline({
                 <div className="sticky top-0 z-10 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border-b border-amber-200 text-center">
                   <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
                   Frecuentes de {cliente?.nombre || "este cliente"}
-                  <span className="text-amber-500 font-normal ml-1">({frecuentesFiltered.length})</span>
+                  <span className="text-amber-500 font-normal ml-1">
+                    ({frecuentesFiltered.length})
+                  </span>
                 </div>
                 {frecuentesFiltered.map((p) => renderProductRow(p, true))}
               </div>
