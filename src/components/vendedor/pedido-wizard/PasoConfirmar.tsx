@@ -40,10 +40,9 @@ export function PasoConfirmar({
     const piso = l.precioLista - (l.producto.descuento_maximo || 0);
     return l.precioUnitario < piso;
   }).length;
-
-  const requiereAutorizacion = lineas.some(
-    (l) => l.requiereAutorizacion && l.autorizacionStatus !== "aprobado"
-  );
+  const errorDedoCount = lineas.filter((l) =>
+    l.precioUnitario > 0 && l.precioUnitario < l.precioLista * 0.5
+  ).length;
 
   const plazoLabel =
     CREDIT_OPTIONS.find((o) => o.value === terminoCredito)?.label ||
@@ -167,14 +166,21 @@ export function PasoConfirmar({
         </Card>
 
         {/* Alerts */}
-        {(bajoPisoCount > 0 || requiereAutorizacion) && (
+        {bajoPisoCount > 0 && (
           <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
             <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
             <p className="text-sm text-amber-800">
-              {bajoPisoCount > 0
-                ? `${bajoPisoCount} producto${bajoPisoCount > 1 ? "s" : ""} bajo piso. `
-                : ""}
-              Este pedido requerirá tu autorización.
+              {bajoPisoCount} producto{bajoPisoCount > 1 ? "s" : ""} bajo piso.
+              José recibirá una notificación para revisar.
+            </p>
+          </div>
+        )}
+        {errorDedoCount > 0 && (
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-300">
+            <AlertTriangle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
+            <p className="text-sm text-red-800">
+              {errorDedoCount} producto{errorDedoCount > 1 ? "s" : ""} con precio menor al 50% de lista.
+              Verifica que no sea un error de captura.
             </p>
           </div>
         )}
@@ -214,11 +220,6 @@ export function PasoConfirmar({
             <>
               <Loader2 className="h-5 w-5 mr-2 animate-spin" />
               Enviando...
-            </>
-          ) : requiereAutorizacion ? (
-            <>
-              <AlertTriangle className="h-5 w-5 mr-2" />
-              Enviar para autorización
             </>
           ) : (
             <>

@@ -227,6 +227,7 @@ function ProductoCard({
   const prod = linea.producto;
   const piso = linea.precioLista - (prod.descuento_maximo || 0);
   const esBajoPiso = linea.precioUnitario < piso;
+  const esErrorDedo = linea.precioUnitario > 0 && linea.precioUnitario < linea.precioLista * 0.5;
   const esPorKilo = prod.precio_por_kilo;
   const pesoTotal = esPorKilo && prod.peso_kg ? linea.cantidad * prod.peso_kg : null;
 
@@ -348,6 +349,17 @@ function ProductoCard({
             <span>Última <span className="font-semibold text-emerald-600 tabular-nums">{formatCurrency(ultimoPrecio.precio)}</span></span>
           )}
         </div>
+
+        {/* Fat finger warning: price < 50% of list */}
+        {esErrorDedo && (
+          <div className="flex items-start gap-2 p-2 rounded bg-red-100 border border-red-300 text-xs text-red-800">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+            <span>
+              <strong>¿Es correcto?</strong> Este precio es menos de la mitad del precio de lista ({formatCurrency(linea.precioLista)}).
+              Verifica que no sea un error de captura.
+            </span>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

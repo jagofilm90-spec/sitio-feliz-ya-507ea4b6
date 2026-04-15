@@ -650,13 +650,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
     if (sucursales.length > 0 && !selectedSucursalId) { toast.error("Selecciona una sucursal"); return; }
     if (lineas.length === 0) { toast.error("Agrega al menos un producto"); return; }
 
-    const productosNecesitanAutorizacion = lineas.filter(l => l.requiereAutorizacion && l.autorizacionStatus !== 'aprobado');
-    if (productosNecesitanAutorizacion.length > 0) {
-      setLineas(prev => prev.map(l =>
-        l.requiereAutorizacion && l.autorizacionStatus !== 'aprobado' ? { ...l, autorizacionStatus: 'pendiente' as const } : l
-      ));
-    }
-
     setSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -665,6 +658,27 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       const totales = calcularTotales();
       const folio = `PED-V-${Date.now().toString().slice(-6)}`;
 
+      // Build price alerts (informational — never blocks the order)
+      const alertasPrec: Array<{
+        producto_id: string; producto_nombre: string;
+        tipo: 'bajo_piso' | 'error_dedo';
+        precio_lista: number; precio_pactado: number; piso: number;
+      }> = [];
+      for (const l of lineas) {
+        const piso = l.precioLista - (l.producto.descuento_maximo || 0);
+        if (l.precioUnitario < piso) {
+          alertasPrec.push({
+            producto_id: l.producto.id,
+            producto_nombre: l.producto.nombre,
+            tipo: l.precioUnitario < l.precioLista * 0.5 ? 'error_dedo' : 'bajo_piso',
+            precio_lista: l.precioLista,
+            precio_pactado: l.precioUnitario,
+            piso,
+          });
+        }
+      }
+
+      // ALL orders go as "pendiente" — never blocked by price
       const { data: pedido, error: pedidoError } = await supabase
         .from("pedidos")
         .insert({
@@ -672,10 +686,11 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
           sucursal_id: selectedSucursalId || null,
           fecha_pedido: new Date().toISOString(), fecha_entrega_estimada: null,
           subtotal: totales.subtotal, impuestos: totales.impuestos, total: totales.total,
-          status: lineas.some(l => l.requiereAutorizacion && l.autorizacionStatus === 'pendiente') ? "por_autorizar" : "pendiente",
+          status: "pendiente",
           notas: notas || null, notas_entrega: notasEntrega || null, es_directo: false,
           termino_credito: terminoCredito as any, requiere_factura: requiereFactura,
           peso_total_kg: totales.pesoTotalKg > 0 ? totales.pesoTotalKg : null,
+          alertas_precio: alertasPrec.length > 0 ? alertasPrec : [],
         } as any)
         .select()
         .single();
@@ -715,27 +730,41 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
             }).catch(e => console.error("Notif error:", e)),
           ];
 
-          if (pedido.status !== "por_autorizar") {
+          // Push + email to secretaría (all orders are now "pendiente")
+          notifPromises.push(
+            supabase.functions.invoke('send-push-notification', {
+              body: { roles: ['secretaria'], title: '📦 Nuevo Pedido',
+                body: `${vNombre} → ${clienteNombre} - ${formatCurrency(totales.total)}`,
+                data: { type: 'nuevo_pedido', pedido_id: pedido.id, folio } }
+            }).catch(e => console.error("Push error:", e)),
+            supabase.functions.invoke('send-secretary-notification', {
+              body: { tipo: 'nuevo_pedido', pedidoId: pedido.id, folio, vendedor: vNombre,
+                cliente: clienteNombre, total: totales.total,
+                requiereFactura: selectedCliente?.termino_credito !== 'contado' }
+            }).catch(e => console.error("Secretary email error:", e))
+          );
+
+          // Price alert notification to admin (José)
+          if (alertasPrec.length > 0) {
+            const alertDesc = alertasPrec.map(a =>
+              `${a.producto_nombre}: ${formatCurrency(a.precio_pactado)} (lista ${formatCurrency(a.precio_lista)}, piso ${formatCurrency(a.piso)})`
+            ).join("; ");
+            const hasErrorDedo = alertasPrec.some(a => a.tipo === 'error_dedo');
             notifPromises.push(
+              supabase.from("notificaciones").insert({
+                tipo: "precio_modificado_admin",
+                titulo: hasErrorDedo
+                  ? `🚨 Precio sospechoso en ${folio}`
+                  : `⚠️ Precio bajo piso en ${folio}`,
+                descripcion: `${vNombre} → ${clienteNombre}: ${alertDesc}`,
+                leida: false,
+              }).catch(() => {}),
               supabase.functions.invoke('send-push-notification', {
-                body: { roles: ['secretaria'], title: '📦 Nuevo Pedido',
-                  body: `${vNombre} → ${clienteNombre} - ${formatCurrency(totales.total)}`,
-                  data: { type: 'nuevo_pedido', pedido_id: pedido.id, folio } }
-              }).catch(e => console.error("Push error:", e)),
-              supabase.functions.invoke('send-secretary-notification', {
-                body: { tipo: 'nuevo_pedido', pedidoId: pedido.id, folio, vendedor: vNombre,
-                  cliente: clienteNombre, total: totales.total,
-                  requiereFactura: selectedCliente?.termino_credito !== 'contado' }
-              }).catch(e => console.error("Secretary email error:", e))
-            );
-          }
-          if (pedido.status === "por_autorizar") {
-            notifPromises.push(
-              supabase.functions.invoke('send-push-notification', {
-                body: { roles: ['admin'], title: '🔔 Solicitud de autorización de precio',
-                  body: `${vNombre} solicita autorización — ${folio} · ${clienteNombre} · ${formatCurrency(totales.total)}`,
-                  data: { type: 'solicitud_autorizacion', pedido_id: pedido.id, folio } }
-              }).catch(e => console.error("Push admin auth error:", e))
+                body: { roles: ['admin'],
+                  title: hasErrorDedo ? `🚨 Precio sospechoso — ${folio}` : `⚠️ Bajo piso — ${folio}`,
+                  body: `${vNombre} → ${clienteNombre}: ${alertasPrec.length} producto${alertasPrec.length > 1 ? 's' : ''} con precio bajo`,
+                  data: { type: 'alerta_precio', pedido_id: pedido.id, folio } }
+              }).catch(() => {})
             );
           }
 
@@ -769,29 +798,27 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
           const direccionEntrega = sucursalObj?.direccion || selectedCliente?.zona?.nombre || "No especificada";
           const emailPromises: Promise<any>[] = [];
 
-          if (pedido.status !== "por_autorizar") {
-            emailPromises.push(
-              supabase.functions.invoke("enviar-pedido-interno", {
-                body: {
-                  folio, clienteNombre, vendedorNombre: vNombre, terminoCredito, direccionEntrega,
-                  sucursalNombre: sucursalObj?.nombre, total: totales.total, subtotal: totales.subtotal,
-                  impuestos: totales.impuestos, fecha: new Date().toISOString(), pedidoId: pedido.id,
-                  productos: lineas.map(l => ({ cantidad: l.cantidad, unidad: l.producto.unidad || "pza", nombre: l.producto.nombre, precioUnitario: l.precioUnitario, importe: l.subtotal })),
-                  pdfBase64: pdfBase64 || undefined, pdfFilename: `Pedido_${folio}.pdf`,
-                }
-              }).catch(e => console.error("Internal email error:", e))
-            );
-          }
+          // Internal email (always — no longer gated by por_autorizar)
+          emailPromises.push(
+            supabase.functions.invoke("enviar-pedido-interno", {
+              body: {
+                folio, clienteNombre, vendedorNombre: vNombre, terminoCredito, direccionEntrega,
+                sucursalNombre: sucursalObj?.nombre, total: totales.total, subtotal: totales.subtotal,
+                impuestos: totales.impuestos, fecha: new Date().toISOString(), pedidoId: pedido.id,
+                productos: lineas.map(l => ({ cantidad: l.cantidad, unidad: l.producto.unidad || "pza", nombre: l.producto.nombre, precioUnitario: l.precioUnitario, importe: l.subtotal })),
+                pdfBase64: pdfBase64 || undefined, pdfFilename: `Pedido_${folio}.pdf`,
+              }
+            }).catch(e => console.error("Internal email error:", e))
+          );
 
-          if (!lineas.some(l => l.requiereAutorizacion && l.autorizacionStatus === 'pendiente')) {
-            emailPromises.push(
-              supabase.functions.invoke('send-client-notification', {
-                body: { clienteId: selectedClienteId, tipo: 'pedido_confirmado',
-                  data: { pedidoFolio: folio, total: totales.total },
-                  pdfBase64: clientPdfBase64 || undefined, pdfFilename: `Pedido_${folio}.pdf` }
-              }).catch(e => console.error("Client email error:", e))
-            );
-          }
+          // Client notification (always)
+          emailPromises.push(
+            supabase.functions.invoke('send-client-notification', {
+              body: { clienteId: selectedClienteId, tipo: 'pedido_confirmado',
+                data: { pedidoFolio: folio, total: totales.total },
+                pdfBase64: clientPdfBase64 || undefined, pdfFilename: `Pedido_${folio}.pdf` }
+            }).catch(e => console.error("Client email error:", e))
+          );
 
           emailPromises.push(
             (async () => {

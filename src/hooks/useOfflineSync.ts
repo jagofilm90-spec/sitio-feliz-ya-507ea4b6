@@ -81,15 +81,96 @@ async function syncPedidoToSupabase(pedido: PedidoPendiente): Promise<void> {
 
   console.log("[OfflineSync] Synced OK:", pedido.id, "→", folio);
 
-  // Fire-and-forget notification
-  try {
-    await supabase.from("notificaciones").insert({
+  // ── Fire-and-forget: notifications + emails (no PDF — browser-only) ──
+  const bgPromises: Promise<any>[] = [];
+
+  // In-app notification
+  bgPromises.push(
+    supabase.from("notificaciones").insert({
       tipo: "nuevo_pedido_vendedor",
-      titulo: `Pedido ${folio} (offline sync)`,
+      titulo: `Pedido ${folio} (sync offline)`,
       descripcion: `Pedido para ${pedido.cliente_nombre} sincronizado desde cola offline`,
       leida: false,
-    });
-  } catch { /* non-critical */ }
+    }).catch(() => {})
+  );
+
+  // Push notification to secretaría
+  bgPromises.push(
+    supabase.functions.invoke("send-push-notification", {
+      body: {
+        roles: ["secretaria"],
+        title: "📦 Nuevo Pedido (sync)",
+        body: `${pedido.cliente_nombre} — ${new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(pedido.totales.total)}`,
+        data: { type: "nuevo_pedido", pedido_id: inserted.id, folio },
+      },
+    }).catch(() => {})
+  );
+
+  // Email to secretaría (send-secretary-notification)
+  bgPromises.push(
+    supabase.functions.invoke("send-secretary-notification", {
+      body: {
+        tipo: "nuevo_pedido",
+        pedidoId: inserted.id,
+        folio,
+        vendedor: "Vendedor (sync offline)",
+        cliente: pedido.cliente_nombre,
+        total: pedido.totales.total,
+        requiereFactura: pedido.requiere_factura,
+      },
+    }).catch(() => {})
+  );
+
+  // Internal email (enviar-pedido-interno) — no PDF attached (generated client-side only)
+  bgPromises.push(
+    supabase.functions.invoke("enviar-pedido-interno", {
+      body: {
+        folio,
+        clienteNombre: pedido.cliente_nombre,
+        vendedorNombre: "Vendedor (sync offline)",
+        terminoCredito: pedido.termino_credito,
+        direccionEntrega: "Sincronizado offline",
+        total: pedido.totales.total,
+        subtotal: pedido.totales.subtotal,
+        impuestos: redondear(pedido.totales.iva + pedido.totales.ieps),
+        fecha: pedido.created_at,
+        pedidoId: inserted.id,
+        productos: pedido.lineas.map((l) => ({
+          cantidad: l.cantidad,
+          unidad: "pza",
+          nombre: l.producto_nombre,
+          precioUnitario: l.precio_unitario,
+          importe: l.subtotal,
+        })),
+        // No pdfBase64 — Edge Function handles missing PDF gracefully
+      },
+    }).catch(() => {})
+  );
+
+  // Client email (send-client-notification) — no PDF
+  bgPromises.push(
+    supabase.functions.invoke("send-client-notification", {
+      body: {
+        clienteId: pedido.cliente_id,
+        tipo: "pedido_confirmado",
+        data: { pedidoFolio: folio, total: pedido.totales.total },
+        // No pdfBase64
+      },
+    }).catch(() => {})
+  );
+
+  // Audit log
+  bgPromises.push(
+    supabase.from("security_audit_log").insert([{
+      user_id: vendedorId,
+      action: "pedido_creado_offline_sync",
+      table_name: "pedidos",
+      record_id: inserted.id,
+      details: { folio, cliente_nombre: pedido.cliente_nombre, total: pedido.totales.total, offline_sync: true },
+    }]).catch(() => {})
+  );
+
+  await Promise.all(bgPromises).catch(() => {});
 }
 
 export function useOfflineSync() {
