@@ -33,12 +33,13 @@ export function PasoProductosInline({
   const [search, setSearch] = useState("");
 
   const selectedIds = useMemo(() => new Set(lineas.map((l) => l.producto.id)), [lineas]);
-
   const frecuenteIds = useMemo(() => new Set(productosFrecuentes.map((p) => p.id)), [productosFrecuentes]);
+  const isSearching = search.trim().length > 0;
 
-  const filtered = useMemo(() => {
+  // Filtered products for search mode
+  const searchResults = useMemo(() => {
+    if (!isSearching) return [];
     const q = search.toLowerCase().trim();
-    if (!q) return productos;
     return productos.filter(
       (p) =>
         p.nombre.toLowerCase().includes(q) ||
@@ -46,21 +47,38 @@ export function PasoProductosInline({
         (p.especificaciones?.toLowerCase() || "").includes(q) ||
         (p.marca?.toLowerCase() || "").includes(q)
     );
-  }, [productos, search]);
+  }, [productos, search, isSearching]);
 
+  // Frequent products (filtered if searching)
   const frecuentesFiltered = useMemo(() => {
+    if (!isSearching) return productosFrecuentes;
     const q = search.toLowerCase().trim();
-    if (!q) return productosFrecuentes;
     return productosFrecuentes.filter(
-      (p) =>
-        p.nombre.toLowerCase().includes(q) ||
-        p.codigo.toLowerCase().includes(q)
+      (p) => p.nombre.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q)
     );
-  }, [productosFrecuentes, search]);
+  }, [productosFrecuentes, search, isSearching]);
 
-  const allFiltered = useMemo(() => {
-    return filtered.filter((p) => !frecuenteIds.has(p.id));
-  }, [filtered, frecuenteIds]);
+  // Products grouped by category (only used when NOT searching)
+  const productosPorCategoria = useMemo(() => {
+    // Exclude frecuentes from the category view
+    const rest = productos.filter((p) => !frecuenteIds.has(p.id));
+    const grupos = new Map<string, Producto[]>();
+
+    for (const prod of rest) {
+      const cat = prod.categoria || "Sin categoría";
+      if (!grupos.has(cat)) grupos.set(cat, []);
+      grupos.get(cat)!.push(prod);
+    }
+
+    // Sort categories alphabetically, "Sin categoría" last
+    const sorted = [...grupos.entries()].sort(([a], [b]) => {
+      if (a === "Sin categoría") return 1;
+      if (b === "Sin categoría") return -1;
+      return a.localeCompare(b);
+    });
+
+    return sorted;
+  }, [productos, frecuenteIds]);
 
   const direccion = sucursal?.direccion || cliente?.direccion || cliente?.zona?.nombre || null;
 
@@ -121,7 +139,7 @@ export function PasoProductosInline({
       </div>
 
       {/* Search */}
-      <div className="p-3 pb-2">
+      <div className="p-3 pb-2 shrink-0">
         <div className="relative">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-ink-400" />
           <Input
@@ -133,33 +151,55 @@ export function PasoProductosInline({
         </div>
       </div>
 
-      {/* Product lists — native overflow (Radix ScrollArea clips flex children) */}
+      {/* Product lists */}
       <div className="flex-1 min-h-0 overflow-y-auto">
-        {/* Frequent products */}
-        {frecuentesFiltered.length > 0 && (
-          <div>
-            <div className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-ink-400 bg-amber-50/50">
-              <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
-              Frecuentes de {cliente?.nombre || "este cliente"}
-            </div>
-            {frecuentesFiltered.map((p) => renderProductRow(p, true))}
-          </div>
-        )}
+        {isSearching ? (
+          /* ── Search mode: flat list, no category headers ── */
+          <>
+            {searchResults.map((p) => renderProductRow(p, frecuenteIds.has(p.id)))}
+            {searchResults.length === 0 && (
+              <div className="text-center py-8 text-ink-400 text-sm">
+                No se encontraron productos
+              </div>
+            )}
+          </>
+        ) : (
+          /* ── Browse mode: frecuentes + categories with sticky headers ── */
+          <>
+            {/* Frequent products */}
+            {frecuentesFiltered.length > 0 && (
+              <div>
+                <div className="sticky top-0 z-10 flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border-b border-amber-200 text-center">
+                  <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+                  Frecuentes de {cliente?.nombre || "este cliente"}
+                  <span className="text-amber-500 font-normal ml-1">({frecuentesFiltered.length})</span>
+                </div>
+                {frecuentesFiltered.map((p) => renderProductRow(p, true))}
+              </div>
+            )}
 
-        {/* All products */}
-        <div>
-          {frecuentesFiltered.length > 0 && (
-            <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-ink-400 bg-ink-50/50">
-              Todos los productos
-            </div>
-          )}
-          {allFiltered.map((p) => renderProductRow(p, false))}
-          {allFiltered.length === 0 && filtered.length === 0 && (
-            <div className="text-center py-8 text-ink-400 text-sm">
-              No se encontraron productos
-            </div>
-          )}
-        </div>
+            {/* Products by category */}
+            {productosPorCategoria.map(([categoria, prods]) => {
+              const selCount = prods.filter((p) => selectedIds.has(p.id)).length;
+              return (
+                <div key={categoria}>
+                  <div className="sticky top-0 z-10 bg-white border-b border-ink-200 px-3 py-2 flex items-center justify-center gap-2 text-center">
+                    <span className="text-xs font-bold uppercase tracking-wider text-ink-500">
+                      {categoria}
+                    </span>
+                    <span className="text-xs text-ink-400">({prods.length})</span>
+                    {selCount > 0 && (
+                      <span className="text-xs text-crimson-500 font-semibold">
+                        · {selCount} seleccionado{selCount > 1 ? "s" : ""}
+                      </span>
+                    )}
+                  </div>
+                  {prods.map((p) => renderProductRow(p, false))}
+                </div>
+              );
+            })}
+          </>
+        )}
       </div>
 
       {/* Floating bar */}

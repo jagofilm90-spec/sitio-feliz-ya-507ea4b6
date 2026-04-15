@@ -8,6 +8,7 @@ export interface Producto {
   marca: string | null;
   contenido_empaque: string | null;
   unidad: string;
+  categoria: string | null;
   precio_venta: number;
   stock_actual: number;
   stock_minimo: number | null;

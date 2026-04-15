@@ -409,7 +409,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
 
       const { data: productosData } = await supabase
         .from("productos")
-        .select("id, codigo, nombre, especificaciones, marca, contenido_empaque, unidad, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg, descuento_maximo")
+        .select("id, codigo, nombre, especificaciones, marca, contenido_empaque, unidad, categoria, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg, descuento_maximo")
         .eq("activo", true)
         .neq("bloqueado_venta", true)
         .order("nombre");
@@ -456,7 +456,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
 
       const { data: productosFrec } = await supabase
         .from("productos")
-        .select("id, codigo, nombre, especificaciones, marca, contenido_empaque, unidad, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg, descuento_maximo")
+        .select("id, codigo, nombre, especificaciones, marca, contenido_empaque, unidad, categoria, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg, descuento_maximo")
         .in("id", topIds)
         .eq("activo", true)
         .neq("bloqueado_venta", true);
