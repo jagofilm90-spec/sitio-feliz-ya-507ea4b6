@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { guardarBorradorOffline, obtenerBorradoresOffline, eliminarBorradorOffline, guardarPedidoPendiente, type BorradorOffline } from "@/lib/offlineQueue";
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -91,6 +92,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
     created_at: string; updated_at: string; num_productos: number;
   }
   const [borradoresDB, setBorradoresDB] = useState<BorradorDB[]>([]);
+  const [borradoresOffline, setBorradoresOffline] = useState<BorradorOffline[]>([]);
   const [loadingBorradores, setLoadingBorradores] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [restoringDraftId, setRestoringDraftId] = useState<string | null>(null);
@@ -121,9 +123,15 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       );
     } catch (err) {
       console.error("Error fetching borradores:", err);
-    } finally {
-      setLoadingBorradores(false);
     }
+
+    // Also load offline borradores from IndexedDB
+    try {
+      const offline = await obtenerBorradoresOffline();
+      setBorradoresOffline(offline);
+    } catch { /* IndexedDB may not be available */ }
+
+    setLoadingBorradores(false);
   }, []);
 
   const handleDeleteBorrador = async () => {
@@ -300,9 +308,37 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
         }
       }
     } catch (err) {
-      console.error("Autosave error:", err);
+      // Supabase failed — save to IndexedDB as offline borrador
+      console.warn("Autosave offline fallback:", err);
+      try {
+        const clienteObj = clientes.find(c => c.id === selectedClienteId);
+        // Use getSession (localStorage) — works offline unlike getUser (network)
+        const { data: { session: offlineSession } } = await supabase.auth.getSession();
+        await guardarBorradorOffline({
+          id: borradorId || crypto.randomUUID(),
+          updated_at: new Date().toISOString(),
+          cliente_id: selectedClienteId,
+          cliente_nombre: clienteObj?.nombre || "",
+          sucursal_id: selectedSucursalId || null,
+          vendedor_id: offlineSession?.user?.id || "",
+          termino_credito: terminoCredito,
+          notas, notas_entrega: notasEntrega,
+          requiere_factura: requiereFactura,
+          es_directo: false,
+          step,
+          lineas: lineas.map(l => ({
+            producto_id: l.producto.id,
+            producto_nombre: l.producto.nombre,
+            cantidad: l.cantidad,
+            precio_unitario: l.precioUnitario,
+            precio_lista: l.precioLista,
+          })),
+        });
+      } catch (offlineErr) {
+        console.error("Offline save also failed:", offlineErr);
+      }
     }
-  }, [borradorId, selectedClienteId, selectedSucursalId, lineas, notas, notasEntrega, terminoCredito, requiereFactura]);
+  }, [borradorId, selectedClienteId, selectedSucursalId, lineas, notas, notasEntrega, terminoCredito, requiereFactura, clientes, step]);
 
   // Autosave effect: triggers 1.5s after last change
   useEffect(() => {
@@ -795,7 +831,66 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       onPedidoCreado();
     } catch (error: any) {
       console.error("Error:", error);
-      toast.error(error.message || "Error al crear pedido");
+
+      // Offline fallback: queue the order locally
+      const isNetworkError = !navigator.onLine
+        || error?.message?.includes("fetch")
+        || error?.message?.includes("network")
+        || error?.message?.includes("Failed to fetch")
+        || error?.code === "PGRST301";
+
+      if (isNetworkError) {
+        try {
+          // Use getSession (reads localStorage, works offline) instead of getUser (network request)
+          const { data: { session } } = await supabase.auth.getSession();
+          const authUserId = session?.user?.id || "";
+          const totales = calcularTotales();
+          const clienteNombre = clientes.find(c => c.id === selectedClienteId)?.nombre || "";
+          await guardarPedidoPendiente({
+            id: crypto.randomUUID(),
+            created_at: new Date().toISOString(),
+            cliente_id: selectedClienteId,
+            cliente_nombre: clienteNombre,
+            sucursal_id: selectedSucursalId || null,
+            vendedor_id: authUserId,
+            termino_credito: terminoCredito,
+            notas: notas || "",
+            notas_entrega: notasEntrega || "",
+            requiere_factura: requiereFactura,
+            es_directo: false,
+            lineas: lineas.map(l => ({
+              producto_id: l.producto.id,
+              producto_nombre: l.producto.nombre,
+              cantidad: l.cantidad,
+              precio_unitario: l.precioUnitario,
+              precio_lista: l.precioLista,
+              subtotal: l.subtotal,
+              aplica_iva: l.producto.aplica_iva,
+              aplica_ieps: l.producto.aplica_ieps,
+            })),
+            totales: {
+              subtotal: totales.subtotal,
+              iva: totales.iva,
+              ieps: totales.ieps,
+              total: totales.total,
+              peso_total: totales.pesoTotalKg > 0 ? totales.pesoTotalKg : null,
+            },
+            status: "pendiente_sync",
+            intentos_sync: 0,
+            ultimo_error: null,
+          });
+          toast.info("Pedido guardado localmente. Se enviará al recuperar conexión.");
+          // Reset wizard so Carlos can continue
+          resetWizardState();
+          onHasActiveOrder?.(false);
+          fetchBorradoresDB();
+        } catch (offlineErr) {
+          console.error("Offline queue failed:", offlineErr);
+          toast.error("Error guardando pedido. Intenta de nuevo.");
+        }
+      } else {
+        toast.error(error.message || "Error al crear pedido");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -906,13 +1001,50 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
             onNext={handleNextStep}
           />
 
-          {/* Borradores */}
-          {!loadingBorradores && borradoresDB.length > 0 && (
+          {/* Borradores (Supabase + offline) */}
+          {!loadingBorradores && (borradoresDB.length > 0 || borradoresOffline.length > 0) && (
             <div className="space-y-3 mt-6">
               <h3 className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
                 <FileEdit className="h-4 w-4" />
-                Pedidos en Borrador ({borradoresDB.length})
+                Pedidos en Borrador ({borradoresDB.length + borradoresOffline.length})
               </h3>
+
+              {/* Offline borradores */}
+              {borradoresOffline.map(b => (
+                <Card key={`offline-${b.id}`} className="border-l-4 border-l-amber-400">
+                  <CardContent className="p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <Store className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <span className="font-semibold text-sm truncate">{b.cliente_nombre}</span>
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-amber-300 text-amber-700 bg-amber-50">
+                            Offline
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{b.lineas.length} producto{b.lineas.length !== 1 ? "s" : ""}</span>
+                          <span>·</span>
+                          <span>Paso {b.step}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                          <Clock className="h-3 w-3" />
+                          <span>{formatDistanceToNow(new Date(b.updated_at), { locale: es, addSuffix: true })}</span>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:text-destructive" onClick={async () => {
+                        await eliminarBorradorOffline(b.id);
+                        setBorradoresOffline(prev => prev.filter(x => x.id !== b.id));
+                        toast.success("Borrador offline eliminado");
+                      }}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+
+              {/* Supabase borradores */}
               {borradoresDB.map(b => (
                 <Card key={b.id} className="border-l-4 border-l-muted-foreground/40">
                   <CardContent className="p-3">

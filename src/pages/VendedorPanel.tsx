@@ -10,7 +10,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { toast } from "sonner";
-import { Users, ShoppingCart, CreditCard, LogOut, TrendingUp, Calendar, IdCard, Sparkles, List, Wallet, Percent, BarChart3 } from "lucide-react";
+import { Users, ShoppingCart, CreditCard, LogOut, TrendingUp, Calendar, IdCard, Sparkles, List, Wallet, Percent, BarChart3, Loader2, AlertTriangle, WifiOff } from "lucide-react";
+import { useOfflineSync } from "@/hooks/useOfflineSync";
+import { initOfflineDB } from "@/lib/offlineQueue";
 import { formatCurrency, cn } from "@/lib/utils";
 import { calcularTotalesConImpuestos } from "@/lib/calculos";
 import { VendedorMisClientesTab } from "@/components/vendedor/VendedorMisClientesTab";
@@ -35,6 +37,11 @@ export default function VendedorPanel() {
   // Track presence in vendedor panel
   useSystemPresence('vendedor');
   
+  const { isOnline, pendingCount, syncing } = useOfflineSync();
+
+  // Init IndexedDB on mount
+  useEffect(() => { initOfflineDB().catch(() => {}); }, []);
+
   const [loading, setLoading] = useState(true);
   const [vendedorNombre, setVendedorNombre] = useState("");
   const [activeTab, setActiveTab] = useState("clientes");
@@ -338,6 +345,26 @@ export default function VendedorPanel() {
                 <p className="text-sm font-medium opacity-95 truncate max-w-[150px]">{vendedorNombre}</p>
                 <p className="text-[10px] opacity-70 font-medium">Ejecutivo de Ventas</p>
               </div>
+              {/* Offline / sync indicator */}
+              {!isOnline && (
+                <div className="flex items-center gap-1.5 text-[10px] bg-red-600 text-white px-2 py-0.5 rounded-full shrink-0">
+                  <WifiOff className="h-3 w-3" />
+                  Sin conexión
+                  {pendingCount > 0 && <span>· {pendingCount} en cola</span>}
+                </div>
+              )}
+              {isOnline && syncing && (
+                <div className="flex items-center gap-1.5 text-[10px] bg-amber-500 text-white px-2 py-0.5 rounded-full shrink-0">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Sincronizando {pendingCount}...
+                </div>
+              )}
+              {isOnline && !syncing && pendingCount > 0 && (
+                <div className="flex items-center gap-1.5 text-[10px] bg-amber-500 text-white px-2 py-0.5 rounded-full shrink-0">
+                  <AlertTriangle className="h-3 w-3" />
+                  {pendingCount} pendiente{pendingCount > 1 ? "s" : ""}
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-1">
               <SidebarTrigger className="text-primary-foreground hover:bg-primary-foreground/20 rounded-full" />
