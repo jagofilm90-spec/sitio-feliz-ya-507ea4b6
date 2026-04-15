@@ -47,14 +47,13 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Eye, ShoppingCart, FileText, Link2, Printer, Receipt, Send, CheckCircle2, Clock, BarChart3, Trash2, AlertCircle, FileCheck, CalendarDays, Truck, Navigation, DollarSign, Package, Weight } from "lucide-react";
+import { Plus, Search, Eye, ShoppingCart, FileText, Link2, Printer, Receipt, Send, CheckCircle2, Clock, BarChart3, Trash2, AlertCircle, FileCheck, CalendarDays, Truck, Navigation, DollarSign, Package, Weight, AlertTriangle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import CotizacionesTab from "@/components/cotizaciones/CotizacionesTab";
 import CotizacionesAnalyticsTab from "@/components/cotizaciones/CotizacionesAnalyticsTab";
-import { PedidosPorAutorizarTab } from "@/components/pedidos/PedidosPorAutorizarTab";
-import { SolicitudesDescuentoPanel } from "@/components/admin/SolicitudesDescuentoPanel";
+// PedidosPorAutorizarTab removed — replaced by AlertasPrecioList inline
 import { CalendarioPedidosTab } from "@/components/pedidos/CalendarioPedidosTab";
 import CotizacionDetalleDialog from "@/components/cotizaciones/CotizacionDetalleDialog";
 import { ImprimirRemisionDialog } from "@/components/remisiones/ImprimirRemisionDialog";
@@ -63,7 +62,7 @@ import NuevoPedidoDialog from "@/components/pedidos/NuevoPedidoDialog";
 import PedidoDetalleDialog from "@/components/pedidos/PedidoDetalleDialog";
 import { PedidoPDFPreviewDialog } from "@/components/vendedor/PedidoPDFPreviewDialog";
 import GenerarFacturaDialog from "@/components/pedidos/GenerarFacturaDialog";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, cn } from "@/lib/utils";
 import { ordenarProductosAzucarPrimero } from "@/lib/calculos";
 import { getDisplayName } from "@/lib/productUtils";
 import { PedidoHistorialCardMobile } from "@/components/pedidos/PedidoHistorialCardMobile";
@@ -111,7 +110,7 @@ const PedidosContent = () => {
   const [deleting, setDeleting] = useState(false);
   const [facturaDialogOpen, setFacturaDialogOpen] = useState(false);
   const [selectedPedidoForFactura, setSelectedPedidoForFactura] = useState<PedidoConCotizacion | null>(null);
-  const [resumen, setResumen] = useState({ porAutorizar: 0, pendientes: 0, enRuta: 0, pesoKg: 0, monto: 0 });
+  const [resumen, setResumen] = useState({ alertasPrecio: 0, pendientes: 0, enRuta: 0, pesoKg: 0, monto: 0 });
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -190,18 +189,24 @@ const PedidosContent = () => {
 
       setPedidos(pedidosConCotizacion);
 
-      // Summary stats (includes por_autorizar which main query excludes)
+      // Summary stats
       const { data: statsData } = await supabase
         .from("pedidos")
-        .select("status, total, peso_total_kg")
-        .in("status", ["por_autorizar", "rechazado", "pendiente", "en_ruta"]);
+        .select("status, total, peso_total_kg, alertas_precio")
+        .in("status", ["pendiente", "en_ruta"]);
+
+      // Count pedidos with price alerts (alertas_precio is non-empty array)
+      const { count: alertasCount } = await supabase
+        .from("pedidos")
+        .select("id", { count: "exact", head: true })
+        .neq("alertas_precio" as any, "[]")
+        .in("status", ["pendiente", "en_ruta"]);
 
       if (statsData) {
-        const porAut = statsData.filter(p => p.status === "por_autorizar" || p.status === "rechazado");
         const pend = statsData.filter(p => p.status === "pendiente");
         const ruta = statsData.filter(p => p.status === "en_ruta");
         setResumen({
-          porAutorizar: porAut.length,
+          alertasPrecio: alertasCount || 0,
           pendientes: pend.length,
           enRuta: ruta.length,
           pesoKg: pend.reduce((s, p) => s + (p.peso_total_kg || 0), 0),
@@ -695,12 +700,13 @@ const PedidosContent = () => {
 
         {/* Resumen rápido */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-          {resumen.porAutorizar > 0 && (
+          {resumen.alertasPrecio > 0 && (
             <StatCard
-              label="Por Autorizar"
-              value={resumen.porAutorizar}
-              meta="Requieren revisión"
-              className="border-crimson-500/30"
+              label="Alertas precio"
+              value={resumen.alertasPrecio}
+              icon={<AlertTriangle className="h-4 w-4 text-amber-500" />}
+              meta="Bajo piso o sospechoso"
+              className="border-amber-400/50"
             />
           )}
           <StatCard label="Pendientes" value={resumen.pendientes} meta="Listos para surtir" />
@@ -711,7 +717,13 @@ const PedidosContent = () => {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="bg-transparent border-b border-ink-100 rounded-none p-0 h-auto gap-6 mb-6">
-            <TabsTrigger value="por-autorizar" className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm">Por Autorizar</TabsTrigger>
+            <TabsTrigger value="por-autorizar" className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm flex items-center gap-1.5">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              Alertas precio
+              {resumen.alertasPrecio > 0 && (
+                <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-[10px]">{resumen.alertasPrecio}</Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="pedidos" className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm">Pedidos</TabsTrigger>
             <TabsTrigger value="cotizaciones" className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm">Cotizaciones</TabsTrigger>
             <TabsTrigger value="analisis" className="px-0 py-3 bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-crimson-500 data-[state=active]:border-b-2 data-[state=active]:border-crimson-500 rounded-none text-ink-500 font-medium text-sm">Análisis</TabsTrigger>
@@ -918,9 +930,8 @@ const PedidosContent = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="por-autorizar" className="mt-6 space-y-6">
-            <SolicitudesDescuentoPanel />
-            <PedidosPorAutorizarTab autoOpenPedidoId={pedidoIdFromUrl} />
+          <TabsContent value="por-autorizar" className="mt-6 space-y-4">
+            <AlertasPrecioList refreshKey={resumen.alertasPrecio} onPedidoClick={(id) => { setSelectedPedidoId(id); setPedidoDetalleOpen(true); }} />
           </TabsContent>
 
           <TabsContent value="cotizaciones" className="mt-6">
@@ -980,7 +991,10 @@ const PedidosContent = () => {
       <PedidoDetalleDialog
         pedidoId={selectedPedidoId}
         open={pedidoDetalleOpen}
-        onOpenChange={setPedidoDetalleOpen}
+        onOpenChange={(open) => {
+          setPedidoDetalleOpen(open);
+          if (!open) loadPedidos(); // refresh stats + alerts after closing detail
+        }}
         onNavigateNext={handleNavigateNextPedido}
         onNavigatePrevious={handleNavigatePreviousPedido}
         canNavigateNext={canNavigateNext}
@@ -1038,6 +1052,77 @@ const PedidosContent = () => {
     </Layout>
   );
 };
+
+// ── Alertas de precio list component ──
+
+function AlertasPrecioList({ refreshKey, onPedidoClick }: { refreshKey?: number; onPedidoClick: (id: string) => void }) {
+  const [pedidos, setPedidos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      const { data } = await supabase
+        .from("pedidos")
+        .select("id, folio, fecha_pedido, total, alertas_precio, clientes(nombre), profiles:vendedor_id(full_name)")
+        .neq("alertas_precio" as any, "[]")
+        .in("status", ["pendiente", "en_ruta"])
+        .order("fecha_pedido", { ascending: false })
+        .limit(50);
+      setPedidos(data || []);
+      setLoading(false);
+    };
+    load();
+  }, [refreshKey]);
+
+  if (loading) return <div className="text-center py-8 text-ink-400">Cargando alertas...</div>;
+  if (pedidos.length === 0) return (
+    <div className="text-center py-12 text-ink-400">
+      <AlertTriangle className="h-10 w-10 mx-auto mb-3 opacity-30" />
+      <p className="text-sm font-medium text-ink-500">Sin alertas de precio</p>
+      <p className="text-xs mt-1">Los pedidos con precios bajo piso aparecerán aquí.</p>
+    </div>
+  );
+
+  return (
+    <div className="space-y-3">
+      {pedidos.map((p: any) => {
+        const alertas: any[] = p.alertas_precio || [];
+        const hasErrorDedo = alertas.some((a: any) => a.tipo === "error_dedo");
+        return (
+          <Card key={p.id} className={cn("border cursor-pointer hover:border-ink-300 transition-colors", hasErrorDedo ? "border-red-300" : "border-amber-300")} onClick={() => onPedidoClick(p.id)}>
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-sm font-semibold text-ink-800">{p.folio}</span>
+                    {hasErrorDedo && <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4">error de dedo</Badge>}
+                    {!hasErrorDedo && <Badge className="text-[10px] px-1.5 py-0 h-4 bg-amber-100 text-amber-700 border-amber-200">bajo piso</Badge>}
+                  </div>
+                  <p className="text-sm text-ink-600 mt-0.5">{(p.clientes as any)?.nombre || "—"}</p>
+                  <p className="text-xs text-ink-400">
+                    {(p.profiles as any)?.full_name || "—"} · {new Date(p.fecha_pedido).toLocaleDateString("es-MX", { day: "numeric", month: "short" })} · {formatCurrency(p.total)}
+                  </p>
+                </div>
+                <Badge variant="outline" className="text-xs shrink-0">{alertas.length} alerta{alertas.length > 1 ? "s" : ""}</Badge>
+              </div>
+              <div className="space-y-1.5">
+                {alertas.map((a: any, i: number) => (
+                  <div key={i} className={cn("flex items-center gap-2 text-xs rounded px-2 py-1", a.tipo === "error_dedo" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700")}>
+                    <AlertTriangle className="h-3 w-3 shrink-0" />
+                    <span className="truncate font-medium">{a.producto_nombre || a.producto_id}</span>
+                    <span className="ml-auto shrink-0 tabular-nums">
+                      {formatCurrency(a.precio_pactado)} <span className="text-ink-400">vs lista {formatCurrency(a.precio_lista)}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
 
 // Componente principal con ErrorBoundary
 const Pedidos = () => (

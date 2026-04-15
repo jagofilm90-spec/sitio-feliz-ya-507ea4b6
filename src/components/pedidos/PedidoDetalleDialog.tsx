@@ -14,10 +14,11 @@ import {
   TableRow} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { formatCurrency } from "@/lib/utils";
-import { esProductoBolsas5kg, redondearABolsasCompletas, calcularNumeroBolsas, KG_POR_BOLSA, ordenarProductosAzucarPrimero } from "@/lib/calculos";
-import { CreditCard } from "lucide-react";
+import { formatCurrency, cn } from "@/lib/utils";
+import { esProductoBolsas5kg, redondearABolsasCompletas, calcularNumeroBolsas, KG_POR_BOLSA, ordenarProductosAzucarPrimero, calcularDesgloseImpuestos, redondear } from "@/lib/calculos";
+import { CreditCard, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import logoAlmasa from "@/assets/logo-almasa.png";
@@ -27,6 +28,7 @@ import { PedidoHistorialCambios } from "./PedidoHistorialCambios";
 import { CREDITO_LABELS } from "@/lib/creditoUtils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PedidoDetalleProductCards } from "./PedidoDetalleProductCards";
+import { useUserRoles } from "@/hooks/useUserRoles";
 
 interface PedidoDetalleDialogProps {
   pedidoId: string | null;
@@ -50,6 +52,8 @@ interface PedidoDetalle {
   termino_credito: string;
   fecha_entrega_real: string | null;
   pagado: boolean;
+  vendedor_id?: string;
+  alertas_precio?: any[];
   clientes: { nombre: string; codigo: string } | null;
   profiles: { full_name: string } | null;
   cliente_sucursales: { nombre: string } | null;
@@ -60,7 +64,9 @@ interface PedidoDetalle {
     subtotal: number;
     kilos_totales: number | null;
     unidades_manual: number | null;
+    precio_original?: number | null;
     productos: {
+      id?: string;
       codigo: string;
       nombre: string;
       marca: string | null;
@@ -69,6 +75,10 @@ interface PedidoDetalle {
       unidad: string;
       precio_por_kilo: boolean;
       peso_kg: number | null;
+      aplica_iva?: boolean;
+      aplica_ieps?: boolean;
+      precio_venta?: number;
+      descuento_maximo?: number;
     };
   }>;
 }
@@ -84,6 +94,7 @@ export default function PedidoDetalleDialog({
   const [pedido, setPedido] = useState<PedidoDetalle | null>(null);
   const [loading, setLoading] = useState(false);
   const isMobile = useIsMobile();
+  const { isAdmin } = useUserRoles();
 
   useEffect(() => {
     if (pedidoId && open) {
@@ -92,7 +103,6 @@ export default function PedidoDetalleDialog({
     }
   }, [pedidoId, open]);
 
-  // Navegación con teclado
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -116,13 +126,13 @@ export default function PedidoDetalleDialog({
         .from("pedidos")
         .select(`
           id, folio, fecha_pedido, subtotal, impuestos, total, status, notas,
-          termino_credito, fecha_entrega_real, pagado,
+          termino_credito, fecha_entrega_real, pagado, vendedor_id, alertas_precio,
           clientes (nombre, codigo),
           profiles:vendedor_id (full_name),
           cliente_sucursales:sucursal_id (nombre),
           pedidos_detalles (
-            id, cantidad, precio_unitario, subtotal, kilos_totales, unidades_manual,
-            productos (codigo, nombre, marca, especificaciones, contenido_empaque, unidad, precio_por_kilo, peso_kg)
+            id, cantidad, precio_unitario, subtotal, kilos_totales, unidades_manual, precio_original,
+            productos (id, codigo, nombre, marca, especificaciones, contenido_empaque, unidad, precio_por_kilo, peso_kg, aplica_iva, aplica_ieps, precio_venta, descuento_maximo)
           )
         `)
         .eq("id", pedidoId)
@@ -136,6 +146,76 @@ export default function PedidoDetalleDialog({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePriceUpdate = async (detalleId: string, newPrice: number, oldPrice: number) => {
+    if (!pedido || newPrice === oldPrice) return;
+
+    const detalle = pedido.pedidos_detalles.find(d => d.id === detalleId);
+    if (!detalle) return;
+
+    const prod = detalle.productos;
+    const newSubtotal = prod.precio_por_kilo && prod.peso_kg
+      ? redondear(detalle.cantidad * prod.peso_kg * newPrice)
+      : redondear(detalle.cantidad * newPrice);
+
+    // 1. Update the line
+    const { error } = await supabase.from("pedidos_detalles").update({
+      precio_unitario: newPrice,
+      subtotal: newSubtotal,
+      precio_ajustado_por: (await supabase.auth.getUser()).data.user?.id || null,
+      fecha_ajuste_precio: new Date().toISOString(),
+    } as any).eq("id", detalleId);
+
+    if (error) { toast.error("Error al actualizar precio"); return; }
+
+    // 2. Recalculate pedido totals
+    const updatedDetalles = pedido.pedidos_detalles.map(d =>
+      d.id === detalleId ? { ...d, precio_unitario: newPrice, subtotal: newSubtotal } : d
+    );
+    let baseTotal = 0, ivaTotal = 0, iepsTotal = 0;
+    for (const d of updatedDetalles) {
+      const aplicaIva = d.productos.aplica_iva ?? true;
+      const aplicaIeps = d.productos.aplica_ieps ?? false;
+      const desglose = calcularDesgloseImpuestos({
+        precio_con_impuestos: d.subtotal,
+        aplica_iva: aplicaIva,
+        aplica_ieps: aplicaIeps,
+      });
+      baseTotal += desglose.base;
+      ivaTotal += desglose.iva;
+      iepsTotal += desglose.ieps;
+    }
+    const newTotal = redondear(baseTotal + ivaTotal + iepsTotal);
+
+    await supabase.from("pedidos").update({
+      subtotal: redondear(baseTotal),
+      impuestos: redondear(ivaTotal + iepsTotal),
+      total: newTotal,
+      updated_at: new Date().toISOString(),
+    }).eq("id", pedido.id);
+
+    // 3. Update alertas_precio if applicable
+    const alertas: any[] = (pedido as any).alertas_precio || [];
+    if (alertas.length > 0) {
+      const prodId = prod.id || (prod as any).producto_id;
+      const updatedAlertas = alertas.filter((a: any) => a.producto_id !== prodId);
+      await supabase.from("pedidos").update({ alertas_precio: updatedAlertas } as any).eq("id", pedido.id);
+    }
+
+    // 4. Notify vendedor
+    try {
+      const productoNombre = getDisplayName(prod);
+      await supabase.from("notificaciones").insert({
+        tipo: "precio_ajustado_admin",
+        titulo: `Precio ajustado en ${pedido.folio}`,
+        descripcion: `${productoNombre}: ${formatCurrency(oldPrice)} → ${formatCurrency(newPrice)}`,
+        leida: false,
+      });
+    } catch { /* non-critical */ }
+
+    toast.success("Precio actualizado");
+    loadPedido(); // refresh
   };
 
   const getStatusBadge = (status: string) => {
@@ -250,11 +330,11 @@ export default function PedidoDetalleDialog({
                       const nombreLower = producto.nombre.toLowerCase();
                       let unidadComercial = producto.unidad || "pza";
                       const esLecaroz = pedido.clientes?.nombre?.toLowerCase().includes('lecaroz');
-                      
+
                       if (esLecaroz && (nombreLower.includes('anís') || nombreLower.includes('anis') || nombreLower.includes('canela molida'))) {
                         unidadComercial = 'bolsa';
                       }
-                      
+
                       let presentacionDisplay = "";
                       if (esProductoBolsas5kg(producto.nombre)) {
                         const numBolsas = calcularNumeroBolsas(detalle.cantidad, KG_POR_BOLSA);
@@ -270,7 +350,7 @@ export default function PedidoDetalleDialog({
                       } else {
                         presentacionDisplay = "-";
                       }
-                      
+
                       return (
                         <TableRow key={detalle.id}>
                           <TableCell className="font-mono text-sm">{producto.codigo}</TableCell>
@@ -291,9 +371,23 @@ export default function PedidoDetalleDialog({
                           <TableCell className="text-center font-semibold text-primary">
                             {presentacionDisplay}
                           </TableCell>
-                          <TableCell className="text-right font-mono">
-                            {formatCurrency(detalle.precio_unitario)}
-                            {producto.precio_por_kilo && <span className="text-xs text-muted-foreground">/kg</span>}
+                          <TableCell className="text-right">
+                            {isAdmin ? (
+                              <EditablePriceCell
+                                detalleId={detalle.id}
+                                price={detalle.precio_unitario}
+                                esPorKilo={producto.precio_por_kilo}
+                                precioLista={producto.precio_venta || detalle.precio_unitario}
+                                piso={(producto.precio_venta || detalle.precio_unitario) - (producto.descuento_maximo || 0)}
+                                wasEdited={detalle.precio_original != null && detalle.precio_original !== detalle.precio_unitario}
+                                onSave={(newPrice) => handlePriceUpdate(detalle.id, newPrice, detalle.precio_unitario)}
+                              />
+                            ) : (
+                              <span className="font-mono">
+                                {formatCurrency(detalle.precio_unitario)}
+                                {producto.precio_por_kilo && <span className="text-xs text-muted-foreground">/kg</span>}
+                              </span>
+                            )}
                           </TableCell>
                           <TableCell className="text-right font-mono">{formatCurrency(detalle.subtotal)}</TableCell>
                         </TableRow>
@@ -333,5 +427,71 @@ export default function PedidoDetalleDialog({
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ── Editable price cell (admin only) ──
+
+function EditablePriceCell({
+  detalleId,
+  price,
+  esPorKilo,
+  precioLista,
+  piso,
+  wasEdited,
+  onSave,
+}: {
+  detalleId: string;
+  price: number;
+  esPorKilo: boolean;
+  precioLista: number;
+  piso: number;
+  wasEdited: boolean;
+  onSave: (newPrice: number) => void;
+}) {
+  const [localPrice, setLocalPrice] = useState(price.toFixed(2));
+  const [focused, setFocused] = useState(false);
+
+  useEffect(() => {
+    if (!focused) setLocalPrice(price.toFixed(2));
+  }, [price, focused]);
+
+  const handleBlur = () => {
+    setFocused(false);
+    const val = parseFloat(localPrice) || 0;
+    setLocalPrice(val.toFixed(2));
+    if (val !== price && val > 0) {
+      onSave(val);
+    }
+  };
+
+  return (
+    <div>
+    <div className="flex items-center gap-1 justify-end">
+      <span className="text-ink-400 text-sm">$</span>
+      <input
+        type="text"
+        inputMode="decimal"
+        value={localPrice}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v === "" || /^\d*\.?\d{0,2}$/.test(v)) setLocalPrice(v);
+        }}
+        onFocus={() => setFocused(true)}
+        onBlur={handleBlur}
+        className={cn(
+          "w-20 text-right font-mono text-sm tabular-nums bg-transparent outline-none transition-colors",
+          focused
+            ? "border border-crimson-400 rounded px-1 py-0.5"
+            : "border-b border-dashed border-ink-300 hover:border-crimson-400 cursor-text"
+        )}
+      />
+      {esPorKilo && <span className="text-xs text-muted-foreground">/kg</span>}
+      {wasEdited && <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 ml-1 text-amber-600 border-amber-300">editado</Badge>}
+    </div>
+    <div className="text-[10px] text-ink-400 mt-0.5 tabular-nums text-right">
+      Lista {formatCurrency(precioLista)} · <span className={price < piso ? "text-red-500 font-medium" : ""}>Piso {formatCurrency(piso)}</span>
+    </div>
+    </div>
   );
 }
