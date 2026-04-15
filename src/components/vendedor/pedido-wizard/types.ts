@@ -1,4 +1,4 @@
-// Types for the Order Wizard
+// Types for the Order Wizard (4-step version)
 
 export interface Producto {
   id: string;
@@ -44,19 +44,33 @@ export interface Cliente {
   } | null;
 }
 
+/** Cliente enriched with frequency data for step 1 */
+export interface ClienteConFrecuencia extends Cliente {
+  numPedidos: number;
+  ultimoPedidoFecha: string | null;
+}
+
 export interface Sucursal {
   id: string;
   nombre: string;
   direccion: string | null;
 }
 
+/** Last price the selected client paid for a product */
+export interface UltimoPrecioCliente {
+  productoId: string;
+  precio: number;
+  fecha: string;
+}
+
 export interface WizardState {
-  step: 1 | 2 | 3;
+  step: 1 | 2 | 3 | 4;
   clienteId: string;
   sucursalId: string;
   lineas: LineaPedido[];
   terminoCredito: string;
   notas: string;
+  notasEntrega: string;
 }
 
 export interface CartDraft {
@@ -73,6 +87,7 @@ export interface CartDraft {
   }>;
   terminoCredito: string;
   notas: string;
+  notasEntrega: string;
   savedAt: string;
 }
 
@@ -88,3 +103,12 @@ export interface TotalesCalculados {
   productosConIva: number;
   productosConIeps: number;
 }
+
+/** Credit term options */
+export const CREDIT_OPTIONS = [
+  { value: "contado", label: "Contado" },
+  { value: "8_dias", label: "8 días" },
+  { value: "15_dias", label: "15 días" },
+  { value: "30_dias", label: "30 días" },
+  { value: "60_dias", label: "60 días" },
+] as const;

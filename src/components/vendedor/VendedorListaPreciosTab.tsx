@@ -32,6 +32,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useListaPrecios, getProductDisplayName, formatPrecio, formatCurrency } from "@/hooks/useListaPrecios";
 import { generarListaPreciosPDF } from "@/utils/listaPreciosPdfGenerator";
+import { PdfExportDialog } from "@/components/precios/shared/PdfExportDialog";
 
 type TaxFilter = "todos" | "iva" | "ieps" | "sin_impuesto";
 type PriceFilter = "todos" | "con_precio" | "sin_precio";
@@ -98,15 +99,6 @@ export function VendedorListaPreciosTab() {
     },
     enabled: !!selectedCliente?.id,
   });
-
-  const handleDownloadPdf = async (version: PdfVersion) => {
-    setPdfDialogOpen(false);
-    await generarListaPreciosPDF({
-      productos: filteredProductos,
-      version,
-      categoriaFilter: categoriaFilter !== "all" && categoriaFilter !== "todas" ? categoriaFilter : null,
-    });
-  };
 
   if (isLoading) {
     return (
@@ -421,31 +413,7 @@ export function VendedorListaPreciosTab() {
         </DialogContent>
       </Dialog>
 
-      {/* PDF version selector dialog */}
-      <Dialog open={pdfDialogOpen} onOpenChange={setPdfDialogOpen}>
-        <DialogContent className="sm:max-w-xs">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Descargar PDF
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <Button variant="outline" className="w-full justify-start h-auto py-3" onClick={() => handleDownloadPdf("cliente")}>
-              <div className="text-left">
-                <p className="font-medium text-sm">Para Cliente</p>
-                <p className="text-xs text-muted-foreground">Solo código, producto, unidad y precio</p>
-              </div>
-            </Button>
-            <Button variant="outline" className="w-full justify-start h-auto py-3" onClick={() => handleDownloadPdf("interno")}>
-              <div className="text-left">
-                <p className="font-medium text-sm">Uso Interno</p>
-                <p className="text-xs text-muted-foreground">Incluye descuento máximo y precio mínimo</p>
-              </div>
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <PdfExportDialog open={pdfDialogOpen} onOpenChange={setPdfDialogOpen} productos={filteredProductos} categoriaFilter={categoriaFilter} />
     </div>
   );
 }

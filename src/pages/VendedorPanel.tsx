@@ -44,7 +44,7 @@ export default function VendedorPanel() {
   
   // Navigation guard for leaving "nuevo" tab with pending work
   const [pendingTabChange, setPendingTabChange] = useState<string | null>(null);
-  const hasActiveOrder = useRef(false);
+  const [hasActiveOrder, setHasActiveOrder] = useState(false);
   const saveDraftRef = useRef<(() => Promise<void>) | null>(null);
 
   const handleNavigateNuevoPedido = (clienteId?: string) => {
@@ -130,7 +130,7 @@ export default function VendedorPanel() {
 
   // Tab change handler with navigation guard
   const handleTabChange = useCallback((newTab: string) => {
-    if (activeTab === "nuevo" && newTab !== "nuevo" && hasActiveOrder.current) {
+    if (activeTab === "nuevo" && newTab !== "nuevo" && hasActiveOrder) {
       setPendingTabChange(newTab);
       return;
     }
@@ -147,7 +147,7 @@ export default function VendedorPanel() {
     if (pendingTabChange) {
       setActiveTab(pendingTabChange);
       setPendingTabChange(null);
-      hasActiveOrder.current = false;
+      setHasActiveOrder(false);
       setPreSelectedClienteId(undefined);
       fetchBorradoresCount();
     }
@@ -155,7 +155,7 @@ export default function VendedorPanel() {
 
   const handleDiscardAndNavigate = () => {
     if (pendingTabChange) {
-      hasActiveOrder.current = false;
+      setHasActiveOrder(false);
       setPreSelectedClienteId(undefined);
       setActiveTab(pendingTabChange);
       setPendingTabChange(null);
@@ -364,8 +364,8 @@ export default function VendedorPanel() {
         </header>
 
         {/* Contenido principal */}
-        <main className="flex-1" onClick={() => sidebarOpen && setSidebarOpen(false)}>
-          <div className="p-4 lg:p-8 pb-32 md:pb-8">
+        <main className="flex-1 min-h-0" onClick={() => sidebarOpen && setSidebarOpen(false)}>
+          <div className={cn("p-4 lg:p-8 pb-32 md:pb-8", activeTab === "nuevo" && "md:p-4 md:pb-8 flex flex-col h-full")}>
             {/* SidebarTrigger desktop + notificaciones */}
             <div className="hidden md:flex items-center mb-4">
               <SidebarTrigger className="h-8 w-8 shrink-0" />
@@ -388,7 +388,7 @@ export default function VendedorPanel() {
               <Card>
                 <CardContent className="p-6">
               {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} onNavigateNuevoPedido={handleNavigateNuevoPedido} />}
-              {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={() => { fetchDashboardData(); fetchBorradoresCount(); }} onNavigateToVentas={() => setActiveTab("pedidos")} preSelectedClienteId={preSelectedClienteId} onHasActiveOrder={(v) => { hasActiveOrder.current = v; }} saveDraftRef={saveDraftRef} />}
+              {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={() => { fetchDashboardData(); fetchBorradoresCount(); }} onNavigateToVentas={() => setActiveTab("pedidos")} preSelectedClienteId={preSelectedClienteId} onHasActiveOrder={setHasActiveOrder} saveDraftRef={saveDraftRef} />}
                    {activeTab === "pedidos" && <VendedorPedidosTab onDashboardRefresh={fetchDashboardData} />}
                    {activeTab === "cobranza" && <VendedorCobranzaTab />}
                   {activeTab === "ventas" && <VendedorMisVentasTab onDashboardRefresh={fetchDashboardData} />}
@@ -402,9 +402,9 @@ export default function VendedorPanel() {
             </div>
 
             {/* Mobile Content */}
-            <div className="md:hidden">
+            <div className={cn("md:hidden", activeTab === "nuevo" && "-m-4 -mb-32")}>
               {activeTab === "clientes" && <VendedorMisClientesTab onClienteCreado={fetchDashboardData} onNavigateNuevoPedido={handleNavigateNuevoPedido} />}
-              {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={() => { fetchDashboardData(); fetchBorradoresCount(); }} onNavigateToVentas={() => setActiveTab("pedidos")} preSelectedClienteId={preSelectedClienteId} onHasActiveOrder={(v) => { hasActiveOrder.current = v; }} saveDraftRef={saveDraftRef} />}
+              {activeTab === "nuevo" && <VendedorNuevoPedidoTab onPedidoCreado={() => { fetchDashboardData(); fetchBorradoresCount(); }} onNavigateToVentas={() => setActiveTab("pedidos")} preSelectedClienteId={preSelectedClienteId} onHasActiveOrder={setHasActiveOrder} saveDraftRef={saveDraftRef} />}
               {activeTab === "pedidos" && <VendedorPedidosTab onDashboardRefresh={fetchDashboardData} />}
               {activeTab === "cobranza" && <VendedorCobranzaTab />}
               {activeTab === "ventas" && <VendedorMisVentasTab onDashboardRefresh={fetchDashboardData} />}
@@ -418,7 +418,7 @@ export default function VendedorPanel() {
         </main>
 
         {/* Mobile Bottom Navigation - Scrollable with fade indicators */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50 pb-[env(safe-area-inset-bottom)]">
+        <nav className={cn("md:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50 pb-[env(safe-area-inset-bottom)]", activeTab === "nuevo" && hasActiveOrder && "hidden")}>
           <div className="relative">
             <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
             <div className="flex overflow-x-auto scrollbar-hide">

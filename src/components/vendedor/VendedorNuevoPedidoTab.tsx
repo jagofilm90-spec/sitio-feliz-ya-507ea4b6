@@ -14,17 +14,17 @@ import { captureDeviceInfo, getPublicIP } from "@/lib/auditoria-pedidos";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { CheckCircle2, ExternalLink, FileEdit, Trash2, ArrowRight, Store, Clock } from "lucide-react";
-// Wizard components
+// Wizard components (4-step version)
 import { StepIndicator } from "./pedido-wizard/StepIndicator";
 import { PasoCliente } from "./pedido-wizard/PasoCliente";
 import { PasoProductosInline } from "./pedido-wizard/PasoProductosInline";
+import { PasoCantidadesPrecios } from "./pedido-wizard/PasoCantidadesPrecios";
 import { PasoConfirmar } from "./pedido-wizard/PasoConfirmar";
 import { SolicitudDescuentoDialog } from "./SolicitudDescuentoDialog";
 import { DatosPedidoPrint } from "@/components/pedidos/PedidoPrintTemplate";
 import { getDisplayName } from "@/lib/productUtils";
-import type { Cliente, Sucursal, Producto, LineaPedido, TotalesCalculados } from "./pedido-wizard/types";
+import type { ClienteConFrecuencia, Sucursal, Producto, LineaPedido, TotalesCalculados, UltimoPrecioCliente } from "./pedido-wizard/types";
 import { PageHeader } from "@/components/layout/PageHeader";
-
 
 interface Props {
   onPedidoCreado: () => void;
@@ -40,23 +40,26 @@ interface PedidoCreadoInfo {
   cliente: string;
 }
 
+const AUTOSAVE_DELAY = 1500; // 1.5 seconds
+
 export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, preSelectedClienteId, onHasActiveOrder, saveDraftRef }: Props) {
   // Data state
-  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [clientes, setClientes] = useState<ClienteConFrecuencia[]>([]);
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
   const [productos, setProductos] = useState<Producto[]>([]);
   const [productosFrecuentes, setProductosFrecuentes] = useState<Producto[]>([]);
-  
+  const [ultimosPrecios, setUltimosPrecios] = useState<Map<string, UltimoPrecioCliente>>(new Map());
+
   // Loading states
   const [loading, setLoading] = useState(true);
   const [loadingSucursales, setLoadingSucursales] = useState(false);
   const [loadingFrecuentes, setLoadingFrecuentes] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  
-  // Wizard state
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+
+  // Wizard state (4 steps)
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
-  
+
   // Form state
   const [selectedClienteId, setSelectedClienteId] = useState("");
   const [selectedSucursalId, setSelectedSucursalId] = useState("");
@@ -66,41 +69,31 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
   const [notasEntrega, setNotasEntrega] = useState("");
   const [requiereFactura, setRequiereFactura] = useState(false);
   const [vendedorNombre, setVendedorNombre] = useState("Vendedor");
-  const confirmPrintRef = useRef<HTMLDivElement>(null);
 
   // Discount authorization dialog
   const [solicitudDialogOpen, setSolicitudDialogOpen] = useState(false);
   const [productoParaSolicitud, setProductoParaSolicitud] = useState<{
-    id: string;
-    codigo: string;
-    nombre: string;
-    precioLista: number;
-    descuentoMaximo: number;
-    precioSolicitado: number;
-    cantidad: number;
+    id: string; codigo: string; nombre: string; precioLista: number;
+    descuentoMaximo: number; precioSolicitado: number; cantidad: number;
   } | null>(null);
-  
-  
+
   // Success confirmation dialog
   const [pedidoCreado, setPedidoCreado] = useState<PedidoCreadoInfo | null>(null);
 
-  // Borradores (drafts from DB)
+  // ── Autosave borrador state ──
+  const [borradorId, setBorradorId] = useState<string | null>(null);
+  const autosaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // ── Borradores list ──
   interface BorradorDB {
-    id: string;
-    folio: string;
-    cliente_id: string;
-    cliente_nombre: string;
-    sucursal_nombre?: string;
-    total: number;
-    notas: string | null;
-    created_at: string;
-    updated_at: string;
-    num_productos: number;
+    id: string; folio: string; cliente_id: string; cliente_nombre: string;
+    sucursal_nombre?: string; total: number; notas: string | null;
+    created_at: string; updated_at: string; num_productos: number;
   }
   const [borradoresDB, setBorradoresDB] = useState<BorradorDB[]>([]);
   const [loadingBorradores, setLoadingBorradores] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-
+  const [restoringDraftId, setRestoringDraftId] = useState<string | null>(null);
 
   // ==================== Borradores ====================
 
@@ -108,32 +101,21 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-
       const { data, error } = await supabase
         .from("pedidos")
-        .select(`
-          id, folio, cliente_id, total, notas, created_at, updated_at,
-          clientes!inner(nombre),
-          cliente_sucursales(nombre),
-          pedidos_detalles(id)
-        `)
+        .select(`id, folio, cliente_id, total, notas, created_at, updated_at,
+          clientes!inner(nombre), cliente_sucursales(nombre), pedidos_detalles(id)`)
         .eq("vendedor_id", user.id)
         .eq("status", "borrador")
         .order("updated_at", { ascending: false });
-
       if (error) throw error;
-
       setBorradoresDB(
         (data || []).map((p: any) => ({
-          id: p.id,
-          folio: p.folio,
-          cliente_id: p.cliente_id,
+          id: p.id, folio: p.folio, cliente_id: p.cliente_id,
           cliente_nombre: p.clientes?.nombre || "—",
           sucursal_nombre: p.cliente_sucursales?.nombre,
-          total: p.total || 0,
-          notas: p.notas,
-          created_at: p.created_at,
-          updated_at: p.updated_at,
+          total: p.total || 0, notas: p.notas,
+          created_at: p.created_at, updated_at: p.updated_at,
           num_productos: p.pedidos_detalles?.length || 0,
         }))
       );
@@ -147,20 +129,10 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
   const handleDeleteBorrador = async () => {
     if (!deleteId) return;
     try {
-      const { error: detallesError } = await supabase
-        .from("pedidos_detalles")
-        .delete()
-        .eq("pedido_id", deleteId);
-      if (detallesError) throw detallesError;
-
-      const { error: pedidoError } = await supabase
-        .from("pedidos")
-        .delete()
-        .eq("id", deleteId)
-        .eq("status", "borrador");
-      if (pedidoError) throw pedidoError;
-
+      await supabase.from("pedidos_detalles").delete().eq("pedido_id", deleteId);
+      await supabase.from("pedidos").delete().eq("id", deleteId).eq("status", "borrador");
       setBorradoresDB(prev => prev.filter(b => b.id !== deleteId));
+      if (borradorId === deleteId) setBorradorId(null);
       toast.success("Borrador eliminado");
     } catch (err) {
       console.error(err);
@@ -170,82 +142,57 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
     }
   };
 
-  const [restoringDraftId, setRestoringDraftId] = useState<string | null>(null);
-
-  const handleContinuarBorrador = async (borradorId: string, clienteId: string) => {
+  // Restore borrador — loads data into memory but KEEPS the borrador in DB
+  // (only deleted after successful submit)
+  const handleContinuarBorrador = async (borId: string, clienteId: string) => {
     try {
-      setRestoringDraftId(borradorId);
-
-      // 1) Cargar encabezado del borrador
-      const { data: pedido, error: pedidoError } = await supabase
+      setRestoringDraftId(borId);
+      const { data: pedido } = await supabase
         .from("pedidos")
-        .select("id, sucursal_id, notas, termino_credito, requiere_factura")
-        .eq("id", borradorId)
-        .single();
+        .select("id, sucursal_id, notas, termino_credito, requiere_factura, notas_entrega")
+        .eq("id", borId).single();
+      if (!pedido) throw new Error("Borrador no encontrado");
 
-      if (pedidoError) throw pedidoError;
-
-      // 2) Cargar líneas sin join para evitar perder filas por filtros de relación
-      const { data: detalles, error: detallesError } = await supabase
+      const { data: detalles } = await supabase
         .from("pedidos_detalles")
         .select("id, producto_id, cantidad, precio_unitario, subtotal, notas_ajuste")
-        .eq("pedido_id", borradorId);
-
-      if (detallesError) throw detallesError;
-
+        .eq("pedido_id", borId);
       if (!detalles || detalles.length === 0) {
         toast.warning("Este borrador no tiene productos para continuar");
         return;
       }
 
-      // 3) Hidratar productos de esas líneas (incluye fallback al catálogo ya cargado)
       const productoIds = Array.from(new Set(detalles.map((d: any) => d.producto_id)));
-
-      const { data: productosDB, error: productosError } = await supabase
+      const { data: productosDB } = await supabase
         .from("productos")
         .select("id, codigo, nombre, especificaciones, marca, contenido_empaque, unidad, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg, descuento_maximo")
         .in("id", productoIds);
 
-      if (productosError) throw productosError;
-
       const productosMap = new Map<string, Producto>();
       (productosDB || []).forEach((p: any) => productosMap.set(p.id, p as Producto));
-      productos.forEach((p) => {
-        if (!productosMap.has(p.id)) productosMap.set(p.id, p);
-      });
+      productos.forEach((p) => { if (!productosMap.has(p.id)) productosMap.set(p.id, p); });
 
-      // 4) Restaurar contexto del pedido
       setSelectedClienteId(clienteId);
-      if (pedido.sucursal_id) {
-        setSelectedSucursalId(pedido.sucursal_id);
-      }
+      if (pedido.sucursal_id) setSelectedSucursalId(pedido.sucursal_id);
       setNotas(pedido.notas || "");
+      setNotasEntrega((pedido as any).notas_entrega || "");
       setTerminoCredito(pedido.termino_credito || "contado");
       setRequiereFactura(pedido.requiere_factura || false);
 
-      // 5) Construir líneas restauradas
       const restoredLineas: LineaPedido[] = (detalles || [])
         .map((d: any) => {
           const prod = productosMap.get(d.producto_id);
           if (!prod) return null;
-
           const precioLista = prod.precio_venta;
           const descuentoUnitario = Math.max(0, precioLista - d.precio_unitario);
           const requiereAutorizacion = descuentoUnitario > (prod.descuento_maximo || 0);
-
           let autorizacionStatus: LineaPedido["autorizacionStatus"] = null;
           if (d.notas_ajuste?.includes("[PENDIENTE REVISIÓN]")) autorizacionStatus = "pendiente";
           if (d.notas_ajuste?.includes("[APROBADO]")) autorizacionStatus = "aprobado";
-
           return {
-            producto: prod,
-            cantidad: d.cantidad,
-            precioLista,
-            precioUnitario: d.precio_unitario,
-            descuento: descuentoUnitario,
-            subtotal: d.subtotal,
-            requiereAutorizacion,
-            autorizacionStatus,
+            producto: prod, cantidad: d.cantidad, precioLista,
+            precioUnitario: d.precio_unitario, descuento: descuentoUnitario,
+            subtotal: d.subtotal, requiereAutorizacion, autorizacionStatus,
           } as LineaPedido;
         })
         .filter((l): l is LineaPedido => l !== null);
@@ -256,16 +203,10 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       }
 
       setLineas(restoredLineas);
-
-      // 6) Convertir borrador a pedido en memoria y evitar duplicados
-      await supabase.from("pedidos_detalles").delete().eq("pedido_id", borradorId);
-      await supabase.from("pedidos").delete().eq("id", borradorId);
-      setBorradoresDB(prev => prev.filter(b => b.id !== borradorId));
-
-      // 7) Navegar al paso de productos
+      setBorradorId(borId); // Keep reference — DON'T delete from DB
+      setBorradoresDB(prev => prev.filter(b => b.id !== borId));
       setCompletedSteps([1]);
       setStep(2);
-
       toast.success(`Borrador restaurado (${restoredLineas.length} producto${restoredLineas.length !== 1 ? "s" : ""})`);
     } catch (err) {
       console.error("Error restoring draft:", err);
@@ -275,87 +216,115 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
     }
   };
 
-  // ==================== Guardar Borrador en BD ====================
+  // ── Autosave with debounce 1.5s ──
 
-  const guardarBorradorEnDB = useCallback(async () => {
-    if (lineas.length === 0 || !selectedClienteId) return;
-    
+  const saveBorradorToDB = useCallback(async () => {
+    if (lineas.length === 0 && !selectedClienteId) return;
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("No autenticado");
+      if (!user) return;
 
-      const totales = calcularTotales();
-      const timestamp = Date.now().toString().slice(-6);
-      const folio = `BOR-V-${timestamp}`;
+      const tots = (() => {
+        let sub = 0;
+        lineas.forEach(l => { sub += l.subtotal; });
+        return { total: redondear(sub) };
+      })();
 
-      const { data: pedido, error: pedidoError } = await supabase
-        .from("pedidos")
-        .insert({
-          folio,
-          cliente_id: selectedClienteId,
-          vendedor_id: user.id,
+      if (borradorId) {
+        // UPDATE existing borrador
+        await supabase.from("pedidos").update({
+          cliente_id: selectedClienteId || undefined,
           sucursal_id: selectedSucursalId || null,
-          fecha_pedido: new Date().toISOString(),
-          subtotal: totales.subtotal,
-          impuestos: totales.impuestos,
-          total: totales.total,
-          status: "borrador",
+          total: tots.total,
           notas: notas || null,
+          notas_entrega: notasEntrega || null,
           termino_credito: terminoCredito as any,
           requiere_factura: requiereFactura,
-        })
-        .select()
-        .single();
+          updated_at: new Date().toISOString(),
+        } as any).eq("id", borradorId);
 
-      if (pedidoError) throw pedidoError;
+        // Replace detalles (DELETE + INSERT — simplest, no diff needed)
+        await supabase.from("pedidos_detalles").delete().eq("pedido_id", borradorId);
+        if (lineas.length > 0) {
+          await supabase.from("pedidos_detalles").insert(
+            lineas.map(l => ({
+              pedido_id: borradorId,
+              producto_id: l.producto.id,
+              cantidad: l.cantidad,
+              precio_unitario: l.precioUnitario,
+              subtotal: l.subtotal,
+              notas_ajuste: l.descuento > 0
+                ? `Descuento: ${formatCurrency(l.descuento)}${l.autorizacionStatus === 'pendiente' ? ' [PENDIENTE REVISIÓN]' : l.autorizacionStatus === 'aprobado' ? ' [APROBADO]' : ''}`
+                : null,
+            }))
+          );
+        }
+      } else {
+        // INSERT new borrador
+        if (!selectedClienteId) return; // need at least a client to create
+        const folio = `BOR-V-${Date.now().toString().slice(-6)}`;
+        const { data: pedido, error } = await supabase
+          .from("pedidos")
+          .insert({
+            folio,
+            cliente_id: selectedClienteId,
+            vendedor_id: user.id,
+            sucursal_id: selectedSucursalId || null,
+            fecha_pedido: new Date().toISOString(),
+            total: tots.total,
+            status: "borrador",
+            notas: notas || null,
+            notas_entrega: notasEntrega || null,
+            termino_credito: terminoCredito as any,
+            requiere_factura: requiereFactura,
+          } as any)
+          .select("id")
+          .single();
 
-      const detallesInsert = lineas.map(l => ({
-        pedido_id: pedido.id,
-        producto_id: l.producto.id,
-        cantidad: l.cantidad,
-        precio_unitario: l.precioUnitario,
-        subtotal: l.subtotal,
-        notas_ajuste: l.descuento > 0
-          ? `Descuento: ${formatCurrency(l.descuento)}`
-          : null
-      }));
+        if (error) throw error;
+        if (!pedido) return;
 
-      const { error: detallesError } = await supabase
-        .from("pedidos_detalles")
-        .insert(detallesInsert);
+        setBorradorId(pedido.id);
 
-      if (detallesError) throw detallesError;
-
-      // Reset form
-      setSelectedClienteId("");
-      setSelectedSucursalId("");
-      setLineas([]);
-      setTerminoCredito("contado");
-      setNotas("");
-      setNotasEntrega("");
-      setRequiereFactura(false);
-      setStep(1);
-      setCompletedSteps([]);
-
-      toast.success("Borrador guardado exitosamente");
-      fetchBorradoresDB();
-    } catch (error: any) {
-      console.error("Error saving draft:", error);
-      toast.error(error.message || "Error al guardar borrador");
+        if (lineas.length > 0) {
+          await supabase.from("pedidos_detalles").insert(
+            lineas.map(l => ({
+              pedido_id: pedido.id,
+              producto_id: l.producto.id,
+              cantidad: l.cantidad,
+              precio_unitario: l.precioUnitario,
+              subtotal: l.subtotal,
+            }))
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Autosave error:", err);
     }
-  }, [selectedClienteId, selectedSucursalId, lineas, notas, terminoCredito, requiereFactura]);
+  }, [borradorId, selectedClienteId, selectedSucursalId, lineas, notas, notasEntrega, terminoCredito, requiereFactura]);
+
+  // Autosave effect: triggers 1.5s after last change
+  useEffect(() => {
+    if (!selectedClienteId && lineas.length === 0) return;
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(() => {
+      saveBorradorToDB();
+    }, AUTOSAVE_DELAY);
+    return () => {
+      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    };
+  }, [selectedClienteId, selectedSucursalId, lineas, terminoCredito, notas, notasEntrega, requiereFactura, saveBorradorToDB]);
 
   // Expose guardarBorrador to parent via ref
   useEffect(() => {
     if (saveDraftRef) {
-      saveDraftRef.current = guardarBorradorEnDB;
+      saveDraftRef.current = saveBorradorToDB;
     }
     return () => {
-      if (saveDraftRef) {
-        saveDraftRef.current = null;
-      }
+      if (saveDraftRef) saveDraftRef.current = null;
     };
-  }, [guardarBorradorEnDB, saveDraftRef]);
+  }, [saveBorradorToDB, saveDraftRef]);
 
   // ==================== Effects ====================
 
@@ -368,6 +337,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
     if (selectedClienteId) {
       fetchSucursales(selectedClienteId);
       fetchProductosFrecuentes(selectedClienteId);
+      fetchUltimosPreciosCliente(selectedClienteId);
       const cliente = clientes.find(c => c.id === selectedClienteId);
       setTerminoCredito(cliente?.termino_credito || "contado");
     } else {
@@ -375,25 +345,22 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       setSelectedSucursalId("");
       setTerminoCredito("");
       setProductosFrecuentes([]);
+      setUltimosPrecios(new Map());
     }
   }, [selectedClienteId, clientes]);
 
-  // Auto-select pre-selected client
   useEffect(() => {
     if (preSelectedClienteId && clientes.length > 0 && !selectedClienteId) {
       const exists = clientes.find(c => c.id === preSelectedClienteId);
-      if (exists) {
-        setSelectedClienteId(preSelectedClienteId);
-      }
+      if (exists) setSelectedClienteId(preSelectedClienteId);
     }
   }, [preSelectedClienteId, clientes]);
 
-  // Notify parent about active order - only when there are products in cart
   useEffect(() => {
-    if (!loading) {
-      onHasActiveOrder?.(lineas.length > 0);
-    }
-  }, [loading, lineas.length]);
+    if (loading) return;
+    const active = step > 1 || selectedClienteId !== "" || lineas.length > 0;
+    onHasActiveOrder?.(active);
+  }, [loading, step, selectedClienteId, lineas.length, onHasActiveOrder]);
 
   // ==================== Data Fetching ====================
 
@@ -403,18 +370,42 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Fetch vendor name
       const { data: profileData } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
       setVendedorNombre(profileData?.full_name || "Vendedor");
 
-      const { data: clientesData } = await supabase
+      // Fetch clients with frequency data
+      const { data: clientesRaw } = await supabase
         .from("clientes")
         .select("id, codigo, nombre, direccion, termino_credito, preferencia_facturacion, csf_archivo_url, zona:zonas(nombre, region)")
         .eq("vendedor_asignado", user.id)
         .eq("activo", true)
         .order("nombre");
 
-      setClientes(clientesData || []);
+      // Get frequency data: count + last pedido date per client
+      const { data: pedidosFreq } = await supabase
+        .from("pedidos")
+        .select("cliente_id, fecha_pedido")
+        .eq("vendedor_id", user.id)
+        .not("status", "in", '("borrador","cancelado")');
+
+      const freqMap = new Map<string, { count: number; last: string | null }>();
+      (pedidosFreq || []).forEach((p: any) => {
+        const existing = freqMap.get(p.cliente_id);
+        if (!existing) {
+          freqMap.set(p.cliente_id, { count: 1, last: p.fecha_pedido });
+        } else {
+          existing.count++;
+          if (!existing.last || p.fecha_pedido > existing.last) existing.last = p.fecha_pedido;
+        }
+      });
+
+      const clientesEnriched: ClienteConFrecuencia[] = (clientesRaw || []).map((c: any) => ({
+        ...c,
+        numPedidos: freqMap.get(c.id)?.count || 0,
+        ultimoPedidoFecha: freqMap.get(c.id)?.last || null,
+      }));
+
+      setClientes(clientesEnriched);
 
       const { data: productosData } = await supabase
         .from("productos")
@@ -422,7 +413,6 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
         .eq("activo", true)
         .neq("bloqueado_venta", true)
         .order("nombre");
-
       setProductos(productosData || []);
     } catch (error) {
       console.error("Error:", error);
@@ -440,64 +430,38 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       .eq("cliente_id", clienteId)
       .eq("activo", true)
       .order("nombre");
-
     setSucursales(data || []);
-    if (data && data.length === 1) {
-      setSelectedSucursalId(data[0].id);
-    }
+    if (data && data.length === 1) setSelectedSucursalId(data[0].id);
     setLoadingSucursales(false);
   };
 
   const fetchProductosFrecuentes = async (clienteId: string) => {
     try {
       setLoadingFrecuentes(true);
-      
       const { data: pedidosData } = await supabase
-        .from("pedidos")
-        .select("id")
+        .from("pedidos").select("id")
         .eq("cliente_id", clienteId)
         .order("created_at", { ascending: false })
         .limit(50);
-
-      if (!pedidosData || pedidosData.length === 0) {
-        setProductosFrecuentes([]);
-        return;
-      }
-
-      const pedidoIds = pedidosData.map(p => p.id);
+      if (!pedidosData || pedidosData.length === 0) { setProductosFrecuentes([]); return; }
 
       const { data: detallesData } = await supabase
-        .from("pedidos_detalles")
-        .select("producto_id")
-        .in("pedido_id", pedidoIds);
-
-      if (!detallesData || detallesData.length === 0) {
-        setProductosFrecuentes([]);
-        return;
-      }
+        .from("pedidos_detalles").select("producto_id")
+        .in("pedido_id", pedidosData.map(p => p.id));
+      if (!detallesData || detallesData.length === 0) { setProductosFrecuentes([]); return; }
 
       const frecuencia: Record<string, number> = {};
-      detallesData.forEach(d => {
-        frecuencia[d.producto_id] = (frecuencia[d.producto_id] || 0) + 1;
-      });
-
-      const topProductoIds = Object.entries(frecuencia)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 8)
-        .map(([id]) => id);
+      detallesData.forEach(d => { frecuencia[d.producto_id] = (frecuencia[d.producto_id] || 0) + 1; });
+      const topIds = Object.entries(frecuencia).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([id]) => id);
 
       const { data: productosFrec } = await supabase
         .from("productos")
         .select("id, codigo, nombre, especificaciones, marca, contenido_empaque, unidad, precio_venta, stock_actual, stock_minimo, aplica_iva, aplica_ieps, precio_por_kilo, peso_kg, descuento_maximo")
-        .in("id", topProductoIds)
+        .in("id", topIds)
         .eq("activo", true)
         .neq("bloqueado_venta", true);
 
-      const sortedProductos = topProductoIds
-        .map(id => productosFrec?.find(p => p.id === id))
-        .filter(Boolean) as Producto[];
-
-      setProductosFrecuentes(sortedProductos);
+      setProductosFrecuentes(topIds.map(id => productosFrec?.find(p => p.id === id)).filter(Boolean) as Producto[]);
     } catch (error) {
       console.error("Error fetching frequent products:", error);
       setProductosFrecuentes([]);
@@ -506,11 +470,34 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
     }
   };
 
-  /**
-   * Calcula subtotal correcto según tipo de precio:
-   * - precio_por_kilo: cantidad × peso_kg × precio_por_kg
-   * - precio por unidad: cantidad × precio_unitario
-   */
+  // NEW: Fetch last price per product for the selected client
+  const fetchUltimosPreciosCliente = async (clienteId: string) => {
+    try {
+      const { data } = await supabase
+        .from("pedidos_detalles")
+        .select("producto_id, precio_unitario, pedidos!inner(fecha_pedido, cliente_id, status)")
+        .eq("pedidos.cliente_id", clienteId)
+        .not("pedidos.status", "in", '("borrador","cancelado")')
+        .order("pedidos(fecha_pedido)", { ascending: false });
+
+      const map = new Map<string, UltimoPrecioCliente>();
+      (data || []).forEach((d: any) => {
+        if (!map.has(d.producto_id)) {
+          map.set(d.producto_id, {
+            productoId: d.producto_id,
+            precio: d.precio_unitario,
+            fecha: d.pedidos?.fecha_pedido || "",
+          });
+        }
+      });
+      setUltimosPrecios(map);
+    } catch (err) {
+      console.error("Error fetching last prices:", err);
+    }
+  };
+
+  // ==================== Product Actions ====================
+
   const calcularSubtotalLinea = (producto: Producto, cantidad: number, precioUnitario: number): number => {
     if (producto.precio_por_kilo && producto.peso_kg) {
       return redondear(cantidad * producto.peso_kg * precioUnitario);
@@ -518,90 +505,44 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
     return redondear(cantidad * precioUnitario);
   };
 
-  // ==================== Product Actions ====================
-
-  const agregarProducto = (producto: Producto, cantidadInicial: number = 1) => {
-    const existe = lineas.find(l => l.producto.id === producto.id);
-    if (existe) {
-      actualizarCantidad(producto.id, existe.cantidad + 1);
-      return;
+  // Toggle a product in/out of the order (step 2)
+  const toggleProducto = (producto: Producto) => {
+    const exists = lineas.find(l => l.producto.id === producto.id);
+    if (exists) {
+      setLineas(lineas.filter(l => l.producto.id !== producto.id));
+    } else {
+      const precio = producto.precio_por_kilo
+        ? producto.precio_venta
+        : obtenerPrecioUnitarioVenta({ precio_venta: producto.precio_venta, precio_por_kilo: producto.precio_por_kilo, peso_kg: producto.peso_kg });
+      const subtotal = calcularSubtotalLinea(producto, 1, precio);
+      setLineas([...lineas, {
+        producto, cantidad: 1, precioLista: precio, precioUnitario: precio,
+        descuento: 0, subtotal, requiereAutorizacion: false,
+      }]);
     }
+  };
 
-    if (producto.stock_actual <= 0) {
-      toast.warning("Producto sin stock disponible", {
-        description: "Se agregó al pedido. Se surtirá cuando haya disponibilidad.",
-        duration: 4000,
-      });
-    }
-
-    // For precio_por_kilo products, use raw $/kg price
-    // For unit products, use obtenerPrecioUnitarioVenta (which is just precio_venta)
-    const precio = producto.precio_por_kilo
-      ? producto.precio_venta // raw $/kg
-      : obtenerPrecioUnitarioVenta({
-          precio_venta: producto.precio_venta,
-          precio_por_kilo: producto.precio_por_kilo,
-          peso_kg: producto.peso_kg
-        });
-
-    const qty = Math.max(1, cantidadInicial);
-    const subtotal = calcularSubtotalLinea(producto, qty, precio);
-    setLineas([...lineas, {
-      producto,
-      cantidad: qty,
-      precioLista: precio,
-      precioUnitario: precio,
-      descuento: 0,
-      subtotal,
-      requiereAutorizacion: false,
-    }]);
+  const removeProducto = (productoId: string) => {
+    setLineas(lineas.filter(l => l.producto.id !== productoId));
   };
 
   const actualizarCantidad = (productoId: string, cantidad: number) => {
-    if (cantidad <= 0) {
-      setLineas(lineas.filter(l => l.producto.id !== productoId));
-      return;
-    }
-
-    setLineas(lineas.map(l => 
-      l.producto.id === productoId 
+    if (cantidad <= 0) { setLineas(lineas.filter(l => l.producto.id !== productoId)); return; }
+    setLineas(lineas.map(l =>
+      l.producto.id === productoId
         ? { ...l, cantidad, subtotal: calcularSubtotalLinea(l.producto, cantidad, l.precioUnitario) }
         : l
     ));
   };
 
-  const actualizarDescuento = (productoId: string, descuento: number) => {
-    setLineas(lineas.map(l => {
-      if (l.producto.id !== productoId) return l;
-      
-      const descuentoMaximo = l.producto.descuento_maximo || 0;
-      const nuevoPrecio = l.precioLista - descuento;
-      const requiereAutorizacion = descuento > descuentoMaximo;
-      
-      return {
-        ...l,
-        descuento,
-        precioUnitario: nuevoPrecio,
-        subtotal: calcularSubtotalLinea(l.producto, l.cantidad, nuevoPrecio),
-        requiereAutorizacion,
-        autorizacionStatus: requiereAutorizacion ? l.autorizacionStatus : null,
-        solicitudId: requiereAutorizacion ? l.solicitudId : undefined,
-      };
-    }));
-  };
-
   const actualizarPrecio = (productoId: string, precio: number) => {
     setLineas(lineas.map(l => {
       if (l.producto.id !== productoId) return l;
-      
       const descuento = l.precioLista - precio;
       const descuentoMaximo = l.producto.descuento_maximo || 0;
       const requiereAutorizacion = descuento > descuentoMaximo;
-      
       return {
-        ...l,
-        precioUnitario: precio,
-        descuento: Math.max(0, descuento),
+        ...l, precioUnitario: precio, descuento: Math.max(0, descuento),
         subtotal: calcularSubtotalLinea(l.producto, l.cantidad, precio),
         requiereAutorizacion,
         autorizacionStatus: requiereAutorizacion ? l.autorizacionStatus : null,
@@ -612,13 +553,9 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
 
   const handleSolicitarAutorizacion = (linea: LineaPedido) => {
     setProductoParaSolicitud({
-      id: linea.producto.id,
-      codigo: linea.producto.codigo,
-      nombre: linea.producto.nombre,
-      precioLista: linea.precioLista,
-      descuentoMaximo: linea.producto.descuento_maximo || 0,
-      precioSolicitado: linea.precioUnitario,
-      cantidad: linea.cantidad,
+      id: linea.producto.id, codigo: linea.producto.codigo, nombre: linea.producto.nombre,
+      precioLista: linea.precioLista, descuentoMaximo: linea.producto.descuento_maximo || 0,
+      precioSolicitado: linea.precioUnitario, cantidad: linea.cantidad,
     });
     setSolicitudDialogOpen(true);
   };
@@ -627,71 +564,42 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
     setLineas(lineas.map(l => {
       if (l.producto.id !== productoId) return l;
       return {
-        ...l,
-        precioUnitario: precioAprobado,
-        descuento: l.precioLista - precioAprobado,
+        ...l, precioUnitario: precioAprobado, descuento: l.precioLista - precioAprobado,
         subtotal: calcularSubtotalLinea(l.producto, l.cantidad, precioAprobado),
-        requiereAutorizacion: false,
-        autorizacionStatus: 'aprobado',
+        requiereAutorizacion: false, autorizacionStatus: 'aprobado',
       };
     }));
   };
 
   const marcarParaRevision = (productoId: string) => {
-    setLineas(lineas.map(l => {
-      if (l.producto.id !== productoId) return l;
-      return {
-        ...l,
-        autorizacionStatus: 'pendiente',
-      };
-    }));
-    toast.info("Producto marcado para revisión de precio", {
-      description: "El administrador revisará este descuento al autorizar el pedido",
-    });
+    setLineas(lineas.map(l => l.producto.id !== productoId ? l : { ...l, autorizacionStatus: 'pendiente' }));
+    toast.info("Producto marcado para revisión de precio");
   };
 
   // ==================== Calculations ====================
 
   const calcularTotales = (): TotalesCalculados => {
-    let subtotalNeto = 0;
-    let totalIva = 0;
-    let totalIeps = 0;
-    let pesoTotalKg = 0;
-    let totalUnidades = 0;
-    let ahorroDescuentos = 0;
-
+    let subtotalNeto = 0, totalIva = 0, totalIeps = 0, pesoTotalKg = 0, totalUnidades = 0, ahorroDescuentos = 0;
     lineas.forEach((l) => {
       const resultado = calcularDesgloseImpuestos({
-        precio_con_impuestos: l.subtotal,
-        aplica_iva: l.producto.aplica_iva,
-        aplica_ieps: l.producto.aplica_ieps,
-        nombre_producto: l.producto.nombre
+        precio_con_impuestos: l.subtotal, aplica_iva: l.producto.aplica_iva,
+        aplica_ieps: l.producto.aplica_ieps, nombre_producto: l.producto.nombre
       });
       subtotalNeto += resultado.base;
       totalIva += resultado.iva;
       totalIeps += resultado.ieps;
-      
-      const pesoUnitario = l.producto.peso_kg || 0;
-      pesoTotalKg += l.cantidad * pesoUnitario;
+      pesoTotalKg += l.cantidad * (l.producto.peso_kg || 0);
       totalUnidades += l.cantidad;
-      
       if (l.descuento > 0) {
-        if (l.producto.precio_por_kilo && l.producto.peso_kg) {
-          ahorroDescuentos += l.descuento * l.cantidad * l.producto.peso_kg;
-        } else {
-          ahorroDescuentos += l.descuento * l.cantidad;
-        }
+        ahorroDescuentos += l.producto.precio_por_kilo && l.producto.peso_kg
+          ? l.descuento * l.cantidad * l.producto.peso_kg
+          : l.descuento * l.cantidad;
       }
     });
-
-    return { 
-      subtotal: redondear(subtotalNeto), 
-      iva: redondear(totalIva),
-      ieps: redondear(totalIeps),
-      impuestos: redondear(totalIva + totalIeps), 
-      total: redondear(subtotalNeto + totalIva + totalIeps),
-      pesoTotalKg: redondear(pesoTotalKg),
-      totalUnidades,
+    return {
+      subtotal: redondear(subtotalNeto), iva: redondear(totalIva), ieps: redondear(totalIeps),
+      impuestos: redondear(totalIva + totalIeps), total: redondear(subtotalNeto + totalIva + totalIeps),
+      pesoTotalKg: redondear(pesoTotalKg), totalUnidades,
       ahorroDescuentos: redondear(ahorroDescuentos),
       productosConIva: lineas.filter(l => l.producto.aplica_iva).length,
       productosConIeps: lineas.filter(l => l.producto.aplica_ieps).length,
@@ -702,31 +610,14 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
 
   const handleSubmit = async () => {
     if (submitting) return;
-    
-    if (!selectedClienteId) {
-      toast.error("Selecciona un cliente");
-      return;
-    }
+    if (!selectedClienteId) { toast.error("Selecciona un cliente"); return; }
+    if (sucursales.length > 0 && !selectedSucursalId) { toast.error("Selecciona una sucursal"); return; }
+    if (lineas.length === 0) { toast.error("Agrega al menos un producto"); return; }
 
-    if (sucursales.length > 0 && !selectedSucursalId) {
-      toast.error("Selecciona una sucursal");
-      return;
-    }
-
-    if (lineas.length === 0) {
-      toast.error("Agrega al menos un producto");
-      return;
-    }
-
-    // Auto-mark products needing authorization as 'pendiente'
-    const productosNecesitanAutorizacion = lineas.filter(
-      l => l.requiereAutorizacion && l.autorizacionStatus !== 'aprobado'
-    );
+    const productosNecesitanAutorizacion = lineas.filter(l => l.requiereAutorizacion && l.autorizacionStatus !== 'aprobado');
     if (productosNecesitanAutorizacion.length > 0) {
-      setLineas(prev => prev.map(l => 
-        l.requiereAutorizacion && l.autorizacionStatus !== 'aprobado'
-          ? { ...l, autorizacionStatus: 'pendiente' as const }
-          : l
+      setLineas(prev => prev.map(l =>
+        l.requiereAutorizacion && l.autorizacionStatus !== 'aprobado' ? { ...l, autorizacionStatus: 'pendiente' as const } : l
       ));
     }
 
@@ -736,273 +627,156 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       if (!user) throw new Error("No autenticado");
 
       const totales = calcularTotales();
-      const timestamp = Date.now().toString().slice(-6);
-      const folio = `PED-V-${timestamp}`;
+      const folio = `PED-V-${Date.now().toString().slice(-6)}`;
 
       const { data: pedido, error: pedidoError } = await supabase
         .from("pedidos")
         .insert({
-          folio,
-          cliente_id: selectedClienteId,
-          vendedor_id: user.id,
+          folio, cliente_id: selectedClienteId, vendedor_id: user.id,
           sucursal_id: selectedSucursalId || null,
-          fecha_pedido: new Date().toISOString(),
-          fecha_entrega_estimada: null,
-          subtotal: totales.subtotal,
-          impuestos: totales.impuestos,
-          total: totales.total,
-          status: lineas.some(l => l.requiereAutorizacion && l.autorizacionStatus === 'pendiente')
-            ? "por_autorizar"
-            : "pendiente",
-          notas: notas || null,
-          notas_entrega: notasEntrega || null,
-          es_directo: false,
-          termino_credito: terminoCredito as any,
-          requiere_factura: requiereFactura,
+          fecha_pedido: new Date().toISOString(), fecha_entrega_estimada: null,
+          subtotal: totales.subtotal, impuestos: totales.impuestos, total: totales.total,
+          status: lineas.some(l => l.requiereAutorizacion && l.autorizacionStatus === 'pendiente') ? "por_autorizar" : "pendiente",
+          notas: notas || null, notas_entrega: notasEntrega || null, es_directo: false,
+          termino_credito: terminoCredito as any, requiere_factura: requiereFactura,
           peso_total_kg: totales.pesoTotalKg > 0 ? totales.pesoTotalKg : null,
         } as any)
         .select()
         .single();
-
       if (pedidoError) throw pedidoError;
 
-      const detallesInsert = lineas.map(l => ({
-        pedido_id: pedido.id,
-        producto_id: l.producto.id,
-        cantidad: l.cantidad,
-        precio_unitario: l.precioUnitario,
-        subtotal: l.subtotal,
-        notas_ajuste: l.descuento > 0 
-          ? `Descuento: ${formatCurrency(l.descuento)} (máx: ${formatCurrency(l.producto.descuento_maximo || 0)})${l.autorizacionStatus === 'pendiente' ? ' [PENDIENTE REVISIÓN]' : l.autorizacionStatus === 'aprobado' ? ' [APROBADO]' : ''}`
-          : null
-      }));
+      await supabase.from("pedidos_detalles").insert(
+        lineas.map(l => ({
+          pedido_id: pedido.id, producto_id: l.producto.id, cantidad: l.cantidad,
+          precio_unitario: l.precioUnitario, subtotal: l.subtotal,
+          notas_ajuste: l.descuento > 0
+            ? `Descuento: ${formatCurrency(l.descuento)} (máx: ${formatCurrency(l.producto.descuento_maximo || 0)})${l.autorizacionStatus === 'pendiente' ? ' [PENDIENTE REVISIÓN]' : l.autorizacionStatus === 'aprobado' ? ' [APROBADO]' : ''}`
+            : null
+        }))
+      );
 
-      const { error: detallesError } = await supabase
-        .from("pedidos_detalles")
-        .insert(detallesInsert);
+      // DELETE borrador ONLY after successful submit
+      if (borradorId) {
+        await supabase.from("pedidos_detalles").delete().eq("pedido_id", borradorId);
+        await supabase.from("pedidos").delete().eq("id", borradorId).eq("status", "borrador");
+        setBorradorId(null);
+      }
 
-      if (detallesError) throw detallesError;
+      const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
+      const vNombre = profile?.full_name || "Vendedor";
+      const clienteNombre = clientes.find(c => c.id === selectedClienteId)?.nombre || "Cliente";
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", user.id)
-        .single();
-      
-      const vendedorNombre = profile?.full_name || "Vendedor";
-      const clienteNombre = selectedCliente?.nombre || "Cliente";
-
-      // === BACKGROUND TASKS (no bloquean la UI) ===
-      // Ejecutar notificaciones, PDFs y emails en paralelo sin await
+      // === BACKGROUND TASKS ===
       const backgroundTasks = async () => {
         try {
-          // 1. Notificaciones rápidas en paralelo (no dependen de PDF)
+          const selectedCliente = clientes.find(c => c.id === selectedClienteId);
+
           const notifPromises: Promise<any>[] = [
-            Promise.resolve(supabase.from("notificaciones").insert({
-              tipo: "nuevo_pedido_vendedor",
-              titulo: `Nuevo pedido ${folio}`,
-              descripcion: `${vendedorNombre} creó pedido para ${clienteNombre} - ${formatCurrency(totales.total)}`,
-              pedido_id: pedido.id,
-              leida: false,
-            })).catch(e => console.error("Notif error:", e)),
-            
+            supabase.from("notificaciones").insert({
+              tipo: "nuevo_pedido_vendedor", titulo: `Nuevo pedido ${folio}`,
+              descripcion: `${vNombre} creó pedido para ${clienteNombre} - ${formatCurrency(totales.total)}`,
+              pedido_id: pedido.id, leida: false,
+            }).catch(e => console.error("Notif error:", e)),
           ];
 
-          // Push y email a secretaria solo si NO requiere autorización
-          // (si requiere, solo se notifica al admin)
           if (pedido.status !== "por_autorizar") {
             notifPromises.push(
               supabase.functions.invoke('send-push-notification', {
-                body: {
-                  roles: ['secretaria'],
-                  title: '📦 Nuevo Pedido',
-                  body: `${vendedorNombre} → ${clienteNombre} - ${formatCurrency(totales.total)}`,
-                  data: { type: 'nuevo_pedido', pedido_id: pedido.id, folio }
-                }
+                body: { roles: ['secretaria'], title: '📦 Nuevo Pedido',
+                  body: `${vNombre} → ${clienteNombre} - ${formatCurrency(totales.total)}`,
+                  data: { type: 'nuevo_pedido', pedido_id: pedido.id, folio } }
               }).catch(e => console.error("Push error:", e)),
               supabase.functions.invoke('send-secretary-notification', {
-                body: {
-                  tipo: 'nuevo_pedido',
-                  pedidoId: pedido.id,
-                  folio,
-                  vendedor: vendedorNombre,
-                  cliente: clienteNombre,
-                  total: totales.total,
-                  requiereFactura: selectedCliente?.termino_credito !== 'contado'
-                }
+                body: { tipo: 'nuevo_pedido', pedidoId: pedido.id, folio, vendedor: vNombre,
+                  cliente: clienteNombre, total: totales.total,
+                  requiereFactura: selectedCliente?.termino_credito !== 'contado' }
               }).catch(e => console.error("Secretary email error:", e))
             );
           }
-
-          // Push adicional a admin si requiere autorización
           if (pedido.status === "por_autorizar") {
             notifPromises.push(
               supabase.functions.invoke('send-push-notification', {
-                body: {
-                  roles: ['admin'],
-                  title: '🔔 Solicitud de autorización de precio',
-                  body: `${vendedorNombre} solicita autorización — ${folio} · ${clienteNombre} · ${formatCurrency(totales.total)}`,
-                  data: { type: 'solicitud_autorizacion', pedido_id: pedido.id, folio }
-                }
+                body: { roles: ['admin'], title: '🔔 Solicitud de autorización de precio',
+                  body: `${vNombre} solicita autorización — ${folio} · ${clienteNombre} · ${formatCurrency(totales.total)}`,
+                  data: { type: 'solicitud_autorizacion', pedido_id: pedido.id, folio } }
               }).catch(e => console.error("Push admin auth error:", e))
             );
           }
 
-          // 2. Generar PDFs en paralelo con las notificaciones
           const datosPrintFinal: DatosPedidoPrint = {
-            pedidoId: pedido.id,
-            folio,
-            numeroDia: pedido.numero_dia,
+            pedidoId: pedido.id, folio, numeroDia: pedido.numero_dia,
             fecha: new Date().toISOString(),
-            vendedor: vendedorNombre,
+            vendedor: vNombre,
             terminoCredito: terminoCredito === 'contado' ? 'Contado' : terminoCredito.replace('_', ' '),
-            cliente: {
-              nombre: selectedCliente?.nombre || "",
-              telefono: (selectedCliente as any)?.telefono || undefined,
-            },
-            sucursal: (() => {
-              const suc = sucursales.find(s => s.id === selectedSucursalId);
-              return suc ? { nombre: suc.nombre, direccion: suc.direccion || undefined } : undefined;
-            })(),
+            cliente: { nombre: selectedCliente?.nombre || "", telefono: (selectedCliente as any)?.telefono },
+            sucursal: (() => { const s = sucursales.find(s => s.id === selectedSucursalId); return s ? { nombre: s.nombre, direccion: s.direccion || undefined } : undefined; })(),
             productos: lineas.map(l => {
               const pesoKg = l.producto.peso_kg || 0;
-              const pesoTotal = pesoKg > 0 ? l.cantidad * pesoKg : null;
-              return {
-                cantidad: l.cantidad,
-                unidad: l.producto.unidad || 'pieza',
-                descripcion: getDisplayName(l.producto),
-                pesoTotal,
-                precioUnitario: l.precioUnitario,
-                importe: l.subtotal,
-                precioPorKilo: !!l.producto.precio_por_kilo,
-              };
+              return { cantidad: l.cantidad, unidad: l.producto.unidad || 'pieza',
+                descripcion: getDisplayName(l.producto), pesoTotal: pesoKg > 0 ? l.cantidad * pesoKg : null,
+                precioUnitario: l.precioUnitario, importe: l.subtotal, precioPorKilo: !!l.producto.precio_por_kilo };
             }),
-            subtotal: totales.subtotal,
-            iva: totales.iva,
-            ieps: totales.ieps,
-            total: totales.total,
-            pesoTotalKg: totales.pesoTotalKg,
-            notas: notas || undefined,
+            subtotal: totales.subtotal, iva: totales.iva, ieps: totales.ieps,
+            total: totales.total, pesoTotalKg: totales.pesoTotalKg, notas: notas || undefined,
           };
 
-          // Generar ambos PDFs usando las mismas funciones que el flujo de autorización
-          // Interno: 2 páginas landscape (Original + Hoja de Carga)
-          // Cliente: 1 página landscape (Confirmación)
           const { generarNotaInternaPDF, generarConfirmacionClientePDF } = await import("@/lib/generarNotaPDF");
-
-          console.log("[PDF] Generating internal (2-page) and client (1-page) PDFs...");
           const pdfPromise = Promise.all([
-            generarNotaInternaPDF(datosPrintFinal).then(r => { console.log(`[PDF] Internal PDF size: ${(r.base64.length / 1024 / 1024).toFixed(2)}MB`); return r.base64; }).catch(e => { console.error("PDF interno error:", e); return null; }),
-            generarConfirmacionClientePDF(datosPrintFinal).then(r => { console.log(`[PDF] Client PDF size: ${(r.base64.length / 1024 / 1024).toFixed(2)}MB`); return r.base64; }).catch(e => { console.error("PDF cliente error:", e); return null; }),
-          ]).catch(e => { console.error("PDF gen error:", e); return [null, null] as (string | null)[]; });
+            generarNotaInternaPDF(datosPrintFinal).then(r => r.base64).catch(() => null),
+            generarConfirmacionClientePDF(datosPrintFinal).then(r => r.base64).catch(() => null),
+          ]).catch(() => [null, null] as (string | null)[]);
 
-          // Esperar notificaciones y PDFs en paralelo
-          const [, pdfResults] = await Promise.all([
-            Promise.all(notifPromises),
-            pdfPromise,
-          ]);
-
+          const [, pdfResults] = await Promise.all([Promise.all(notifPromises), pdfPromise]);
           const [pdfBase64, clientPdfBase64] = pdfResults || [null, null];
 
-          // 3. Enviar emails con PDFs adjuntos en paralelo
           const sucursalObj = sucursales.find(s => s.id === selectedSucursalId);
           const direccionEntrega = sucursalObj?.direccion || selectedCliente?.zona?.nombre || "No especificada";
-
           const emailPromises: Promise<any>[] = [];
 
-          // Email interno solo si no requiere autorización
-          // (cuando se autorice, PedidosPorAutorizarTab lo enviará)
-          const esPorAutorizarFinal = pedido.status === "por_autorizar";
-          if (!esPorAutorizarFinal) {
-          console.log(`[Email] Sending internal email, PDF attached: ${!!pdfBase64}, size: ${pdfBase64 ? (pdfBase64.length / 1024 / 1024).toFixed(2) + 'MB' : 'none'}`);
-          emailPromises.push(
-            supabase.functions.invoke("enviar-pedido-interno", {
-              body: {
-                folio,
-                clienteNombre,
-                vendedorNombre,
-                terminoCredito,
-                direccionEntrega,
-                sucursalNombre: sucursalObj?.nombre || undefined,
-                total: totales.total,
-                subtotal: totales.subtotal,
-                impuestos: totales.impuestos,
-                fecha: new Date().toISOString(),
-                pedidoId: pedido.id,
-                productos: lineas.map(l => ({
-                  cantidad: l.cantidad,
-                  unidad: l.producto.unidad || "pza",
-                  nombre: l.producto.nombre,
-                  precioUnitario: l.precioUnitario,
-                  importe: l.subtotal,
-                })),
-                pdfBase64: pdfBase64 || undefined,
-                pdfFilename: `Pedido_${folio}.pdf`,
-              }
-            }).then(res => {
-              if (res.error) console.error("Internal email invoke error:", res.error);
-              else console.log("[Email] Internal email sent successfully");
-            }).catch(e => console.error("Internal email error:", e))
-          );
-          } // cierre if (!esPorAutorizarFinal)
+          if (pedido.status !== "por_autorizar") {
+            emailPromises.push(
+              supabase.functions.invoke("enviar-pedido-interno", {
+                body: {
+                  folio, clienteNombre, vendedorNombre: vNombre, terminoCredito, direccionEntrega,
+                  sucursalNombre: sucursalObj?.nombre, total: totales.total, subtotal: totales.subtotal,
+                  impuestos: totales.impuestos, fecha: new Date().toISOString(), pedidoId: pedido.id,
+                  productos: lineas.map(l => ({ cantidad: l.cantidad, unidad: l.producto.unidad || "pza", nombre: l.producto.nombre, precioUnitario: l.precioUnitario, importe: l.subtotal })),
+                  pdfBase64: pdfBase64 || undefined, pdfFilename: `Pedido_${folio}.pdf`,
+                }
+              }).catch(e => console.error("Internal email error:", e))
+            );
+          }
 
-          // Email al cliente solo si no requiere autorización
-          const esPorAutorizar = lineas.some(l => l.requiereAutorizacion && l.autorizacionStatus === 'pendiente');
-          if (!esPorAutorizar) {
+          if (!lineas.some(l => l.requiereAutorizacion && l.autorizacionStatus === 'pendiente')) {
             emailPromises.push(
               supabase.functions.invoke('send-client-notification', {
-                body: {
-                  clienteId: selectedClienteId,
-                  tipo: 'pedido_confirmado',
+                body: { clienteId: selectedClienteId, tipo: 'pedido_confirmado',
                   data: { pedidoFolio: folio, total: totales.total },
-                  pdfBase64: clientPdfBase64 || undefined,
-                  pdfFilename: `Pedido_${folio}.pdf`,
-                }
-              }).then(({ data: notifResponse }) => {
-                if (notifResponse?.whatsapp?.sent) {
-                  toast.success("📱 WhatsApp enviado al cliente");
-                }
+                  pdfBase64: clientPdfBase64 || undefined, pdfFilename: `Pedido_${folio}.pdf` }
               }).catch(e => console.error("Client email error:", e))
             );
           }
 
-          // Audit log
           emailPromises.push(
             (async () => {
               try {
                 const deviceInfo = captureDeviceInfo();
                 const ipAddress = await getPublicIP();
                 await supabase.from("security_audit_log").insert([{
-                  user_id: user.id,
-                  action: "pedido_creado",
-                  table_name: "pedidos",
-                  record_id: pedido.id,
+                  user_id: user.id, action: "pedido_creado", table_name: "pedidos", record_id: pedido.id,
                   ip_address: ipAddress,
-                  details: {
-                    folio,
-                    cliente_id: selectedClienteId,
-                    cliente_nombre: clienteNombre,
-                    total: totales.total,
-                    num_productos: lineas.length,
-                    termino_credito: terminoCredito,
-                    status_inicial: pedido.status,
-                    device: JSON.parse(JSON.stringify(deviceInfo)),
-                    session_draft_restored: false
-                  }
+                  details: { folio, cliente_id: selectedClienteId, cliente_nombre: clienteNombre,
+                    total: totales.total, num_productos: lineas.length, termino_credito: terminoCredito,
+                    status_inicial: pedido.status, device: JSON.parse(JSON.stringify(deviceInfo)) }
                 }]);
-              } catch (e) {
-                console.error("Audit log error:", e);
-              }
+              } catch (e) { console.error("Audit log error:", e); }
             })()
           );
-
           await Promise.all(emailPromises);
         } catch (bgError) {
           console.error("Background tasks error:", bgError);
         }
       };
-
-      // Lanzar tareas en background SIN bloquear la UI
       backgroundTasks();
 
       // Reset form
@@ -1016,12 +790,8 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       setStep(1);
       setCompletedSteps([]);
 
-      setPedidoCreado({
-        folio,
-        total: totales.total,
-        cliente: clienteNombre,
-      });
-
+      onHasActiveOrder?.(false);
+      setPedidoCreado({ folio, total: totales.total, cliente: clienteNombre });
       onPedidoCreado();
     } catch (error: any) {
       console.error("Error:", error);
@@ -1031,25 +801,60 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
     }
   };
 
+  // ==================== Cancel Pedido ====================
+
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+
+  const resetWizardState = () => {
+    setSelectedClienteId("");
+    setSelectedSucursalId("");
+    setLineas([]);
+    setTerminoCredito("contado");
+    setNotas("");
+    setNotasEntrega("");
+    setRequiereFactura(false);
+    setBorradorId(null);
+    setCompletedSteps([]);
+    setStep(1);
+    setCancelDialogOpen(false);
+    onHasActiveOrder?.(false);
+  };
+
+  const handleGuardarYSalir = () => {
+    resetWizardState();
+    fetchBorradoresDB();
+    toast.success("Borrador guardado");
+  };
+
+  const handleDescartarPedido = async () => {
+    if (borradorId) {
+      try {
+        await supabase.from("pedidos_detalles").delete().eq("pedido_id", borradorId);
+        await supabase.from("pedidos").delete().eq("id", borradorId).eq("status", "borrador");
+      } catch (e) {
+        console.error("Error deleting borrador on discard:", e);
+      }
+    }
+    resetWizardState();
+    fetchBorradoresDB();
+    toast.success("Pedido descartado");
+  };
+
   // ==================== Navigation ====================
 
   const handleNextStep = () => {
-    if (step < 3) {
+    if (step < 4) {
       setCompletedSteps(prev => [...new Set([...prev, step])]);
-      setStep((step + 1) as 1 | 2 | 3);
+      setStep((step + 1) as 1 | 2 | 3 | 4);
     }
   };
 
   const handlePrevStep = () => {
-    if (step > 1) {
-      setStep((step - 1) as 1 | 2 | 3);
-    }
+    if (step > 1) setStep((step - 1) as 1 | 2 | 3 | 4);
   };
 
-  const handleStepClick = (targetStep: 1 | 2 | 3) => {
-    if (completedSteps.includes(targetStep) || targetStep < step) {
-      setStep(targetStep);
-    }
+  const handleStepClick = (targetStep: 1 | 2 | 3 | 4) => {
+    if (completedSteps.includes(targetStep) || targetStep < step) setStep(targetStep);
   };
 
   // ==================== Render ====================
@@ -1069,36 +874,39 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
   const selectedSucursal = sucursales.find(s => s.id === selectedSucursalId);
 
   return (
-    <div className={cn("mx-auto space-y-4", step === 2 ? "px-2" : "max-w-4xl p-4")}>
-      <PageHeader
-        title="Nuevo pedido."
-        lead="Captura rápida de orden"
-      />
+    <div className="flex flex-col h-[calc(100dvh-3.5rem)] md:h-auto md:min-h-[600px] overflow-hidden max-w-4xl mx-auto">
+      {/* Fixed header area */}
+      <div className={cn("shrink-0", step === 2 ? "px-2" : "px-4 pt-4")}>
+        <PageHeader
+          title="Nuevo pedido."
+          lead="Captura rápida de orden"
+        />
 
-      {/* Step Indicator */}
-      <StepIndicator
-        currentStep={step}
-        completedSteps={completedSteps}
-        onStepClick={handleStepClick}
-      />
+        <StepIndicator
+          currentStep={step}
+          completedSteps={completedSteps}
+          onStepClick={handleStepClick}
+        />
+      </div>
 
-      {/* Step Content */}
+      {/* Scrollable step content */}
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+
+      {/* Step 1: Client */}
       {step === 1 && (
-        <>
+        <div className="flex-1 min-h-0 overflow-auto px-4 pb-4">
           <PasoCliente
             clientes={clientes}
             sucursales={sucursales}
             selectedClienteId={selectedClienteId}
             selectedSucursalId={selectedSucursalId}
-            terminoCredito={terminoCredito}
             loading={loadingSucursales}
             onClienteChange={setSelectedClienteId}
             onSucursalChange={setSelectedSucursalId}
-            onTerminoCreditoChange={setTerminoCredito}
             onNext={handleNextStep}
           />
 
-          {/* Borradores inline */}
+          {/* Borradores */}
           {!loadingBorradores && borradoresDB.length > 0 && (
             <div className="space-y-3 mt-6">
               <h3 className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
@@ -1140,51 +948,66 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
               ))}
             </div>
           )}
-        </>
+        </div>
       )}
 
+      {/* Step 2: Select products */}
       {step === 2 && (
         <PasoProductosInline
           productos={productos}
           productosFrecuentes={productosFrecuentes}
           lineas={lineas}
-          loadingFrecuentes={loadingFrecuentes}
-          onAgregarProducto={agregarProducto}
-          onActualizarCantidad={actualizarCantidad}
-          onActualizarPrecio={actualizarPrecio}
-          onSolicitarAutorizacion={handleSolicitarAutorizacion}
-          onMarcarParaRevision={marcarParaRevision}
-          totales={totales}
-          terminoCredito={terminoCredito}
-          notas={notas}
-          clienteDefaultCredito={selectedCliente?.termino_credito || "contado"}
-          clienteNombre={selectedCliente?.nombre}
-          onTerminoCreditoChange={setTerminoCredito}
-          onNotasChange={setNotas}
+          onToggleProducto={toggleProducto}
+          cliente={selectedCliente}
+          sucursal={selectedSucursal}
           onNext={handleNextStep}
           onBack={handlePrevStep}
+          onCancelar={() => setCancelDialogOpen(true)}
         />
       )}
 
+      {/* Step 3: Quantities & prices */}
       {step === 3 && (
+        <PasoCantidadesPrecios
+          lineas={lineas}
+          onActualizarCantidad={actualizarCantidad}
+          onActualizarPrecio={actualizarPrecio}
+          onRemoveProducto={removeProducto}
+          cliente={selectedCliente}
+          sucursal={selectedSucursal}
+          terminoCredito={terminoCredito}
+          onTerminoCreditoChange={setTerminoCredito}
+          requiereFactura={requiereFactura}
+          onRequiereFacturaChange={setRequiereFactura}
+          notasEntrega={notasEntrega}
+          onNotasEntregaChange={setNotasEntrega}
+          totales={totales}
+          ultimosPrecios={ultimosPrecios}
+          onGoToStep2={() => { setCompletedSteps(prev => [...new Set([...prev, 3])]); setStep(2); }}
+          onNext={handleNextStep}
+          onBack={handlePrevStep}
+          onCancelar={() => setCancelDialogOpen(true)}
+        />
+      )}
+
+      {/* Step 4: Confirm */}
+      {step === 4 && (
         <PasoConfirmar
           cliente={selectedCliente}
           sucursal={selectedSucursal}
           lineas={lineas}
           terminoCredito={terminoCredito}
-          notas={notas}
           notasEntrega={notasEntrega}
-          onNotasEntregaChange={setNotasEntrega}
-          totales={totales}
-          submitting={submitting}
           requiereFactura={requiereFactura}
-          onRequiereFacturaChange={setRequiereFactura}
+          totales={totales}
+          vendedorNombre={vendedorNombre}
+          submitting={submitting}
           onSubmit={handleSubmit}
           onBack={handlePrevStep}
-          vendedorNombre={vendedorNombre}
-          printRef={confirmPrintRef}
+          onCancelar={() => setCancelDialogOpen(true)}
         />
       )}
+      </div>{/* end scrollable step content */}
 
       {/* Discount Authorization Dialog */}
       <SolicitudDescuentoDialog
@@ -1224,6 +1047,27 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Cancel pedido confirmation — 3 options */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Salir del pedido?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tu progreso quedará guardado como borrador. Puedes retomarlo después desde el paso 1.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="sm:mr-auto">Volver al pedido</AlertDialogCancel>
+            <Button variant="ghost" className="text-destructive hover:text-destructive text-sm" onClick={handleDescartarPedido}>
+              Descartar pedido
+            </Button>
+            <AlertDialogAction onClick={handleGuardarYSalir} className="bg-crimson-500 hover:bg-crimson-600">
+              Guardar y salir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Delete borrador confirmation */}
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>

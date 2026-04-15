@@ -277,7 +277,7 @@ export function VendedorBienvenidaDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-[480px] max-h-[90vh] overflow-x-hidden !p-0 !gap-0 !rounded-2xl shadow-[0_20px_60px_-20px_rgba(15,14,13,0.25)]">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-[480px] max-h-[90vh] overflow-x-hidden !p-0 !gap-0 !rounded-2xl shadow-[0_20px_60px_-20px_rgba(15,14,13,0.25)] !top-[50%] !translate-y-[-50%]">
         {/* Header */}
         <DialogHeader className="px-8 pt-8 pb-6">
           <DialogDescription className="!text-[15px] text-ink-500 italic !mt-0">
