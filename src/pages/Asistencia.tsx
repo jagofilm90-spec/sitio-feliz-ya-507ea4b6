@@ -2,6 +2,7 @@ import Layout from "@/components/Layout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResponsiveTabsList } from "@/components/ui/responsive-tabs";
 import { ZkMappingPanel } from "@/components/asistencia/ZkMappingPanel";
+import { AsistenciaStats } from "@/components/asistencia/AsistenciaStats";
 import { AsistenciaView } from "@/components/asistencia/AsistenciaView";
 import { ReporteSemanal } from "@/components/asistencia/ReporteSemanal";
 import { ReporteQuincenal } from "@/components/asistencia/ReporteQuincenal";
@@ -36,6 +37,8 @@ export default function Asistencia() {
             ) : undefined
           }
         />
+
+        <AsistenciaStats />
 
         <Tabs defaultValue="registros">
           <TabsList className="bg-transparent border-b border-ink-100 rounded-none p-0 h-auto gap-8 mb-6">

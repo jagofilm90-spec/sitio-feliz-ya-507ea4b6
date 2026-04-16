@@ -235,6 +235,25 @@ export function ReporteSemanal() {
         </div>
       </CardHeader>
       <CardContent>
+        {/* Summary chips */}
+        {!loading && reporte.length > 0 && (() => {
+          const totalFaltas = reporte.reduce((s, r) => s + r.faltas, 0);
+          const totalRetardos = reporte.reduce((s, r) => s + r.retardos, 0);
+          const totalPierden = reporte.filter(r => r.premioGanado === 0 && r.premioCompleto > 0).length;
+          return (
+            <div className="flex flex-wrap gap-2 mb-4">
+              <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${totalFaltas > 0 ? "bg-red-50 text-red-700" : "bg-ink-50 text-ink-500"}`}>
+                Faltas: {totalFaltas}
+              </span>
+              <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${totalRetardos > 0 ? "bg-amber-50 text-amber-700" : "bg-ink-50 text-ink-500"}`}>
+                Retardos: {totalRetardos}
+              </span>
+              <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${totalPierden > 0 ? "bg-red-50 text-red-700" : "bg-ink-50 text-ink-500"}`}>
+                Pierden premio: {totalPierden} de {reporte.length}
+              </span>
+            </div>
+          );
+        })()}
         {loading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

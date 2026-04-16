@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Users, Palmtree, PenLine } from "lucide-react";
+import { Loader2, Users, Palmtree, PenLine, AlertTriangle } from "lucide-react";
 import { format, startOfWeek, eachDayOfInterval } from "date-fns";
 import { es } from "date-fns/locale";
 import { useUserRoles } from "@/hooks/useUserRoles";
@@ -173,6 +173,24 @@ export function AsistenciaView() {
         </div>
       )}
       <Badge variant="secondary" className="text-sm px-3 py-1"><Users className="h-4 w-4 mr-1.5" />{presCount} de {empsZk.length} presentes</Badge>
+
+      {/* Banner de ausentes después de 8:31 AM */}
+      {(() => {
+        const minActual = horaActual * 60 + new Date(new Date().toLocaleString("en-US", { timeZone: "America/Mexico_City" })).getMinutes();
+        if (minActual <= 8 * 60 + 30) return null;
+        const ausentes = empsZk.filter(e => !datosHoy.has(e.id));
+        if (ausentes.length === 0) return null;
+        const nombres = ausentes.slice(0, 5).map(e => e.nombre_completo).join(", ") + (ausentes.length > 5 ? ` y ${ausentes.length - 5} más` : "");
+        return (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-red-800">{ausentes.length} empleado{ausentes.length > 1 ? "s" : ""} sin check hoy</p>
+              <p className="text-xs text-red-700 mt-0.5">{nombres}</p>
+            </div>
+          </div>
+        );
+      })()}
 
       {AREAS.map(area => {
         const ae = empsZk.filter(e => area.puestos.includes(e.puesto));
