@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -161,13 +161,26 @@ const VehiculosTab = () => {
         .eq("activo", true)
         .eq("puesto", "Chofer")
         .order("nombre_completo");
-
       if (error) throw error;
       setChoferes(data || []);
     } catch (error: any) {
       console.error("Error loading choferes:", error);
     }
   };
+
+  // Derived: choferes available for assignment (not already on another vehicle)
+  const choferesDisponibles = useMemo(() => {
+    const asignadoIds = new Set(
+      vehiculos
+        .filter(v => v.chofer_asignado_id)
+        .map(v => v.chofer_asignado_id!)
+    );
+    // When editing, keep the current vehicle's chofer as an option
+    const editingChoferId = editingVehiculo?.chofer_asignado_id;
+    return choferes.filter(c =>
+      !asignadoIds.has(c.id) || c.id === editingChoferId
+    );
+  }, [choferes, vehiculos, editingVehiculo]);
 
   const loadVehiculos = async () => {
     try {
@@ -813,7 +826,12 @@ const VehiculosTab = () => {
                     <SelectTrigger><SelectValue placeholder="Sin asignar" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Sin asignar</SelectItem>
-                      {choferes.map(c => <SelectItem key={c.id} value={c.id}>{c.nombre_completo}</SelectItem>)}
+                      {choferesDisponibles.map(c => <SelectItem key={c.id} value={c.id}>{c.nombre_completo}</SelectItem>)}
+                      {choferesDisponibles.length === 0 && (
+                        <div className="px-3 py-2 text-xs text-muted-foreground italic">
+                          Todos los choferes ya tienen unidad asignada
+                        </div>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
