@@ -30,6 +30,15 @@ function StepCircle({ num, status }: { num: number; status: "active" | "complete
   return <div className={`${base} bg-white text-[#a8a8ae] border-[#eae8e4]`}>{num}</div>;
 }
 
+function formatMoney(val: string): string {
+  const num = parseFloat(val.replace(/,/g, ""));
+  if (isNaN(num) || val === "") return val;
+  return num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function parseMoney(val: string): string {
+  return val.replace(/,/g, "");
+}
+
 export function EmpleadoWizard({ onBack, onCreated }: Props) {
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
@@ -96,9 +105,9 @@ export function EmpleadoWizard({ onBack, onCreated }: Props) {
         fecha_ingreso: fechaIngreso,
         telefono: telefono || null,
         email: email || null,
-        sueldo_bruto: sueldoBruto ? parseFloat(sueldoBruto) : null,
+        sueldo_bruto: sueldoBruto ? parseFloat(sueldoBruto.replace(/,/g, "")) : null,
         periodo_pago: periodoPago,
-        premio_asistencia_semanal: premioAsistencia ? parseFloat(premioAsistencia) : null,
+        premio_asistencia_semanal: premioAsistencia ? parseFloat(premioAsistencia.replace(/,/g, "")) : null,
         porcentaje_comision: tieneComision && porcentajeComision ? parseFloat(porcentajeComision) : null,
         numero_seguro_social: nss || null,
         rfc: rfc || null,
@@ -178,11 +187,11 @@ export function EmpleadoWizard({ onBack, onCreated }: Props) {
         {step === 2 && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-5">
-              <div><label className={labelClass}>Sueldo bruto mensual</label><input type="number" className={inputClass} value={sueldoBruto} onChange={e => setSueldoBruto(e.target.value)} placeholder="16975" /></div>
+              <div><label className={labelClass}>Sueldo bruto mensual (MXN)</label><div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[#a8a8ae]">$</span><input type="text" inputMode="decimal" className={`${inputClass} pl-7 tabular-nums`} value={sueldoBruto} onChange={e => setSueldoBruto(e.target.value.replace(/[^0-9.,]/g, ""))} onFocus={() => setSueldoBruto(sueldoBruto.replace(/,/g, ""))} onBlur={() => { const n = parseFloat(sueldoBruto.replace(/,/g, "")); if (!isNaN(n)) setSueldoBruto(n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })); }} placeholder="16,975.00" /></div></div>
               <div><label className={labelClass}>Periodo de pago</label><select className={inputClass} value={periodoPago} onChange={e => setPeriodoPago(e.target.value)}>{PERIODOS.map(p => <option key={p} value={p} className="capitalize">{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}</select></div>
-              {showPremio && <div><label className={labelClass}>Premio asistencia semanal</label><input type="number" className={inputClass} value={premioAsistencia} onChange={e => setPremioAsistencia(e.target.value)} placeholder="957" /></div>}
+              {showPremio && <div><label className={labelClass}>Premio asistencia semanal (MXN)</label><div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[#a8a8ae]">$</span><input type="text" inputMode="decimal" className={`${inputClass} pl-7 tabular-nums`} value={premioAsistencia} onChange={e => setPremioAsistencia(e.target.value.replace(/[^0-9.,]/g, ""))} onFocus={() => setPremioAsistencia(premioAsistencia.replace(/,/g, ""))} onBlur={() => { const n = parseFloat(premioAsistencia.replace(/,/g, "")); if (!isNaN(n)) setPremioAsistencia(n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })); }} placeholder="957.00" /></div></div>}
               {showComision && <div><label className={labelClass}>¿Tiene comisión?</label><select className={inputClass} value={tieneComision ? "si" : "no"} onChange={e => setTieneComision(e.target.value === "si")}><option value="no">No</option><option value="si">Sí</option></select></div>}
-              {showComision && tieneComision && <div><label className={labelClass}>% Comisión</label><input type="number" className={inputClass} value={porcentajeComision} onChange={e => setPorcentajeComision(e.target.value)} placeholder="1" /></div>}
+              {showComision && tieneComision && <div><label className={labelClass}>% Comisión</label><div className="relative"><input type="number" className={`${inputClass} pr-7`} value={porcentajeComision} onChange={e => setPorcentajeComision(e.target.value)} placeholder="1" /><span className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] text-[#a8a8ae]">%</span></div></div>}
               <div><label className={labelClass}>NSS</label><input className={`${inputClass} font-mono text-[12px] tracking-[0.03em]`} value={nss} onChange={e => setNss(e.target.value)} /></div>
               <div><label className={labelClass}>RFC</label><input className={`${inputClass} font-mono text-[12px] tracking-[0.03em]`} value={rfc} onChange={e => setRfc(e.target.value)} /></div>
               <div><label className={labelClass}>CURP</label><input className={`${inputClass} font-mono text-[12px] tracking-[0.03em]`} value={curp} onChange={e => setCurp(e.target.value)} /></div>
@@ -253,9 +262,9 @@ export function EmpleadoWizard({ onBack, onCreated }: Props) {
               </div>
               <div className="border border-[#eae8e4] rounded-xl p-4">
                 <div className="flex justify-between items-center mb-3"><h4 className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#a8a8ae]">Laboral</h4><button onClick={() => setStep(2)} className="text-[11px] text-[#c41e3a] font-medium hover:underline">Editar</button></div>
-                <p className="text-[14px] font-medium text-[#1a1a1f] tabular-nums">{sueldoBruto ? `$${parseFloat(sueldoBruto).toLocaleString("es-MX")}` : "—"}</p>
+                <p className="text-[14px] font-medium text-[#1a1a1f] tabular-nums">{sueldoBruto ? `$${formatMoney(parseMoney(sueldoBruto))}` : "—"}</p>
                 <p className="text-[12px] text-[#78787e] capitalize">{periodoPago}</p>
-                {premioAsistencia && <p className="text-[12px] text-[#78787e]">Premio: ${parseFloat(premioAsistencia).toLocaleString("es-MX")}/sem</p>}
+                {premioAsistencia && <p className="text-[12px] text-[#78787e]">Premio: ${formatMoney(parseMoney(premioAsistencia))}/sem</p>}
                 {tieneComision && <p className="text-[12px] text-[#78787e]">Comisión: {porcentajeComision}%</p>}
               </div>
               <div className="border border-[#eae8e4] rounded-xl p-4">
