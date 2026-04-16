@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Download, CalendarDays, Check, X } from "lucide-react";
+import { Loader2, Download, CalendarDays, Check, X, AlertTriangle } from "lucide-react";
 import { format, addDays, startOfWeek, subWeeks, isAfter } from "date-fns";
 import { es } from "date-fns/locale";
 import { exportToExcel } from "@/utils/exportData";
@@ -34,6 +34,13 @@ function timeToAMPM(time: string): string {
   const h12 = h % 12 || 12;
   return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
 }
+
+function timeToMinutes(time: string): number {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
+}
+
+const HORA_LIMITE_MINS = 8 * 60 + 30; // 8:30 AM
 
 export function ReporteSemanal() {
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
@@ -127,17 +134,30 @@ export function ReporteSemanal() {
         const isFuture = isAfter(dia.date, today);
         const regs = empRegistros.filter(r => r.fecha === dia.dateStr && r.hora).sort((a, b) => (a.hora || "").localeCompare(b.hora || ""));
         const asistio = regs.length > 0;
-        const horaEntrada = regs[0]?.hora ? timeToAMPM(regs[0].hora) : null;
+        const horaEntradaRaw = regs[0]?.hora || null; // "HH:MM" 24h
+        const horaEntrada = horaEntradaRaw ? timeToAMPM(horaEntradaRaw) : null;
         const isManual = manualesSemana.has(`${dia.dateStr}:${emp.id}`);
-        return { ...dia, debeTrabjar, asistio, horaEntrada, isFuture, isManual };
+        const esRetardo = asistio && horaEntradaRaw ? timeToMinutes(horaEntradaRaw) > HORA_LIMITE_MINS : false;
+        return { ...dia, debeTrabjar, asistio, horaEntradaRaw, horaEntrada, isFuture, isManual, esRetardo };
       });
 
       const diasQueTocaba = diasInfo.filter(d => d.debeTrabjar && !d.isFuture);
       const diasTrabajados = diasInfo.filter(d => d.asistio).length;
-      const totalDiasLab = 6;
-      const premioPorDia = (emp.premio_asistencia_semanal || 0) / totalDiasLab;
-      const diasConPremio = diasInfo.filter(d => d.debeTrabjar && d.asistio).length;
-      const premioGanado = Math.round(premioPorDia * diasConPremio * 100) / 100;
+
+      // Faltas: día laboral pasado sin check
+      const faltas = diasInfo.filter(d => d.debeTrabjar && !d.asistio && !d.isFuture).length;
+      // Retardos: día laboral con check después de 8:30 AM
+      const retardos = diasInfo.filter(d => d.esRetardo).length;
+      // Premio binario: 1 falta = pierde todo, 2 retardos = pierde todo
+      const pierdePremio = faltas >= 1 || retardos >= 2;
+      const premioCompleto = emp.premio_asistencia_semanal || 0;
+      const premioGanado = pierdePremio ? 0 : premioCompleto;
+      const motivoPerdida = faltas >= 1
+        ? `${faltas} falta${faltas > 1 ? "s" : ""}`
+        : retardos >= 2
+        ? `${retardos} retardos`
+        : null;
+
       const sueldoDiario = emp.sueldo_bruto ? emp.sueldo_bruto / 30 : 0;
       const sueldoSemanal = Math.round(sueldoDiario * diasTrabajados * 100) / 100;
       const totalPagar = sueldoSemanal + premioGanado;
@@ -151,9 +171,11 @@ export function ReporteSemanal() {
         totalDiasLab: diasQueTocaba.length,
         sueldoDiario,
         sueldoSemanal,
-        premioPorDia,
-        diasConPremio,
+        faltas,
+        retardos,
+        premioCompleto,
         premioGanado,
+        motivoPerdida,
         totalPagar,
       };
     });
@@ -165,12 +187,16 @@ export function ReporteSemanal() {
       diasSemana.forEach((dia, i) => {
         const info = r.diasInfo[i];
         const marker = info.isManual ? "*" : "";
-        row[dia.label] = info.asistio ? `${marker}${info.horaEntrada || "✓"}` : (info.debeTrabjar && !info.isFuture ? "✗" : "—");
+        const retardoMark = info.esRetardo ? "R " : "";
+        row[dia.label] = info.asistio ? `${marker}${retardoMark}${info.horaEntrada || "✓"}` : (info.debeTrabjar && !info.isFuture ? "✗" : "—");
       });
       row["Días"] = `${r.diasTrabajados}/${r.totalDiasLab}`;
+      row["Faltas"] = r.faltas;
+      row["Retardos"] = r.retardos;
       row["Sueldo semanal"] = r.sueldoSemanal.toFixed(2);
-      row["Premio/día"] = r.premioPorDia.toFixed(2);
+      row["Premio"] = r.premioCompleto.toFixed(2);
       row["Premio ganado"] = r.premioGanado.toFixed(2);
+      row["Motivo pérdida"] = r.motivoPerdida || "";
       row["Total"] = r.totalPagar.toFixed(2);
       return row;
     });
@@ -226,8 +252,7 @@ export function ReporteSemanal() {
                   ))}
                   <TableHead className="text-center">Días</TableHead>
                   <TableHead className="text-right">Sueldo sem.</TableHead>
-                  <TableHead className="text-right">Premio/día</TableHead>
-                  <TableHead className="text-right">Premio ganado</TableHead>
+                  <TableHead className="text-right">Premio</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                 </TableRow>
               </TableHeader>
@@ -239,8 +264,12 @@ export function ReporteSemanal() {
                       <TableCell key={i} className="text-center p-1">
                         {d.asistio ? (
                           <div className="flex flex-col items-center">
-                            <Check className="h-4 w-4 text-green-600" />
-                            <span className="text-[10px] text-muted-foreground">
+                            {d.esRetardo ? (
+                              <AlertTriangle className="h-4 w-4 text-amber-500" />
+                            ) : (
+                              <Check className="h-4 w-4 text-green-600" />
+                            )}
+                            <span className={`text-[10px] ${d.esRetardo ? "text-amber-600 font-medium" : "text-muted-foreground"}`}>
                               {d.isManual && <span className="text-orange-500">*</span>}
                               {d.horaEntrada}
                             </span>
@@ -256,9 +285,15 @@ export function ReporteSemanal() {
                     ))}
                     <TableCell className="text-center font-mono">{r.diasTrabajados}/{r.totalDiasLab}</TableCell>
                     <TableCell className="text-right font-mono text-sm">{fmt$(r.sueldoSemanal)}</TableCell>
-                    <TableCell className="text-right font-mono text-sm">{fmt$(r.premioPorDia)}</TableCell>
                     <TableCell className="text-right font-mono text-sm">
-                      {r.premioGanado > 0 ? <span className="text-green-600">{fmt$(r.premioGanado)}</span> : <span className="text-muted-foreground">$0</span>}
+                      {r.premioGanado > 0 ? (
+                        <span className="text-green-600">{fmt$(r.premioGanado)}</span>
+                      ) : (
+                        <div>
+                          <span className="text-red-600">$0</span>
+                          {r.motivoPerdida && <p className="text-[10px] text-muted-foreground">{r.motivoPerdida}</p>}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="text-right font-mono font-semibold">{fmt$(r.totalPagar)}</TableCell>
                   </TableRow>
@@ -267,7 +302,6 @@ export function ReporteSemanal() {
                   <TableCell className="sticky left-0 bg-background z-10">TOTAL</TableCell>
                   {diasSemana.map((_, i) => <TableCell key={i} />)}
                   <TableCell className="text-center font-mono">{reporte.reduce((s, r) => s + r.diasTrabajados, 0)}</TableCell>
-                  <TableCell />
                   <TableCell />
                   <TableCell className="text-right font-mono">{fmt$(reporte.reduce((s, r) => s + r.premioGanado, 0))}</TableCell>
                   <TableCell className="text-right font-mono">{fmt$(reporte.reduce((s, r) => s + r.totalPagar, 0))}</TableCell>
