@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Edit, Truck, Check, X, AlertTriangle, Trophy } from "lucide-react";
+import { ArrowLeft, Truck, Check, X, AlertTriangle, Trophy, Save } from "lucide-react";
 import { format, startOfWeek, addDays, isAfter } from "date-fns";
-import { es } from "date-fns/locale";
+import { toast } from "sonner";
 import { DocumentosChecklist } from "./DocumentosChecklist";
 import { ActasAdministrativas } from "./ActasAdministrativas";
 import { VacacionesEmpleado } from "./VacacionesEmpleado";
@@ -24,7 +24,14 @@ interface Empleado {
   licencia_vencimiento: string | null; dias_laborales?: string[] | null; contrato_firmado_fecha: string | null;
 }
 
-interface Props { empleado: Empleado; foto?: string; onBack: () => void; onEditar: () => void; }
+interface Props {
+  empleado: Empleado;
+  foto?: string;
+  onBack: () => void;
+  onEmpleadoUpdated?: (updated: Partial<Empleado>) => void;
+}
+
+type SeccionEditable = "personales" | "emergencia" | "licencia" | "bancarios" | "laborales" | null;
 
 const colors = ["#E24B4A", "#D85A30", "#BA7517", "#639922", "#1D9E75", "#378ADD", "#7F77DD", "#D4537E"];
 const getColor = (n: string) => colors[n.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % colors.length];
@@ -37,30 +44,125 @@ function timeToMinutes(t: string) { const [h, m] = t.split(":").map(Number); ret
 function timeToAMPM(t: string) { const [h, m] = t.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`; }
 
 const tabClass = "px-0 pb-3 bg-transparent shadow-none rounded-none border-b-2 border-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-[#c41e3a] data-[state=active]:text-stone-900 text-stone-400 font-medium text-sm";
+const inputClass = "w-full px-3 py-2 text-sm border border-stone-200 rounded-lg focus:outline-none focus:border-[#c41e3a] focus:ring-1 focus:ring-[#c41e3a]/20 bg-white";
 
-function Field({ label, value, mono }: { label: string; value: string | number | null | undefined; mono?: boolean }) {
+const TIPO_SANGRE = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"];
+const ESTADO_CIVIL = ["Soltero", "Casado", "Divorciado", "Viudo", "Unión libre"];
+const NIVEL_ESTUDIOS = ["Primaria", "Secundaria", "Preparatoria", "Universidad", "Posgrado"];
+const LICENCIA_TIPOS = ["A", "B", "C", "D", "E"];
+
+// ── Editable field ──
+
+function EditableField({ label, value, field, type = "text", options, mono, editing, onChange }: {
+  label: string; value: string | number | null | undefined; field: string;
+  type?: "text" | "date" | "number" | "select"; options?: string[];
+  mono?: boolean; editing: boolean; onChange: (field: string, value: string) => void;
+}) {
+  if (!editing) {
+    return (
+      <div>
+        <p className="text-[10px] uppercase tracking-[0.15em] text-stone-400 font-medium mb-1">{label}</p>
+        <p className={`text-sm text-stone-800 ${mono ? "font-mono tracking-wide" : ""}`}>{value ?? <span className="italic text-stone-300">Sin capturar</span>}</p>
+      </div>
+    );
+  }
+
+  const strVal = value?.toString() || "";
+
+  if (type === "select" && options) {
+    return (
+      <div>
+        <p className="text-[10px] uppercase tracking-[0.15em] text-stone-400 font-medium mb-1">{label}</p>
+        <select className={inputClass} defaultValue={strVal} onChange={(e) => onChange(field, e.target.value)}>
+          <option value="">— Seleccionar —</option>
+          {options.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+      </div>
+    );
+  }
+
   return (
     <div>
       <p className="text-[10px] uppercase tracking-[0.15em] text-stone-400 font-medium mb-1">{label}</p>
-      <p className={`text-sm text-stone-800 ${mono ? "font-mono tracking-wide" : ""}`}>{value || <span className="italic text-stone-300">Sin capturar</span>}</p>
+      <input type={type} className={inputClass} defaultValue={strVal} onChange={(e) => onChange(field, e.target.value)} />
     </div>
   );
 }
 
-function SectionHeading({ title, onEdit }: { title: string; onEdit?: () => void }) {
+function SectionHeading({ title, editing, onEdit, onSave, onCancel, saving }: {
+  title: string; editing: boolean; onEdit?: () => void;
+  onSave?: () => void; onCancel?: () => void; saving?: boolean;
+}) {
   return (
     <div className="flex items-center justify-between pb-3 mb-5 border-b border-stone-100">
       <h3 className="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-400">{title}</h3>
-      {onEdit && <button onClick={onEdit} className="text-[11px] text-[#c41e3a] font-medium cursor-pointer hover:underline normal-case tracking-normal">Editar</button>}
+      {!editing && onEdit && <button onClick={onEdit} className="text-[11px] text-[#c41e3a] font-medium cursor-pointer hover:underline normal-case tracking-normal">Editar</button>}
+      {editing && (
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="ghost" className="h-7 text-xs text-stone-500" onClick={onCancel} disabled={saving}>Cancelar</Button>
+          <Button size="sm" className="h-7 text-xs bg-[#c41e3a] hover:bg-[#a31830] text-white" onClick={onSave} disabled={saving}>
+            {saving ? "Guardando..." : <><Save className="h-3 w-3 mr-1" />Guardar</>}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
 
-export function EmpleadoFicha({ empleado: e, foto, onBack, onEditar }: Props) {
+// ── Main component ──
+
+export function EmpleadoFicha({ empleado: initialEmpleado, foto, onBack, onEmpleadoUpdated }: Props) {
+  const [e, setE] = useState(initialEmpleado);
   const { isAdmin } = useUserRoles();
   const esChofer = e.puesto.toLowerCase() === "chofer";
-  const diasLab = (e as any).dias_laborales || ["lun", "mar", "mie", "jue", "vie", "sab"];
+  const diasLab: string[] = (e as any).dias_laborales || ["lun", "mar", "mie", "jue", "vie", "sab"];
 
+  const [editando, setEditando] = useState<SeccionEditable>(null);
+  const [changes, setChanges] = useState<Record<string, any>>({});
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleChange = useCallback((field: string, value: string) => {
+    setChanges(prev => ({ ...prev, [field]: value || null }));
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    if (Object.keys(changes).length === 0) { setEditando(null); return; }
+    setSaving(true);
+    setError(null);
+    try {
+      // Build nombre_completo if name parts changed
+      const updates = { ...changes };
+      if (updates.nombre || updates.primer_apellido || updates.segundo_apellido) {
+        const nombre = (updates.nombre ?? e.nombre) || "";
+        const ap1 = (updates.primer_apellido ?? e.primer_apellido) || "";
+        const ap2 = (updates.segundo_apellido ?? e.segundo_apellido) || "";
+        updates.nombre_completo = [nombre, ap1, ap2].filter(Boolean).join(" ");
+      }
+      if (updates.numero_dependientes !== undefined) {
+        updates.numero_dependientes = updates.numero_dependientes ? parseInt(updates.numero_dependientes) : null;
+      }
+
+      const { error: err } = await supabase.from("empleados").update(updates as any).eq("id", e.id);
+      if (err) throw err;
+
+      const merged = { ...e, ...updates } as Empleado;
+      setE(merged);
+      onEmpleadoUpdated?.(updates);
+      setEditando(null);
+      setChanges({});
+      toast.success("Datos actualizados");
+    } catch (err: any) {
+      setError(err?.message || "Error al guardar");
+    } finally {
+      setSaving(false);
+    }
+  }, [changes, e, onEmpleadoUpdated]);
+
+  const startEdit = (seccion: SeccionEditable) => { setEditando(seccion); setChanges({}); setError(null); };
+  const cancelEdit = () => { setEditando(null); setChanges({}); setError(null); };
+
+  // Antigüedad
   const hoy = new Date();
   const [iy, im, id] = e.fecha_ingreso.split("-").map(Number);
   const ingreso = new Date(iy, im - 1, id);
@@ -132,6 +234,8 @@ export function EmpleadoFicha({ empleado: e, foto, onBack, onEditar }: Props) {
     no_laboral: "bg-stone-50/50 border-dashed border-stone-200",
   };
 
+  const isEditing = (s: SeccionEditable) => editando === s;
+
   return (
     <div className="flex flex-col lg:flex-row min-h-[600px]">
       {/* ── Sidebar ── */}
@@ -183,10 +287,6 @@ export function EmpleadoFicha({ empleado: e, foto, onBack, onEditar }: Props) {
             )}
           </div>
         )}
-
-        <div className="mt-6">
-          <Button size="sm" variant="outline" className="w-full border-stone-200 text-stone-600 hover:bg-stone-50" onClick={onEditar}><Edit className="h-3 w-3 mr-1.5" />Editar empleado</Button>
-        </div>
       </div>
 
       {/* ── Main area ── */}
@@ -202,77 +302,108 @@ export function EmpleadoFicha({ empleado: e, foto, onBack, onEditar }: Props) {
           </TabsList>
 
           <TabsContent value="general" className="space-y-8">
+            {/* Datos personales */}
             <div>
-              <SectionHeading title="Datos personales" onEdit={onEditar} />
+              <SectionHeading title="Datos personales" editing={isEditing("personales")} onEdit={() => startEdit("personales")} onSave={handleSave} onCancel={cancelEdit} saving={saving} />
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                <Field label="Nombre" value={e.nombre} />
-                <Field label="Primer apellido" value={e.primer_apellido} />
-                <Field label="Segundo apellido" value={e.segundo_apellido} />
-                <Field label="CURP" value={e.curp} mono />
-                <Field label="RFC" value={e.rfc} mono />
-                <Field label="NSS" value={e.numero_seguro_social} mono />
-                <Field label="Fecha de nacimiento" value={e.fecha_nacimiento?.split("-").reverse().join("/")} />
-                <Field label="Tipo de sangre" value={e.tipo_sangre} />
-                <Field label="Estado civil" value={e.estado_civil} />
-                <Field label="Nivel de estudios" value={e.nivel_estudios} />
-                <Field label="Dependientes" value={e.numero_dependientes?.toString()} />
-                <Field label="Beneficiario" value={e.beneficiario} />
+                <EditableField label="Nombre" value={e.nombre} field="nombre" editing={isEditing("personales")} onChange={handleChange} />
+                <EditableField label="Primer apellido" value={e.primer_apellido} field="primer_apellido" editing={isEditing("personales")} onChange={handleChange} />
+                <EditableField label="Segundo apellido" value={e.segundo_apellido} field="segundo_apellido" editing={isEditing("personales")} onChange={handleChange} />
+                <EditableField label="CURP" value={e.curp} field="curp" mono editing={isEditing("personales")} onChange={handleChange} />
+                <EditableField label="RFC" value={e.rfc} field="rfc" mono editing={isEditing("personales")} onChange={handleChange} />
+                <EditableField label="NSS" value={e.numero_seguro_social} field="numero_seguro_social" mono editing={isEditing("personales")} onChange={handleChange} />
+                <EditableField label="Fecha de nacimiento" value={e.fecha_nacimiento} field="fecha_nacimiento" type="date" editing={isEditing("personales")} onChange={handleChange} />
+                <EditableField label="Tipo de sangre" value={e.tipo_sangre} field="tipo_sangre" type="select" options={TIPO_SANGRE} editing={isEditing("personales")} onChange={handleChange} />
+                <EditableField label="Estado civil" value={e.estado_civil} field="estado_civil" type="select" options={ESTADO_CIVIL} editing={isEditing("personales")} onChange={handleChange} />
+                <EditableField label="Nivel de estudios" value={e.nivel_estudios} field="nivel_estudios" type="select" options={NIVEL_ESTUDIOS} editing={isEditing("personales")} onChange={handleChange} />
+                <EditableField label="Dependientes" value={e.numero_dependientes} field="numero_dependientes" type="number" editing={isEditing("personales")} onChange={handleChange} />
+                <EditableField label="Beneficiario" value={e.beneficiario} field="beneficiario" editing={isEditing("personales")} onChange={handleChange} />
               </div>
+              {error && editando === "personales" && <p className="text-xs text-red-600 mt-2">{error}</p>}
             </div>
 
-            {e.contacto_emergencia_nombre && (
+            {/* Contacto emergencia */}
+            {(e.contacto_emergencia_nombre || isEditing("emergencia")) && (
               <div>
-                <SectionHeading title="Contacto de emergencia" />
+                <SectionHeading title="Contacto de emergencia" editing={isEditing("emergencia")} onEdit={() => startEdit("emergencia")} onSave={handleSave} onCancel={cancelEdit} saving={saving} />
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                  <Field label="Nombre" value={e.contacto_emergencia_nombre} />
-                  <Field label="Teléfono" value={e.contacto_emergencia_telefono} />
-                  <Field label="Parentesco" value={(e as any).emergencia_parentesco} />
+                  <EditableField label="Nombre" value={e.contacto_emergencia_nombre} field="contacto_emergencia_nombre" editing={isEditing("emergencia")} onChange={handleChange} />
+                  <EditableField label="Teléfono" value={e.contacto_emergencia_telefono} field="contacto_emergencia_telefono" editing={isEditing("emergencia")} onChange={handleChange} />
+                  <EditableField label="Parentesco" value={(e as any).emergencia_parentesco} field="emergencia_parentesco" editing={isEditing("emergencia")} onChange={handleChange} />
                 </div>
+                {error && editando === "emergencia" && <p className="text-xs text-red-600 mt-2">{error}</p>}
               </div>
             )}
 
+            {/* Licencia (chofer) */}
             {esChofer && (
               <div>
-                <SectionHeading title="Licencia de manejo" />
+                <SectionHeading title="Licencia de manejo" editing={isEditing("licencia")} onEdit={() => startEdit("licencia")} onSave={handleSave} onCancel={cancelEdit} saving={saving} />
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                  <Field label="Número" value={e.licencia_numero} mono />
-                  <Field label="Tipo" value={e.licencia_tipo} />
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[0.15em] text-stone-400 font-medium mb-1">Vencimiento</p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-stone-800">{e.licencia_vencimiento?.split("-").reverse().join("/") || <span className="italic text-stone-300">Sin capturar</span>}</span>
-                      {licStatus === "vencida" && <Badge variant="outline" className="text-[10px] bg-red-50 text-red-700 border-red-200">VENCIDA</Badge>}
-                      {licStatus === "por_vencer" && <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">Por vencer</Badge>}
-                    </div>
-                  </div>
+                  <EditableField label="Número" value={e.licencia_numero} field="licencia_numero" mono editing={isEditing("licencia")} onChange={handleChange} />
+                  <EditableField label="Tipo" value={e.licencia_tipo} field="licencia_tipo" type="select" options={LICENCIA_TIPOS} editing={isEditing("licencia")} onChange={handleChange} />
+                  <EditableField label="Vencimiento" value={e.licencia_vencimiento} field="licencia_vencimiento" type="date" editing={isEditing("licencia")} onChange={handleChange} />
                 </div>
+                {error && editando === "licencia" && <p className="text-xs text-red-600 mt-2">{error}</p>}
               </div>
             )}
 
+            {/* Bancarios */}
             <div>
-              <SectionHeading title="Datos bancarios" />
+              <SectionHeading title="Datos bancarios" editing={isEditing("bancarios")} onEdit={() => startEdit("bancarios")} onSave={handleSave} onCancel={cancelEdit} saving={saving} />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <Field label="Cuenta bancaria" value={e.cuenta_bancaria} mono />
-                <Field label="CLABE interbancaria" value={e.clabe_interbancaria} mono />
+                <EditableField label="Cuenta bancaria" value={e.cuenta_bancaria} field="cuenta_bancaria" mono editing={isEditing("bancarios")} onChange={handleChange} />
+                <EditableField label="CLABE interbancaria" value={e.clabe_interbancaria} field="clabe_interbancaria" mono editing={isEditing("bancarios")} onChange={handleChange} />
               </div>
+              {error && editando === "bancarios" && <p className="text-xs text-red-600 mt-2">{error}</p>}
             </div>
 
+            {/* Días laborales */}
             <div>
-              <SectionHeading title="Días laborales" />
+              <SectionHeading title="Días laborales" editing={isEditing("laborales")} onEdit={() => startEdit("laborales")} onSave={() => {
+                const newDias = Object.keys(changes).length > 0 ? changes.dias_laborales : diasLab;
+                if (newDias) {
+                  setChanges({ dias_laborales: newDias });
+                }
+                handleSave();
+              }} onCancel={cancelEdit} saving={saving} />
               <div className="flex gap-2 mb-3">
-                {["lun", "mar", "mie", "jue", "vie", "sab", "dom"].map(d => (
-                  <span key={d} className={`px-3 py-1.5 rounded-full text-xs font-medium ${diasLab.includes(d) ? "bg-stone-800 text-white" : "border border-dashed border-stone-300 text-stone-300"}`}>
-                    {d.charAt(0).toUpperCase() + d.slice(1)}
-                  </span>
-                ))}
+                {["lun", "mar", "mie", "jue", "vie", "sab", "dom"].map(d => {
+                  const active = isEditing("laborales")
+                    ? (changes.dias_laborales || diasLab).includes(d)
+                    : diasLab.includes(d);
+                  return (
+                    <button
+                      key={d}
+                      type="button"
+                      disabled={!isEditing("laborales")}
+                      onClick={() => {
+                        if (!isEditing("laborales")) return;
+                        const current = changes.dias_laborales || [...diasLab];
+                        const next = active ? current.filter((x: string) => x !== d) : [...current, d];
+                        setChanges(prev => ({ ...prev, dias_laborales: next }));
+                      }}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                        active
+                          ? "bg-stone-800 text-white"
+                          : "border border-dashed border-stone-300 text-stone-300"
+                      } ${isEditing("laborales") ? "cursor-pointer hover:opacity-80" : ""}`}
+                    >
+                      {d.charAt(0).toUpperCase() + d.slice(1)}
+                    </button>
+                  );
+                })}
               </div>
               <p className="text-xs text-stone-400">Horario de entrada: antes de las 8:30 AM</p>
             </div>
           </TabsContent>
 
+          {/* TAB ASISTENCIA */}
           <TabsContent value="asistencia" className="space-y-8">
             <div>
-              <SectionHeading title="Semana actual" />
+              <div className="flex items-center justify-between pb-3 mb-5 border-b border-stone-100">
+                <h3 className="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-400">Semana actual</h3>
+              </div>
               <div className="flex gap-3 mb-6">
                 {asistDias.map((d, i) => (
                   <div key={i} className="flex flex-col items-center w-14">
@@ -310,7 +441,9 @@ export function EmpleadoFicha({ empleado: e, foto, onBack, onEditar }: Props) {
           </TabsContent>
 
           <TabsContent value="nomina" className="space-y-5">
-            <SectionHeading title="Historial de sueldo" />
+            <div className="flex items-center justify-between pb-3 mb-5 border-b border-stone-100">
+              <h3 className="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-400">Historial de sueldo</h3>
+            </div>
             <div className="relative pl-5 border-l-2 border-stone-200 space-y-6">
               {e.sueldo_bruto && (
                 <div className="relative">

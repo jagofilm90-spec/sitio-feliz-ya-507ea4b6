@@ -1405,7 +1405,10 @@ const Empleados = () => {
           empleado={fichaEmpleado as any}
           foto={fotos[fichaEmpleado.id]}
           onBack={() => setFichaEmpleado(null)}
-          onEditar={() => { const emp = fichaEmpleado; setFichaEmpleado(null); handleEdit(emp); }}
+          onEmpleadoUpdated={(updates) => {
+            setFichaEmpleado(prev => prev ? { ...prev, ...updates } as Empleado : null);
+            loadEmpleados();
+          }}
         />
       </Layout>
     );
