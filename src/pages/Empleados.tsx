@@ -19,6 +19,7 @@ import { generarContratoPDF, generarAvisoPrivacidadPDF, hoyMexico } from "@/lib/
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import Layout from "@/components/Layout";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { EmpleadosStats } from "@/components/empleados/EmpleadosStats";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1429,6 +1430,8 @@ const Empleados = () => {
             </Button>
           }
         />
+
+        <EmpleadosStats />
 
         <Dialog open={isDialogOpen} onOpenChange={(o) => { setIsDialogOpen(o); if (!o && volverATarjeta) { setCardEmpleado(volverATarjeta); setVolverATarjeta(null); } }}>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
