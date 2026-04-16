@@ -7,6 +7,7 @@ import { DarAccesoSistemaDialog } from "@/components/empleados/DarAccesoSistemaD
 import { FirmaContratoFlow } from "@/components/empleados/FirmaContratoFlow";
 import { ExpedienteDigital } from "@/components/empleados/ExpedienteDigital";
 import { EmpleadoCard } from "@/components/empleados/EmpleadoCard";
+import { EmpleadoFicha } from "@/components/empleados/EmpleadoFicha";
 import { DocumentosChecklist } from "@/components/empleados/DocumentosChecklist";
 import { FirmaAddendumFlow } from "@/components/empleados/FirmaAddendumFlow";
 import { ActasAdministrativas } from "@/components/empleados/ActasAdministrativas";
@@ -196,6 +197,7 @@ const Empleados = () => {
   const [bajaEmpleado, setBajaEmpleado] = useState<Empleado | null>(null);
   const [vacacionesEmpleado, setVacacionesEmpleado] = useState<Empleado | null>(null);
   const [cardEmpleado, setCardEmpleado] = useState<Empleado | null>(null);
+  const [fichaEmpleado, setFichaEmpleado] = useState<Empleado | null>(null);
   const [volverATarjeta, setVolverATarjeta] = useState<Empleado | null>(null);
   const [addendumEmpleado, setAddendumEmpleado] = useState<Empleado | null>(null);
   const [pdfPreviewData, setPdfPreviewData] = useState<{
@@ -1395,6 +1397,20 @@ const Empleados = () => {
     return labels[tipo];
   };
 
+  // Desktop ficha view
+  if (fichaEmpleado && !isMobile) {
+    return (
+      <Layout>
+        <EmpleadoFicha
+          empleado={fichaEmpleado as any}
+          foto={fotos[fichaEmpleado.id]}
+          onBack={() => setFichaEmpleado(null)}
+          onEditar={() => { const emp = fichaEmpleado; setFichaEmpleado(null); handleEdit(emp); }}
+        />
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -2177,7 +2193,7 @@ const Empleados = () => {
                           <TableRow key={empleado.id}>
                             <TableCell className="font-medium">
                               <div className="flex items-center gap-2">
-                                <div className="cursor-pointer" onClick={(e) => { e.stopPropagation(); setCardEmpleado(empleado); }}>
+                                <div className="cursor-pointer" onClick={(e) => { e.stopPropagation(); isMobile ? setCardEmpleado(empleado) : setFichaEmpleado(empleado); }}>
                                   {fotos[empleado.id] ? (
                                     <img src={fotos[empleado.id]} className="w-8 h-8 rounded-full object-cover shrink-0 hover:ring-2 hover:ring-primary" />
                                   ) : (
@@ -2403,7 +2419,7 @@ const Empleados = () => {
                           <TableRow key={empleado.id}>
                             <TableCell className="font-medium">
                               <div className="flex items-center gap-2">
-                                <div className="cursor-pointer" onClick={(e) => { e.stopPropagation(); setCardEmpleado(empleado); }}>
+                                <div className="cursor-pointer" onClick={(e) => { e.stopPropagation(); isMobile ? setCardEmpleado(empleado) : setFichaEmpleado(empleado); }}>
                                   {fotos[empleado.id] ? (
                                     <img src={fotos[empleado.id]} className="w-8 h-8 rounded-full object-cover shrink-0 hover:ring-2 hover:ring-primary" />
                                   ) : (
@@ -2678,7 +2694,7 @@ const Empleados = () => {
                           <TableRow key={empleado.id}>
                             <TableCell className="font-medium">
                               <div className="flex items-center gap-2">
-                                <div className="cursor-pointer" onClick={(e) => { e.stopPropagation(); setCardEmpleado(empleado); }}>
+                                <div className="cursor-pointer" onClick={(e) => { e.stopPropagation(); isMobile ? setCardEmpleado(empleado) : setFichaEmpleado(empleado); }}>
                                   {fotos[empleado.id] ? (
                                     <img src={fotos[empleado.id]} className="w-8 h-8 rounded-full object-cover shrink-0 hover:ring-2 hover:ring-primary" />
                                   ) : (
