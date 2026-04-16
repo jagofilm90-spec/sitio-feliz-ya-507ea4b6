@@ -43,8 +43,9 @@ const DIA_LABELS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 function timeToMinutes(t: string) { const [h, m] = t.split(":").map(Number); return h * 60 + m; }
 function timeToAMPM(t: string) { const [h, m] = t.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`; }
 
-const tabClass = "px-0 pb-3 bg-transparent shadow-none rounded-none border-b-2 border-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-[#c41e3a] data-[state=active]:text-stone-900 text-stone-400 font-medium text-sm";
-const inputClass = "w-full px-3 py-2 text-sm border border-stone-200 rounded-lg focus:outline-none focus:border-[#c41e3a] focus:ring-1 focus:ring-[#c41e3a]/20 bg-white";
+const tabClass = "px-0 mr-5 pb-3.5 bg-transparent shadow-none rounded-none border-b-2 border-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-[#c41e3a] data-[state=active]:text-[#1a1a1f] text-[#78787e] font-medium text-[13px]";
+const inputClass = "w-full px-3 py-2 text-[13px] border border-[#eae8e4] rounded-lg bg-white focus:outline-none focus:border-[#c41e3a] focus:ring-1 focus:ring-[#c41e3a]/20";
+const inputClassMono = inputClass + " font-mono text-[12px] tracking-[0.03em]";
 
 const TIPO_SANGRE = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"];
 const ESTADO_CIVIL = ["Soltero", "Casado", "Divorciado", "Viudo", "Unión libre"];
@@ -58,22 +59,27 @@ function EditableField({ label, value, field, type = "text", options, mono, edit
   type?: "text" | "date" | "number" | "select"; options?: string[];
   mono?: boolean; editing: boolean; onChange: (field: string, value: string) => void;
 }) {
+  const lblClass = "text-[9.5px] uppercase tracking-[0.14em] text-[#a8a8ae] font-medium mb-1";
+
   if (!editing) {
     return (
       <div>
-        <p className="text-[10px] uppercase tracking-[0.15em] text-stone-400 font-medium mb-1">{label}</p>
-        <p className={`text-sm text-stone-800 ${mono ? "font-mono tracking-wide" : ""}`}>{value ?? <span className="italic text-stone-300">Sin capturar</span>}</p>
+        <p className={lblClass}>{label}</p>
+        <p className={mono ? "font-mono text-[12.5px] tracking-[0.03em] text-[#1a1a1f]" : "text-[13.5px] text-[#1a1a1f]"}>
+          {value ?? <span className="italic text-[#a8a8ae] text-[12.5px]">Sin capturar</span>}
+        </p>
       </div>
     );
   }
 
   const strVal = value?.toString() || "";
+  const cls = mono ? inputClassMono : inputClass;
 
   if (type === "select" && options) {
     return (
       <div>
-        <p className="text-[10px] uppercase tracking-[0.15em] text-stone-400 font-medium mb-1">{label}</p>
-        <select className={inputClass} defaultValue={strVal} onChange={(e) => onChange(field, e.target.value)}>
+        <p className={lblClass}>{label}</p>
+        <select className={cls} defaultValue={strVal} onChange={(e) => onChange(field, e.target.value)}>
           <option value="">— Seleccionar —</option>
           {options.map(o => <option key={o} value={o}>{o}</option>)}
         </select>
@@ -83,8 +89,8 @@ function EditableField({ label, value, field, type = "text", options, mono, edit
 
   return (
     <div>
-      <p className="text-[10px] uppercase tracking-[0.15em] text-stone-400 font-medium mb-1">{label}</p>
-      <input type={type} className={inputClass} defaultValue={strVal} onChange={(e) => onChange(field, e.target.value)} />
+      <p className={lblClass}>{label}</p>
+      <input type={type} className={cls} defaultValue={strVal} onChange={(e) => onChange(field, e.target.value)} />
     </div>
   );
 }
@@ -94,15 +100,15 @@ function SectionHeading({ title, editing, onEdit, onSave, onCancel, saving }: {
   onSave?: () => void; onCancel?: () => void; saving?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between pb-3 mb-5 border-b border-stone-100">
-      <h3 className="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-400">{title}</h3>
+    <div className="flex items-center justify-between pb-2.5 mb-4 border-b border-[#f4f2ef]">
+      <h3 className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#a8a8ae]">{title}</h3>
       {!editing && onEdit && <button onClick={onEdit} className="text-[11px] text-[#c41e3a] font-medium cursor-pointer hover:underline normal-case tracking-normal">Editar</button>}
       {editing && (
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="ghost" className="h-7 text-xs text-stone-500" onClick={onCancel} disabled={saving}>Cancelar</Button>
-          <Button size="sm" className="h-7 text-xs bg-[#c41e3a] hover:bg-[#a31830] text-white" onClick={onSave} disabled={saving}>
-            {saving ? "Guardando..." : <><Save className="h-3 w-3 mr-1" />Guardar</>}
-          </Button>
+        <div className="flex items-center gap-2.5">
+          <button onClick={onCancel} disabled={saving} className="text-[#78787e] text-[12px] hover:text-[#1a1a1f] disabled:opacity-50">Cancelar</button>
+          <button onClick={onSave} disabled={saving} className="bg-[#c41e3a] hover:bg-[#a31830] text-white text-[12px] px-3.5 py-1.5 rounded-md font-medium disabled:opacity-50 flex items-center gap-1">
+            {saving ? "Guardando..." : <><Save className="h-3 w-3" />Guardar</>}
+          </button>
         </div>
       )}
     </div>
@@ -227,72 +233,72 @@ export function EmpleadoFicha({ empleado: initialEmpleado, foto, onBack, onEmple
     no_laboral: <span className="text-stone-300 text-sm">—</span>,
   };
   const bgMap: Record<string, string> = {
-    puntual: "bg-emerald-50 border-emerald-200",
-    retardo: "bg-amber-50 border-amber-200",
-    falta: "bg-red-50 border-red-200",
-    futuro: "bg-stone-50 border-stone-200",
-    no_laboral: "bg-stone-50/50 border-dashed border-stone-200",
+    puntual: "bg-[#ecfdf5] border-[#a7f3d0]",
+    retardo: "bg-[#fefce8] border-[#fde68a]",
+    falta: "bg-[#fef2f2] border-[#fca5a5]",
+    futuro: "bg-[#f4f2ef] border-[#eae8e4]",
+    no_laboral: "bg-[#f4f2ef]/50 border-dashed border-[#eae8e4]",
   };
 
   const isEditing = (s: SeccionEditable) => editando === s;
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-[600px]">
+    <div className="flex flex-col lg:flex-row min-h-[calc(100vh-60px)]">
       {/* ── Sidebar ── */}
-      <div className="w-full lg:w-[300px] shrink-0 bg-gradient-to-b from-stone-50 to-stone-100/50 border-b lg:border-b-0 lg:border-r border-stone-200 p-6">
-        <button onClick={onBack} className="flex items-center gap-1.5 text-stone-400 hover:text-stone-700 text-sm mb-6 transition-colors">
+      <div className="w-full lg:w-[300px] shrink-0 bg-gradient-to-b from-[#f8f6f3] to-[#f0ece7] border-b lg:border-b-0 lg:border-r border-[#eae8e4] p-6">
+        <button onClick={onBack} className="flex items-center gap-1.5 text-[#78787e] hover:text-[#1a1a1f] text-[12px] cursor-pointer transition-colors mb-6">
           <ArrowLeft className="h-4 w-4" /> Volver a lista
         </button>
 
         <div className="flex flex-col items-center text-center mb-6">
           {foto ? (
-            <img src={foto} className="w-24 h-24 rounded-full object-cover ring-2 ring-white shadow-lg" />
+            <img src={foto} className="w-[88px] h-[88px] rounded-full object-cover ring-[3px] ring-white shadow-lg" />
           ) : (
-            <div className="w-24 h-24 rounded-full flex items-center justify-center text-white text-3xl font-bold ring-2 ring-white shadow-lg" style={{ backgroundColor: getColor(e.nombre_completo) }}>
+            <div className="w-[88px] h-[88px] rounded-full flex items-center justify-center text-white text-[26px] font-bold ring-[3px] ring-white shadow-lg" style={{ backgroundColor: getColor(e.nombre_completo) }}>
               {getInitials(e.nombre_completo)}
             </div>
           )}
-          <h2 className="font-serif text-2xl font-medium text-stone-900 mt-4">{e.nombre_completo}</h2>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-400 mt-1">{e.puesto}</p>
+          <h2 className="font-serif text-[22px] font-medium text-[#1a1a1f] mt-3.5">{e.nombre_completo}</h2>
+          <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#a8a8ae] mt-1">{e.puesto}</p>
           <div className="flex flex-wrap gap-1.5 mt-3 justify-center">
-            <Badge variant="outline" className={e.activo ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-stone-100 text-stone-500 border-stone-200"}>
+            <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-medium ${e.activo ? "bg-[#e8f5ee] text-[#1a7a4c] border border-[#e8f5ee]" : "bg-stone-100 text-stone-500"}`}>
               {e.activo ? "Activo" : "Inactivo"}
-            </Badge>
+            </span>
             {esChofer && licStatus && (
-              <Badge variant="outline" className={licStatus === "vencida" ? "bg-red-50 text-red-700 border-red-200" : licStatus === "por_vencer" ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-emerald-50 text-emerald-700 border-emerald-200"}>
+              <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-medium ${licStatus === "vencida" ? "bg-[#fde8ec] text-[#c41e3a] border border-[#fde8ec]" : licStatus === "por_vencer" ? "bg-amber-50 text-amber-700 border border-amber-50" : "bg-[#e8f5ee] text-[#1a7a4c] border border-[#e8f5ee]"}`}>
                 Lic. {licStatus === "vencida" ? "vencida" : licStatus === "por_vencer" ? "por vencer" : "vigente"}
-              </Badge>
+              </span>
             )}
           </div>
         </div>
 
         <div className="space-y-0">
-          <div className="flex justify-between py-2 border-b border-stone-100"><span className="text-stone-400 text-xs">Ingreso</span><span className="text-xs font-medium text-stone-800">{e.fecha_ingreso.split("-").reverse().join("/")}</span></div>
-          <div className="flex justify-between py-2 border-b border-stone-100"><span className="text-stone-400 text-xs">Antigüedad</span><span className="text-xs font-medium text-stone-800">{antig}</span></div>
-          {e.periodo_pago && <div className="flex justify-between py-2 border-b border-stone-100"><span className="text-stone-400 text-xs">Periodo</span><span className="text-xs font-medium text-stone-800 capitalize">{e.periodo_pago}</span></div>}
-          {e.telefono && <div className="flex justify-between py-2 border-b border-stone-100"><span className="text-stone-400 text-xs">Teléfono</span><span className="text-xs font-medium text-stone-800">{e.telefono}</span></div>}
-          {e.email && <div className="flex justify-between py-2 border-b border-stone-100"><span className="text-stone-400 text-xs">Email</span><span className="text-xs font-medium text-stone-800 truncate ml-2">{e.email}</span></div>}
+          <div className="flex justify-between py-[8px] border-b border-[rgba(0,0,0,0.05)]"><span className="text-[12px] text-[#78787e]">Ingreso</span><span className="text-[12px] font-medium text-[#1a1a1f] text-right">{e.fecha_ingreso.split("-").reverse().join("/")}</span></div>
+          <div className="flex justify-between py-[8px] border-b border-[rgba(0,0,0,0.05)]"><span className="text-[12px] text-[#78787e]">Antigüedad</span><span className="text-[12px] font-medium text-[#1a1a1f] text-right">{antig}</span></div>
+          {e.periodo_pago && <div className="flex justify-between py-[8px] border-b border-[rgba(0,0,0,0.05)]"><span className="text-[12px] text-[#78787e]">Periodo</span><span className="text-[12px] font-medium text-[#1a1a1f] text-right capitalize">{e.periodo_pago}</span></div>}
+          {e.telefono && <div className="flex justify-between py-[8px] border-b border-[rgba(0,0,0,0.05)]"><span className="text-[12px] text-[#78787e]">Teléfono</span><span className="text-[12px] font-medium text-[#1a1a1f] text-right">{e.telefono}</span></div>}
+          {e.email && <div className="flex justify-between py-[8px] border-b border-[rgba(0,0,0,0.05)]"><span className="text-[12px] text-[#78787e]">Email</span><span className="text-[12px] font-medium text-[#1a1a1f] text-right truncate ml-2">{e.email}</span></div>}
         </div>
 
         {esChofer && (
-          <div className="mt-6">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-stone-400 font-semibold flex items-center gap-1.5 mb-2"><Truck className="h-3.5 w-3.5" />Unidad asignada</p>
+          <div className="mt-5">
+            <p className="text-[9px] tracking-[0.2em] text-[#a8a8ae] uppercase font-semibold mb-1.5 flex items-center gap-1.5"><Truck className="h-3.5 w-3.5" />Unidad asignada</p>
             {vehiculo ? (
-              <div className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
-                <p className="font-serif text-4xl font-bold text-stone-900">{vehiculo.nombre}</p>
-                <p className="text-xs text-stone-500 mt-1">{vehiculo.tipo}{vehiculo.marca ? ` · ${vehiculo.marca}` : ""}{vehiculo.modelo ? ` ${vehiculo.modelo}` : ""}{vehiculo.anio ? ` · ${vehiculo.anio}` : ""}</p>
+              <div className="rounded-xl border border-[#eae8e4] bg-white p-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)] hover:border-[#c41e3a] transition-colors cursor-pointer">
+                <p className="font-serif text-[36px] font-bold text-[#1a1a1f]">{vehiculo.nombre}</p>
+                <p className="text-[11.5px] text-[#78787e] mt-1">{vehiculo.tipo}{vehiculo.marca ? ` · ${vehiculo.marca}` : ""}{vehiculo.modelo ? ` ${vehiculo.modelo}` : ""}{vehiculo.anio ? ` · ${vehiculo.anio}` : ""}</p>
               </div>
             ) : (
-              <p className="text-xs italic text-stone-400">Sin unidad asignada</p>
+              <p className="text-[12px] italic text-[#a8a8ae]">Sin unidad asignada</p>
             )}
           </div>
         )}
       </div>
 
       {/* ── Main area ── */}
-      <div className="flex-1 min-w-0 p-8">
+      <div className="flex-1 min-w-0 p-7">
         <Tabs defaultValue="general">
-          <TabsList className="bg-transparent border-b border-stone-200 rounded-none p-0 h-auto gap-6 mb-8">
+          <TabsList className="bg-transparent border-b border-[#eae8e4] rounded-none p-0 h-auto mb-7">
             <TabsTrigger value="general" className={tabClass}>General</TabsTrigger>
             <TabsTrigger value="asistencia" className={tabClass}>Asistencia</TabsTrigger>
             <TabsTrigger value="documentos" className={tabClass}>Documentos</TabsTrigger>
@@ -301,11 +307,11 @@ export function EmpleadoFicha({ empleado: initialEmpleado, foto, onBack, onEmple
             <TabsTrigger value="vacaciones" className={tabClass}>Vacaciones</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="general" className="space-y-8">
+          <TabsContent value="general" className="space-y-7">
             {/* Datos personales */}
             <div>
               <SectionHeading title="Datos personales" editing={isEditing("personales")} onEdit={() => startEdit("personales")} onSave={handleSave} onCancel={cancelEdit} saving={saving} />
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-4">
                 <EditableField label="Nombre" value={e.nombre} field="nombre" editing={isEditing("personales")} onChange={handleChange} />
                 <EditableField label="Primer apellido" value={e.primer_apellido} field="primer_apellido" editing={isEditing("personales")} onChange={handleChange} />
                 <EditableField label="Segundo apellido" value={e.segundo_apellido} field="segundo_apellido" editing={isEditing("personales")} onChange={handleChange} />
@@ -326,7 +332,7 @@ export function EmpleadoFicha({ empleado: initialEmpleado, foto, onBack, onEmple
             {(e.contacto_emergencia_nombre || isEditing("emergencia")) && (
               <div>
                 <SectionHeading title="Contacto de emergencia" editing={isEditing("emergencia")} onEdit={() => startEdit("emergencia")} onSave={handleSave} onCancel={cancelEdit} saving={saving} />
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-5 gap-y-4">
                   <EditableField label="Nombre" value={e.contacto_emergencia_nombre} field="contacto_emergencia_nombre" editing={isEditing("emergencia")} onChange={handleChange} />
                   <EditableField label="Teléfono" value={e.contacto_emergencia_telefono} field="contacto_emergencia_telefono" editing={isEditing("emergencia")} onChange={handleChange} />
                   <EditableField label="Parentesco" value={(e as any).emergencia_parentesco} field="emergencia_parentesco" editing={isEditing("emergencia")} onChange={handleChange} />
@@ -339,7 +345,7 @@ export function EmpleadoFicha({ empleado: initialEmpleado, foto, onBack, onEmple
             {esChofer && (
               <div>
                 <SectionHeading title="Licencia de manejo" editing={isEditing("licencia")} onEdit={() => startEdit("licencia")} onSave={handleSave} onCancel={cancelEdit} saving={saving} />
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-5 gap-y-4">
                   <EditableField label="Número" value={e.licencia_numero} field="licencia_numero" mono editing={isEditing("licencia")} onChange={handleChange} />
                   <EditableField label="Tipo" value={e.licencia_tipo} field="licencia_tipo" type="select" options={LICENCIA_TIPOS} editing={isEditing("licencia")} onChange={handleChange} />
                   <EditableField label="Vencimiento" value={e.licencia_vencimiento} field="licencia_vencimiento" type="date" editing={isEditing("licencia")} onChange={handleChange} />
@@ -351,7 +357,7 @@ export function EmpleadoFicha({ empleado: initialEmpleado, foto, onBack, onEmple
             {/* Bancarios */}
             <div>
               <SectionHeading title="Datos bancarios" editing={isEditing("bancarios")} onEdit={() => startEdit("bancarios")} onSave={handleSave} onCancel={cancelEdit} saving={saving} />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4">
                 <EditableField label="Cuenta bancaria" value={e.cuenta_bancaria} field="cuenta_bancaria" mono editing={isEditing("bancarios")} onChange={handleChange} />
                 <EditableField label="CLABE interbancaria" value={e.clabe_interbancaria} field="clabe_interbancaria" mono editing={isEditing("bancarios")} onChange={handleChange} />
               </div>
@@ -367,7 +373,7 @@ export function EmpleadoFicha({ empleado: initialEmpleado, foto, onBack, onEmple
                 }
                 handleSave();
               }} onCancel={cancelEdit} saving={saving} />
-              <div className="flex gap-2 mb-3">
+              <div className="flex gap-1.5 mb-3">
                 {["lun", "mar", "mie", "jue", "vie", "sab", "dom"].map(d => {
                   const active = isEditing("laborales")
                     ? (changes.dias_laborales || diasLab).includes(d)
@@ -383,10 +389,10 @@ export function EmpleadoFicha({ empleado: initialEmpleado, foto, onBack, onEmple
                         const next = active ? current.filter((x: string) => x !== d) : [...current, d];
                         setChanges(prev => ({ ...prev, dias_laborales: next }));
                       }}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                      className={`px-3.5 py-1.5 rounded-full text-[12px] font-medium transition-colors ${
                         active
-                          ? "bg-stone-800 text-white"
-                          : "border border-dashed border-stone-300 text-stone-300"
+                          ? "bg-[#1a1a1f] text-white"
+                          : "border border-dashed border-[#eae8e4] text-[#a8a8ae]"
                       } ${isEditing("laborales") ? "cursor-pointer hover:opacity-80" : ""}`}
                     >
                       {d.charAt(0).toUpperCase() + d.slice(1)}
@@ -394,25 +400,25 @@ export function EmpleadoFicha({ empleado: initialEmpleado, foto, onBack, onEmple
                   );
                 })}
               </div>
-              <p className="text-xs text-stone-400">Horario de entrada: antes de las 8:30 AM</p>
+              <p className="text-[12px] text-[#a8a8ae]">Horario de entrada: antes de las 8:30 AM</p>
             </div>
           </TabsContent>
 
           {/* TAB ASISTENCIA */}
-          <TabsContent value="asistencia" className="space-y-8">
+          <TabsContent value="asistencia" className="space-y-7">
             <div>
-              <div className="flex items-center justify-between pb-3 mb-5 border-b border-stone-100">
-                <h3 className="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-400">Semana actual</h3>
+              <div className="flex items-center justify-between pb-2.5 mb-4 border-b border-[#f4f2ef]">
+                <h3 className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#a8a8ae]">Semana actual</h3>
               </div>
               <div className="flex gap-3 mb-6">
                 {asistDias.map((d, i) => (
-                  <div key={i} className="flex flex-col items-center w-14">
-                    <span className="text-[10px] text-stone-400 font-medium mb-1.5">{d.label}</span>
-                    <div className={`w-12 h-12 rounded-lg border-2 flex items-center justify-center ${bgMap[d.status]}`}>
+                  <div key={i} className="flex flex-col items-center w-[56px]">
+                    <span className="text-[10px] text-[#a8a8ae] font-medium mb-1.5">{d.label}</span>
+                    <div className={`w-[44px] h-[44px] rounded-lg border-2 flex items-center justify-center ${bgMap[d.status]}`}>
                       {iconMap[d.status]}
                     </div>
                     {d.hora && (
-                      <span className={`text-[10px] mt-1.5 tabular-nums ${d.status === "retardo" ? "text-amber-600 font-medium" : "text-stone-400"}`}>
+                      <span className={`text-[10px] mt-1.5 tabular-nums ${d.status === "retardo" ? "text-amber-600 font-medium" : "text-[#a8a8ae]"}`}>
                         {timeToAMPM(d.hora)}
                       </span>
                     )}
@@ -421,13 +427,13 @@ export function EmpleadoFicha({ empleado: initialEmpleado, foto, onBack, onEmple
               </div>
 
               {premioSemanal > 0 && (
-                <div className={`mt-6 p-5 rounded-xl border bg-white flex items-center gap-5 ${premioGanado > 0 ? "border-emerald-200" : "border-red-200"}`}>
-                  <Trophy className={`h-10 w-10 ${premioGanado > 0 ? "text-emerald-500" : "text-red-400"}`} />
+                <div className={`mt-6 p-5 rounded-xl border bg-white flex items-center gap-5 ${premioGanado > 0 ? "border-[#a7f3d0]" : "border-[#fca5a5]"}`}>
+                  <Trophy className={`h-11 w-11 ${premioGanado > 0 ? "text-emerald-500" : "text-red-400"}`} />
                   <div>
-                    <p className={`font-serif text-3xl font-bold tabular-nums ${premioGanado > 0 ? "text-emerald-700" : "text-red-600"}`}>
+                    <p className={`font-serif text-[28px] font-bold tabular-nums ${premioGanado > 0 ? "text-emerald-700" : "text-red-600"}`}>
                       {fmt$(premioGanado)}
                     </p>
-                    <p className="text-sm text-stone-500 mt-1">
+                    <p className="text-[13px] text-[#78787e] mt-1">
                       {premioGanado > 0 ? "Premio de asistencia ganado" : `Premio perdido — ${motivo}`}
                     </p>
                   </div>
@@ -441,26 +447,26 @@ export function EmpleadoFicha({ empleado: initialEmpleado, foto, onBack, onEmple
           </TabsContent>
 
           <TabsContent value="nomina" className="space-y-5">
-            <div className="flex items-center justify-between pb-3 mb-5 border-b border-stone-100">
-              <h3 className="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-400">Historial de sueldo</h3>
+            <div className="flex items-center justify-between pb-2.5 mb-4 border-b border-[#f4f2ef]">
+              <h3 className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#a8a8ae]">Historial de sueldo</h3>
             </div>
-            <div className="relative pl-5 border-l-2 border-stone-200 space-y-6">
+            <div className="relative pl-5 ml-1.5 border-l-2 border-[#eae8e4] space-y-6">
               {e.sueldo_bruto && (
                 <div className="relative">
-                  <div className="absolute -left-[1.625rem] w-3 h-3 rounded-full bg-[#c41e3a] ring-4 ring-red-50" />
-                  <p className="font-serif text-xl font-semibold text-stone-900 tabular-nums">{fmt$(e.sueldo_bruto)}</p>
-                  <p className="text-xs text-stone-400">Sueldo actual</p>
+                  <div className="absolute -left-[1.625rem] w-3 h-3 rounded-full bg-[#c41e3a] ring-4 ring-[#fde8ec]" />
+                  <p className="font-serif text-[20px] font-semibold text-[#1a1a1f] tabular-nums">{fmt$(e.sueldo_bruto)}</p>
+                  <p className="text-[11px] text-[#a8a8ae]">Sueldo actual</p>
                 </div>
               )}
               {sueldoHist.map((h, i) => (
                 <div key={i} className="relative">
-                  <div className="absolute -left-[1.625rem] w-3 h-3 rounded-full bg-stone-300" />
-                  <p className="text-sm tabular-nums text-stone-600">{fmt$(h.sueldo_anterior)} → {fmt$(h.sueldo_nuevo)}</p>
-                  <p className="text-xs text-stone-400">{h.fecha_inicio?.split("-").reverse().join("/")}</p>
+                  <div className="absolute -left-[1.625rem] w-3 h-3 rounded-full bg-[#a8a8ae]" />
+                  <p className="font-serif text-[16px] tabular-nums text-[#78787e]">{fmt$(h.sueldo_anterior)} → {fmt$(h.sueldo_nuevo)}</p>
+                  <p className="text-[11px] text-[#a8a8ae]">{h.fecha_inicio?.split("-").reverse().join("/")}</p>
                 </div>
               ))}
               {!e.sueldo_bruto && sueldoHist.length === 0 && (
-                <p className="text-sm italic text-stone-400">Sin historial de sueldo</p>
+                <p className="text-[13px] italic text-[#a8a8ae]">Sin historial de sueldo</p>
               )}
             </div>
           </TabsContent>
