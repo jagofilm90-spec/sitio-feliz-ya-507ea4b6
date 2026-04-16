@@ -130,7 +130,7 @@ export function AsistenciaStats() {
         label="Presentes hoy"
         value={`${stats.presentesHoy} de ${stats.totalEmpleados}`}
         icon={<UserCheck className="h-4 w-4" />}
-        meta={stats.sinCheck > 0 ? <span className="text-crimson-500">{stats.sinCheck} sin check a las {stats.horaActual}</span> : "Todos checaron"}
+        meta={stats.sinCheck > 0 ? <span className="text-crimson-500">{stats.sinCheck} sin check</span> : "Todos checaron"}
       />
       <StatCard
         label="Retardos semana"

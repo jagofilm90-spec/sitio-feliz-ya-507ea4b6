@@ -124,10 +124,24 @@ export function AsistenciaView() {
     });
   }, [selectedEmpleado, registros, manualesSemana]);
 
+  const HORA_LIMITE_MINS = 8 * 60 + 30;
+  const timeToMins = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
   const empsZk = empleados.filter(e => mappedIds.has(e.id));
   const presCount = empsZk.filter(e => datosHoy.has(e.id)).length;
-  const getStatus = (e: Empleado) => { const d = datosHoy.get(e.id); if (!d) return (cierreMotivo || horaActual < 9) ? "no_llegado" : "ausente"; return d.salida ? "salio" : "trabajando"; };
-  const sCfg: Record<string, { label: string; cls: string }> = { trabajando: { label: "Trabajando", cls: "bg-green-100 text-green-700 border-green-300" }, salio: { label: "Salió", cls: "bg-blue-100 text-blue-700 border-blue-300" }, no_llegado: { label: "No ha llegado", cls: "bg-gray-100 text-gray-600 border-gray-300" }, ausente: { label: "Ausente", cls: "bg-red-100 text-red-700 border-red-300" } };
+  const getStatus = (e: Empleado) => {
+    const d = datosHoy.get(e.id);
+    if (!d) return (cierreMotivo || horaActual < 9) ? "no_llegado" : "ausente";
+    if (d.salida) return "salio";
+    if (d.entrada && timeToMins(d.entrada) > HORA_LIMITE_MINS) return "retardo";
+    return "trabajando";
+  };
+  const sCfg: Record<string, { label: string; cls: string }> = {
+    trabajando: { label: "Trabajando", cls: "bg-green-100 text-green-700 border-green-300" },
+    retardo: { label: "Retardo", cls: "bg-amber-100 text-amber-700 border-amber-300" },
+    salio: { label: "Salió", cls: "bg-blue-100 text-blue-700 border-blue-300" },
+    no_llegado: { label: "No ha llegado", cls: "bg-gray-100 text-gray-600 border-gray-300" },
+    ausente: { label: "Ausente", cls: "bg-red-100 text-red-700 border-red-300" },
+  };
 
   const openManualDialog = (emp: Empleado, e: React.MouseEvent) => {
     e.stopPropagation();
