@@ -20,6 +20,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import Layout from "@/components/Layout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmpleadosStats } from "@/components/empleados/EmpleadosStats";
+import { EmpleadoWizard } from "@/components/empleados/EmpleadoWizard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -199,6 +200,7 @@ const Empleados = () => {
   const [vacacionesEmpleado, setVacacionesEmpleado] = useState<Empleado | null>(null);
   const [cardEmpleado, setCardEmpleado] = useState<Empleado | null>(null);
   const [fichaEmpleado, setFichaEmpleado] = useState<Empleado | null>(null);
+  const [showWizard, setShowWizard] = useState(false);
   const [volverATarjeta, setVolverATarjeta] = useState<Empleado | null>(null);
   const [addendumEmpleado, setAddendumEmpleado] = useState<Empleado | null>(null);
   const [pdfPreviewData, setPdfPreviewData] = useState<{
@@ -1398,6 +1400,18 @@ const Empleados = () => {
     return labels[tipo];
   };
 
+  // Desktop wizard view
+  if (showWizard && !isMobile) {
+    return (
+      <Layout>
+        <EmpleadoWizard
+          onBack={() => setShowWizard(false)}
+          onCreated={() => { setShowWizard(false); loadEmpleados(); }}
+        />
+      </Layout>
+    );
+  }
+
   // Desktop ficha view
   if (fichaEmpleado && !isMobile) {
     return (
@@ -1424,7 +1438,7 @@ const Empleados = () => {
           titleAccent="empleados."
           lead={`${empleados.filter(e => e.activo).length} empleados activos en ALMASA.`}
           actions={
-            <Button onClick={() => { resetForm(); setIsDialogOpen(true); }}>
+            <Button onClick={() => { isMobile ? (resetForm(), setIsDialogOpen(true)) : setShowWizard(true); }}>
               <UserPlus className="h-4 w-4 mr-2" />
               Nuevo empleado
             </Button>
