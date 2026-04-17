@@ -3,12 +3,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Truck, Check, X, AlertTriangle, Trophy, Save } from "lucide-react";
+import { ArrowLeft, Truck, Check, X, AlertTriangle, Trophy, Save, FileCheck, FilePlus } from "lucide-react";
 import { format, startOfWeek, addDays, isAfter } from "date-fns";
 import { toast } from "sonner";
 import { DocumentosChecklist } from "./DocumentosChecklist";
 import { ActasAdministrativas } from "./ActasAdministrativas";
 import { VacacionesEmpleado } from "./VacacionesEmpleado";
+import { ExpedienteDigital } from "./ExpedienteDigital";
+import { FirmaContratoFlow } from "./FirmaContratoFlow";
+import { FirmaAddendumFlow } from "./FirmaAddendumFlow";
+import { ProcesoBaja } from "./ProcesoBaja";
 import { useUserRoles } from "@/hooks/useUserRoles";
 
 interface Empleado {
@@ -29,6 +33,7 @@ interface Props {
   foto?: string;
   onBack: () => void;
   onEmpleadoUpdated?: (updated: Partial<Empleado>) => void;
+  onBajaCompleted?: () => void;
 }
 
 type SeccionEditable = "personales" | "emergencia" | "licencia" | "bancarios" | "laborales" | null;
@@ -117,9 +122,19 @@ function SectionHeading({ title, editing, onEdit, onSave, onCancel, saving }: {
 
 // ── Main component ──
 
-export function EmpleadoFicha({ empleado: initialEmpleado, foto, onBack, onEmpleadoUpdated }: Props) {
+const EMPRESA = {
+  representante_legal: "JOSE ANTONIO GOMEZ ORTEGA",
+  razon_social: "ABARROTES LA MANITA, S.A. DE C.V.",
+  rfc: "AMA 700701GI8",
+  domicilio: "MELCHOR OCAMPO 59, MAGDALENA MIXIHUCA, VENUSTIANO CARRANZA, 15850, CIUDAD DE MEXICO",
+};
+
+export function EmpleadoFicha({ empleado: initialEmpleado, foto, onBack, onEmpleadoUpdated, onBajaCompleted }: Props) {
   const [e, setE] = useState(initialEmpleado);
   const { isAdmin } = useUserRoles();
+  const [showFirma, setShowFirma] = useState(false);
+  const [showBaja, setShowBaja] = useState(false);
+  const [showAddendum, setShowAddendum] = useState(false);
   const esChofer = e.puesto.toLowerCase() === "chofer";
   const diasLab: string[] = (e as any).dias_laborales || ["lun", "mar", "mie", "jue", "vie", "sab"];
 
@@ -243,9 +258,9 @@ export function EmpleadoFicha({ empleado: initialEmpleado, foto, onBack, onEmple
   const isEditing = (s: SeccionEditable) => editando === s;
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-[calc(100vh-60px)]">
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-3.5rem)] -mx-6 sm:-mx-8 lg:-mx-12 -mt-8 lg:-mt-10 -mb-8 lg:-mb-10">
       {/* ── Sidebar ── */}
-      <div className="w-full lg:w-[300px] shrink-0 bg-gradient-to-b from-[#f8f6f3] to-[#f0ece7] border-b lg:border-b-0 lg:border-r border-[#eae8e4] p-6">
+      <div className="w-full lg:w-[300px] shrink-0 bg-gradient-to-b from-[#f8f6f3] to-[#f0ece7] border-b lg:border-b-0 lg:border-r border-[#eae8e4] p-6 overflow-y-auto">
         <button onClick={onBack} className="flex items-center gap-1.5 text-[#78787e] hover:text-[#1a1a1f] text-[12px] cursor-pointer transition-colors mb-6">
           <ArrowLeft className="h-4 w-4" /> Volver a lista
         </button>
@@ -294,10 +309,17 @@ export function EmpleadoFicha({ empleado: initialEmpleado, foto, onBack, onEmple
             )}
           </div>
         )}
+
+        {/* Dar de baja (admin only) */}
+        {isAdmin && e.activo && (
+          <button onClick={() => setShowBaja(true)} className="w-full mt-6 text-[12px] text-[#c41e3a] border border-[#fde8ec] rounded-lg px-3 py-2 hover:bg-[#fde8ec] transition-colors">
+            Dar de baja
+          </button>
+        )}
       </div>
 
       {/* ── Main area ── */}
-      <div className="flex-1 min-w-0 p-7">
+      <div className="flex-1 min-w-0 p-7 overflow-y-auto">
         <Tabs defaultValue="general">
           <TabsList className="bg-transparent border-b border-[#eae8e4] rounded-none p-0 h-auto mb-7">
             <TabsTrigger value="general" className={tabClass}>General</TabsTrigger>
@@ -443,8 +465,49 @@ export function EmpleadoFicha({ empleado: initialEmpleado, foto, onBack, onEmple
             </div>
           </TabsContent>
 
-          <TabsContent value="documentos">
-            <DocumentosChecklist empleadoId={e.id} empleadoNombre={e.nombre_completo} />
+          <TabsContent value="documentos" className="space-y-7">
+            {/* Estado del contrato */}
+            <div>
+              <div className="flex items-center justify-between pb-2.5 mb-4 border-b border-[#f4f2ef]">
+                <h3 className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#a8a8ae]">Estado del contrato</h3>
+              </div>
+              {e.contrato_firmado_fecha ? (
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="text-[11px] px-2.5 py-0.5 rounded-full font-medium bg-[#e8f5ee] text-[#1a7a4c]">
+                    <FileCheck className="h-3 w-3 inline mr-1" />Contrato vigente
+                  </span>
+                  <span className="text-[12px] text-[#78787e]">Firmado {e.contrato_firmado_fecha.split("-").reverse().join("/")}</span>
+                  {isAdmin && (
+                    <button onClick={() => setShowAddendum(true)} className="text-[11px] text-[#c41e3a] font-medium hover:underline ml-auto">
+                      <FilePlus className="h-3 w-3 inline mr-1" />Generar Addendum
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] px-2.5 py-0.5 rounded-full font-medium bg-[#fde8ec] text-[#c41e3a]">Sin contrato</span>
+                  <button onClick={() => setShowFirma(true)} className="text-[12px] bg-[#c41e3a] hover:bg-[#a31830] text-white px-3 py-1.5 rounded-md font-medium">
+                    Firmar Contrato
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Expediente digital */}
+            <div>
+              <div className="flex items-center justify-between pb-2.5 mb-4 border-b border-[#f4f2ef]">
+                <h3 className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#a8a8ae]">Expediente digital</h3>
+              </div>
+              <ExpedienteDigital empleadoId={e.id} isAdmin={isAdmin} />
+            </div>
+
+            {/* Checklist de documentos */}
+            <div>
+              <div className="flex items-center justify-between pb-2.5 mb-4 border-b border-[#f4f2ef]">
+                <h3 className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#a8a8ae]">Checklist de documentos</h3>
+              </div>
+              <DocumentosChecklist empleadoId={e.id} empleadoNombre={e.nombre_completo} />
+            </div>
           </TabsContent>
 
           <TabsContent value="nomina" className="space-y-5">
@@ -481,6 +544,48 @@ export function EmpleadoFicha({ empleado: initialEmpleado, foto, onBack, onEmple
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* ── Dialogs ── */}
+      {showFirma && (
+        <FirmaContratoFlow
+          open={showFirma}
+          onClose={() => setShowFirma(false)}
+          onSigned={() => {
+            setShowFirma(false);
+            setE(prev => ({ ...prev, contrato_firmado_fecha: new Date().toISOString().split("T")[0] }));
+            onEmpleadoUpdated?.({ contrato_firmado_fecha: new Date().toISOString().split("T")[0] });
+          }}
+          empleado={{
+            id: e.id, nombre_completo: e.nombre_completo, rfc: e.rfc || "", curp: e.curp || "",
+            puesto: e.puesto, sueldo_bruto: e.sueldo_bruto || 0, fecha_ingreso: e.fecha_ingreso,
+            email: e.email || undefined, direccion: undefined,
+            beneficiario: e.beneficiario || undefined,
+            premio_asistencia_semanal: e.premio_asistencia_semanal || undefined,
+          }}
+          empresa={EMPRESA}
+        />
+      )}
+
+      {showAddendum && sueldoHist.length > 0 && (
+        <FirmaAddendumFlow
+          empleado={{ id: e.id, nombre_completo: e.nombre_completo, puesto: e.puesto, fecha_ingreso: e.fecha_ingreso, email: e.email || undefined }}
+          historial={{
+            sueldo_anterior: sueldoHist[0].sueldo_anterior,
+            sueldo_nuevo: sueldoHist[0].sueldo_nuevo,
+          }}
+          onClose={() => setShowAddendum(false)}
+          onSigned={() => setShowAddendum(false)}
+        />
+      )}
+
+      {showBaja && (
+        <ProcesoBaja
+          empleado={{ id: e.id, nombre_completo: e.nombre_completo, puesto: e.puesto, user_id: (e as any).user_id || null, fecha_ingreso: e.fecha_ingreso }}
+          open={showBaja}
+          onClose={() => setShowBaja(false)}
+          onCompleted={() => { setShowBaja(false); onBajaCompleted?.(); }}
+        />
+      )}
     </div>
   );
 }

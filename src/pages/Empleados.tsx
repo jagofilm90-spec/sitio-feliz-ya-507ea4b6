@@ -1424,6 +1424,7 @@ const Empleados = () => {
             setFichaEmpleado(prev => prev ? { ...prev, ...updates } as Empleado : null);
             loadEmpleados();
           }}
+          onBajaCompleted={() => { setFichaEmpleado(null); loadEmpleados(); }}
         />
       </Layout>
     );
