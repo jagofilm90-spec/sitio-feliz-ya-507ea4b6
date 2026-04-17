@@ -2324,7 +2324,7 @@ const Empleados = () => {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleEdit(empleado)}
+                                  onClick={() => isMobile ? handleEdit(empleado) : setFichaEmpleado(empleado)}
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
@@ -2600,7 +2600,7 @@ const Empleados = () => {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleEdit(empleado)}
+                                  onClick={() => isMobile ? handleEdit(empleado) : setFichaEmpleado(empleado)}
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
@@ -2875,7 +2875,7 @@ const Empleados = () => {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleEdit(empleado)}
+                                  onClick={() => isMobile ? handleEdit(empleado) : setFichaEmpleado(empleado)}
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>

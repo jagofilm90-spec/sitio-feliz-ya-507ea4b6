@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Truck, Check, X, AlertTriangle, Trophy, Save, FileCheck, FilePlus } from "lucide-react";
+import { ArrowLeft, Truck, Check, X, AlertTriangle, Trophy, Save, FileCheck, FilePlus, Camera } from "lucide-react";
+import { FotoCropDialog } from "./FotoCropDialog";
 import { format, startOfWeek, addDays, isAfter } from "date-fns";
 import { toast } from "sonner";
 import { DocumentosChecklist } from "./DocumentosChecklist";
@@ -36,7 +37,7 @@ interface Props {
   onBajaCompleted?: () => void;
 }
 
-type SeccionEditable = "personales" | "emergencia" | "licencia" | "bancarios" | "laborales" | null;
+type SeccionEditable = "personales" | "contacto" | "emergencia" | "laboral" | "licencia" | "bancarios" | "laborales" | null;
 
 const colors = ["#E24B4A", "#D85A30", "#BA7517", "#639922", "#1D9E75", "#378ADD", "#7F77DD", "#D4537E"];
 const getColor = (n: string) => colors[n.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % colors.length];
@@ -135,7 +136,10 @@ export function EmpleadoFicha({ empleado: initialEmpleado, foto, onBack, onEmple
   const [showFirma, setShowFirma] = useState(false);
   const [showBaja, setShowBaja] = useState(false);
   const [showAddendum, setShowAddendum] = useState(false);
+  const [cropUrl, setCropUrl] = useState<string | null>(null);
+  const [localFoto, setLocalFoto] = useState(foto);
   const esChofer = e.puesto.toLowerCase() === "chofer";
+  const manejaVehiculo = ["Chofer", "Vendedor"].includes(e.puesto);
   const diasLab: string[] = (e as any).dias_laborales || ["lun", "mar", "mie", "jue", "vie", "sab"];
 
   const [editando, setEditando] = useState<SeccionEditable>(null);
@@ -162,6 +166,15 @@ export function EmpleadoFicha({ empleado: initialEmpleado, foto, onBack, onEmple
       }
       if (updates.numero_dependientes !== undefined) {
         updates.numero_dependientes = updates.numero_dependientes ? parseInt(updates.numero_dependientes) : null;
+      }
+      if (updates.sueldo_bruto !== undefined) {
+        updates.sueldo_bruto = updates.sueldo_bruto ? parseFloat(updates.sueldo_bruto) : null;
+      }
+      if (updates.premio_asistencia_semanal !== undefined) {
+        updates.premio_asistencia_semanal = updates.premio_asistencia_semanal ? parseFloat(updates.premio_asistencia_semanal) : null;
+      }
+      if (updates.porcentaje_comision !== undefined) {
+        updates.porcentaje_comision = updates.porcentaje_comision ? parseFloat(updates.porcentaje_comision) : null;
       }
 
       const { error: err } = await supabase.from("empleados").update(updates as any).eq("id", e.id);
@@ -266,20 +279,30 @@ export function EmpleadoFicha({ empleado: initialEmpleado, foto, onBack, onEmple
         </button>
 
         <div className="flex flex-col items-center text-center mb-6">
-          {foto ? (
-            <img src={foto} className="w-[88px] h-[88px] rounded-full object-cover ring-[3px] ring-white shadow-lg" />
-          ) : (
-            <div className="w-[88px] h-[88px] rounded-full flex items-center justify-center text-white text-[26px] font-bold ring-[3px] ring-white shadow-lg" style={{ backgroundColor: getColor(e.nombre_completo) }}>
-              {getInitials(e.nombre_completo)}
+          <label className="relative group cursor-pointer">
+            <input type="file" accept="image/*" className="hidden" onChange={(ev) => {
+              const file = ev.target.files?.[0];
+              if (file) setCropUrl(URL.createObjectURL(file));
+              ev.target.value = "";
+            }} />
+            {localFoto ? (
+              <img src={localFoto} className="w-[88px] h-[88px] rounded-full object-cover ring-[3px] ring-white shadow-lg" />
+            ) : (
+              <div className="w-[88px] h-[88px] rounded-full flex items-center justify-center text-white text-[26px] font-bold ring-[3px] ring-white shadow-lg" style={{ backgroundColor: getColor(e.nombre_completo) }}>
+                {getInitials(e.nombre_completo)}
+              </div>
+            )}
+            <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <Camera className="h-5 w-5 text-white" />
             </div>
-          )}
+          </label>
           <h2 className="font-serif text-[22px] font-medium text-[#1a1a1f] mt-3.5">{e.nombre_completo}</h2>
           <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-[#a8a8ae] mt-1">{e.puesto}</p>
           <div className="flex flex-wrap gap-1.5 mt-3 justify-center">
             <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-medium ${e.activo ? "bg-[#e8f5ee] text-[#1a7a4c] border border-[#e8f5ee]" : "bg-stone-100 text-stone-500"}`}>
               {e.activo ? "Activo" : "Inactivo"}
             </span>
-            {esChofer && licStatus && (
+            {manejaVehiculo && licStatus && (
               <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-medium ${licStatus === "vencida" ? "bg-[#fde8ec] text-[#c41e3a] border border-[#fde8ec]" : licStatus === "por_vencer" ? "bg-amber-50 text-amber-700 border border-amber-50" : "bg-[#e8f5ee] text-[#1a7a4c] border border-[#e8f5ee]"}`}>
                 Lic. {licStatus === "vencida" ? "vencida" : licStatus === "por_vencer" ? "por vencer" : "vigente"}
               </span>
@@ -351,6 +374,17 @@ export function EmpleadoFicha({ empleado: initialEmpleado, foto, onBack, onEmple
               {error && editando === "personales" && <p className="text-xs text-red-600 mt-2">{error}</p>}
             </div>
 
+            {/* Contacto */}
+            <div>
+              <SectionHeading title="Contacto" editing={isEditing("contacto")} onEdit={() => startEdit("contacto")} onSave={handleSave} onCancel={cancelEdit} saving={saving} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-4">
+                <EditableField label="Teléfono" value={e.telefono} field="telefono" editing={isEditing("contacto")} onChange={handleChange} />
+                <EditableField label="Email" value={e.email} field="email" editing={isEditing("contacto")} onChange={handleChange} />
+                <EditableField label="Dirección" value={(e as any).direccion} field="direccion" editing={isEditing("contacto")} onChange={handleChange} />
+              </div>
+              {error && editando === "contacto" && <p className="text-xs text-red-600 mt-2">{error}</p>}
+            </div>
+
             {/* Contacto emergencia */}
             {(e.contacto_emergencia_nombre || isEditing("emergencia")) && (
               <div>
@@ -364,8 +398,22 @@ export function EmpleadoFicha({ empleado: initialEmpleado, foto, onBack, onEmple
               </div>
             )}
 
-            {/* Licencia (chofer) */}
-            {esChofer && (
+            {/* Datos laborales */}
+            <div>
+              <SectionHeading title="Datos laborales" editing={isEditing("laboral")} onEdit={() => startEdit("laboral")} onSave={handleSave} onCancel={cancelEdit} saving={saving} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-5 gap-y-4">
+                <EditableField label="Sueldo bruto mensual" value={isEditing("laboral") ? e.sueldo_bruto : e.sueldo_bruto != null ? fmt$(e.sueldo_bruto) : null} field="sueldo_bruto" type="number" editing={isEditing("laboral")} onChange={handleChange} />
+                <EditableField label="Periodo de pago" value={e.periodo_pago} field="periodo_pago" type="select" options={["semanal", "quincenal"]} editing={isEditing("laboral")} onChange={handleChange} />
+                <EditableField label="Premio asistencia semanal" value={isEditing("laboral") ? e.premio_asistencia_semanal : e.premio_asistencia_semanal != null ? fmt$(e.premio_asistencia_semanal) : null} field="premio_asistencia_semanal" type="number" editing={isEditing("laboral")} onChange={handleChange} />
+                {e.puesto === "Vendedor" && (
+                  <EditableField label="Porcentaje comisión" value={(e as any).porcentaje_comision} field="porcentaje_comision" type="number" editing={isEditing("laboral")} onChange={handleChange} />
+                )}
+              </div>
+              {error && editando === "laboral" && <p className="text-xs text-red-600 mt-2">{error}</p>}
+            </div>
+
+            {/* Licencia (chofer/vendedor) */}
+            {manejaVehiculo && (
               <div>
                 <SectionHeading title="Licencia de manejo" editing={isEditing("licencia")} onEdit={() => startEdit("licencia")} onSave={handleSave} onCancel={cancelEdit} saving={saving} />
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-5 gap-y-4">
@@ -546,6 +594,25 @@ export function EmpleadoFicha({ empleado: initialEmpleado, foto, onBack, onEmple
       </div>
 
       {/* ── Dialogs ── */}
+      {cropUrl && (
+        <FotoCropDialog
+          imageUrl={cropUrl}
+          open={!!cropUrl}
+          onClose={() => { URL.revokeObjectURL(cropUrl); setCropUrl(null); }}
+          onCropped={async (blob) => {
+            const fileName = `${e.id}-${Date.now()}.jpg`;
+            await supabase.storage.from("empleados-fotos").upload(fileName, blob, { contentType: "image/jpeg", upsert: true });
+            const { data: pub } = supabase.storage.from("empleados-fotos").getPublicUrl(fileName);
+            const newUrl = `${pub.publicUrl}?t=${Date.now()}`;
+            await supabase.from("empleados").update({ foto_url: pub.publicUrl } as any).eq("id", e.id);
+            setLocalFoto(newUrl);
+            onEmpleadoUpdated?.({ foto_url: pub.publicUrl } as any);
+            URL.revokeObjectURL(cropUrl);
+            setCropUrl(null);
+          }}
+        />
+      )}
+
       {showFirma && (
         <FirmaContratoFlow
           open={showFirma}
