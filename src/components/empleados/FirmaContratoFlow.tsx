@@ -137,8 +137,10 @@ function SignatureCanvas({
 
 export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }: FirmaContratoFlowProps) {
   const { toast } = useToast();
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<0 | 1 | 2 | 3>(0);
   const [loading, setLoading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [generatingPreview, setGeneratingPreview] = useState(false);
 
   // Track whether current canvas has been drawn on
   const [hasSignature, setHasSignature] = useState(false);
@@ -153,15 +155,37 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
   // One canvas ref per step
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Reset when opened
+  // Reset when opened + generate preview
   useEffect(() => {
     if (open) {
-      setStep(1);
+      setStep(0);
       setConsentimientoSi(true);
       setHasSignature(false);
       setFirmaEmpleadoImg("");
       setFirmaAdminImg("");
+      setPreviewUrl(null);
+      // Generate preview PDF (unsigned)
+      setGeneratingPreview(true);
+      generarContratoPDF({
+        empleado: {
+          nombre_completo: empleado.nombre_completo, rfc: empleado.rfc, curp: empleado.curp,
+          puesto: empleado.puesto, sueldo_bruto: empleado.sueldo_bruto,
+          premio_asistencia: empleado.premio_asistencia_semanal || null,
+          beneficiario: empleado.beneficiario || "Por designar",
+          fecha_ingreso: empleado.fecha_ingreso, fecha_contrato: hoyMexico(),
+          direccion: empleado.direccion || null,
+        },
+        empresa,
+        firmas: { empleado: "", admin: "" },
+        preview: true, // prevents auto-download
+      }).then(result => {
+        const url = URL.createObjectURL(result.pdfBlob);
+        setPreviewUrl(url);
+      }).catch(err => {
+        console.error("Error generating preview:", err);
+      }).finally(() => setGeneratingPreview(false));
     }
+    return () => { if (previewUrl) URL.revokeObjectURL(previewUrl); };
   }, [open]);
 
   const fetchExtras = useCallback(async () => {
@@ -402,6 +426,42 @@ export function FirmaContratoFlow({ open, onClose, onSigned, empleado, empresa }
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o && !loading) onClose(); }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        {step === 0 && (
+          <>
+            <DialogHeader>
+              <DialogTitle>Contrato de trabajo</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              Lee el contrato completo antes de firmar. El empleado debe estar de acuerdo con los términos.
+            </p>
+            <div className="mt-3">
+              {generatingPreview ? (
+                <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">Generando vista previa...</div>
+              ) : previewUrl ? (
+                <iframe src={previewUrl} className="w-full h-[500px] rounded-lg border" />
+              ) : (
+                <div className="flex items-center justify-center py-16 text-muted-foreground text-sm">No se pudo generar la vista previa.</div>
+              )}
+            </div>
+            <div className="flex justify-between mt-4">
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={onClose}>Cerrar sin firmar</Button>
+                {previewUrl && (
+                  <Button variant="outline" onClick={() => {
+                    const a = document.createElement("a");
+                    a.href = previewUrl;
+                    a.download = `Contrato_${empleado.nombre_completo.replace(/\s+/g, "_")}_preview.pdf`;
+                    a.click();
+                  }}>Descargar PDF</Button>
+                )}
+              </div>
+              <Button onClick={() => setStep(1)} disabled={generatingPreview}>
+                He leído y acepto — Proceder a firma
+              </Button>
+            </div>
+          </>
+        )}
+
         {step === 1 && (
           <>
             <DialogHeader>
