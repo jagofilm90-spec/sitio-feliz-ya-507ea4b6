@@ -429,8 +429,8 @@ const ClienteNuevoPedido = ({ clienteId, limiteCredito, saldoPendiente }: Client
       const totalesGuardar = calcularTotales();
       const pesoTotal = calcularPesoTotal();
       
-      const timestamp = Date.now().toString().slice(-6);
-      const folio = `PED-CLI-${timestamp}`;
+      const { data: folio, error: folioError } = await supabase.rpc("generar_folio_pedido");
+      if (folioError || !folio) throw new Error("Error generando folio: " + (folioError?.message || "sin respuesta"));
 
       const { data: pedido, error: pedidoError } = await supabase
         .from("pedidos")

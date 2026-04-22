@@ -656,7 +656,8 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       if (!user) throw new Error("No autenticado");
 
       const totales = calcularTotales();
-      const folio = `PED-V-${Date.now().toString().slice(-6)}`;
+      const { data: folio, error: folioError } = await supabase.rpc("generar_folio_pedido");
+      if (folioError || !folio) throw new Error("Error generando folio: " + (folioError?.message || "sin respuesta"));
 
       // Build price alerts (informational — never blocks the order)
       const alertasPrec: Array<{

@@ -95,6 +95,7 @@ export default function PedidoDetalleDialog({
   const [loading, setLoading] = useState(false);
   const isMobile = useIsMobile();
   const { isAdmin } = useUserRoles();
+  const canEditPrice = isAdmin && pedido != null && ["pendiente", "por_autorizar", "borrador"].includes(pedido.status);
 
   useEffect(() => {
     if (pedidoId && open) {
@@ -372,7 +373,7 @@ export default function PedidoDetalleDialog({
                             {presentacionDisplay}
                           </TableCell>
                           <TableCell className="text-right">
-                            {isAdmin ? (
+                            {canEditPrice ? (
                               <EditablePriceCell
                                 detalleId={detalle.id}
                                 price={detalle.precio_unitario}

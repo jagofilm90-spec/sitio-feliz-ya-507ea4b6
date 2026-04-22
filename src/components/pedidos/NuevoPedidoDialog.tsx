@@ -422,8 +422,8 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
 
       const totales = calcularTotales();
       const pesoTotal = calcularPesoTotal();
-      const timestamp = Date.now();
-      const folio = `PED-${timestamp}`;
+      const { data: folio, error: folioError } = await supabase.rpc("generar_folio_pedido");
+      if (folioError || !folio) throw new Error("Error generando folio: " + (folioError?.message || "sin respuesta"));
 
       // Resolve vendor + es_directo flag
       const esDirecto = selectedVendedorId === DIRECTO_VALUE;

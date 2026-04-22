@@ -20,7 +20,8 @@ import {
 import { redondear } from "@/lib/calculos";
 
 async function syncPedidoToSupabase(pedido: PedidoPendiente): Promise<void> {
-  const folio = `PED-V-${Date.now().toString().slice(-6)}`;
+  const { data: folio, error: folioError } = await supabase.rpc("generar_folio_pedido");
+  if (folioError || !folio) throw new Error("Error generando folio: " + (folioError?.message || "sin respuesta"));
 
   // Resolve vendedor_id: use stored value, fall back to current session
   let vendedorId = pedido.vendedor_id;

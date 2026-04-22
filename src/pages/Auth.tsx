@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { AlmasaLogoBoot } from "@/components/brand/AlmasaLogoBoot";
-import { BootTransition } from "@/components/brand/BootTransition";
 import { cn } from "@/lib/utils";
 
 const colors = ["#E24B4A", "#D85A30", "#BA7517", "#639922", "#1D9E75", "#378ADD", "#7F77DD", "#D4537E"];
@@ -23,7 +22,6 @@ const Auth = () => {
   const [showReset, setShowReset] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [animate, setAnimate] = useState(false);
-  const [booted, setBooted] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -139,12 +137,6 @@ const Auth = () => {
     "focus:border-b-[1.5px] focus:border-crimson-500 transition-colors duration-200",
     "font-['Inter_Tight',sans-serif]"
   );
-
-  if (!booted) {
-    return (
-      <BootTransition onComplete={() => setBooted(true)} />
-    );
-  }
 
   return (
     <div className="fixed inset-0 flex flex-col items-center justify-center bg-white p-4">
