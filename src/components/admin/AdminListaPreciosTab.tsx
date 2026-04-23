@@ -28,6 +28,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { PromocionBadge, ImpuestoBadges } from "@/components/precios/shared/ProductoBadges";
+import { ListaPreciosPdfButton } from "@/components/precios/shared/ListaPreciosPdfButton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -424,7 +425,7 @@ export const AdminListaPreciosTab = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2"><DollarSign className="h-5 w-5 text-primary" /><h2 className="text-base font-semibold">Análisis de Precios</h2></div>
             <div className="flex gap-1">
-              <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setPdfDialogOpen(true)}><Download className="h-3.5 w-3.5" /></Button>
+              <ListaPreciosPdfButton onClick={() => setPdfDialogOpen(true)} className="h-8 text-xs" />
               <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setBulkSheetOpen(true)}><ListChecks className="h-3.5 w-3.5 mr-1" /> En masa</Button>
             </div>
           </div>
@@ -485,7 +486,7 @@ export const AdminListaPreciosTab = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2"><DollarSign className="h-5 w-5 text-primary" /><h2 className="text-lg font-semibold">Análisis de Precios y Márgenes</h2></div>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => setPdfDialogOpen(true)}><Download className="h-4 w-4 mr-1" /> PDF</Button>
+            <ListaPreciosPdfButton onClick={() => setPdfDialogOpen(true)} />
             <Button size="sm" variant="outline" onClick={handleExportExcel}><Download className="h-4 w-4 mr-1" /> Excel</Button>
             <Button size="sm" variant="outline" onClick={() => setBulkSheetOpen(true)}><ListChecks className="h-4 w-4 mr-1" /> Actualizar en masa</Button>
           </div>

@@ -4,8 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PromocionBadge, ImpuestoBadges } from "@/components/precios/shared/ProductoBadges";
+import { ListaPreciosPdfButton } from "@/components/precios/shared/ListaPreciosPdfButton";
 import { Button } from "@/components/ui/button";
-import { Search, Package, Filter, Download, FileText, User, TrendingDown, TrendingUp, Shield } from "lucide-react";
+import { Search, Package, Filter, FileText, User, TrendingDown, TrendingUp, Shield } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { cn } from "@/lib/utils";
 import {
@@ -129,9 +130,7 @@ export function VendedorListaPreciosTab() {
               className="pl-8 h-9"
             />
           </div>
-          <Button size="sm" variant="outline" className="ml-2 h-9" onClick={() => setPdfDialogOpen(true)}>
-            <Download className="h-4 w-4 mr-1" /> PDF
-          </Button>
+          <ListaPreciosPdfButton onClick={() => setPdfDialogOpen(true)} className="ml-2 h-9" />
         </div>
         <div className="flex gap-2 flex-wrap">
           <Select value={categoriaFilter === "all" ? "todas" : categoriaFilter} onValueChange={(v) => setCategoriaFilter(v === "todas" ? "all" : v)}>

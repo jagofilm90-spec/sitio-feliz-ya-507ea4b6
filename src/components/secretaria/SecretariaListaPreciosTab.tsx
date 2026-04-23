@@ -20,10 +20,11 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, Pencil, Search, History, ChevronLeft, ChevronRight, DollarSign,
   TrendingUp, TrendingDown, Minus, Check, Package, Calculator, Percent,
-  Download, FileText, AlertTriangle, ChevronDown, ChevronUp, Clock,
+  FileText, AlertTriangle, ChevronDown, ChevronUp, Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PromocionBadge, ImpuestoBadges } from "@/components/precios/shared/ProductoBadges";
+import { ListaPreciosPdfButton } from "@/components/precios/shared/ListaPreciosPdfButton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { redondear } from "@/lib/calculos";
 import { useListaPrecios, getProductDisplayName, formatCurrency } from "@/hooks/useListaPrecios";
@@ -73,9 +74,7 @@ export const SecretariaListaPreciosTab = () => {
           title="Lista de precios."
           lead={`${filteredProductos.length} productos activos`}
           actions={
-            <Button size="sm" variant="outline" className="h-8" onClick={() => setPdfDialogOpen(true)}>
-              <Download className="h-3.5 w-3.5 mr-1" /> PDF
-            </Button>
+            <ListaPreciosPdfButton onClick={() => setPdfDialogOpen(true)} className="h-8" />
           }
         />
 
