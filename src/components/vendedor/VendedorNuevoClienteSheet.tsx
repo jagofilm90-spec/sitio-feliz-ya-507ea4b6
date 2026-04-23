@@ -356,10 +356,9 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
   };
 
   const generarCodigo = async (): Promise<string> => {
-    const { count } = await supabase
-      .from("clientes")
-      .select("id", { count: "exact", head: true });
-    return `CLI${((count || 0) + 1).toString().padStart(4, "0")}`;
+    const { data, error } = await supabase.rpc("generar_codigo_cliente");
+    if (error || !data) throw new Error("Error generando código de cliente: " + (error?.message || "sin respuesta"));
+    return data as string;
   };
 
   const construirDireccionNegocio = (): string => {
@@ -394,6 +393,20 @@ export function VendedorNuevoClienteSheet({ open, onOpenChange, onClienteCreado 
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) throw new Error("No autenticado");
+
+      // Verificar RFC duplicado (solo si se capturó RFC)
+      if (rfc.trim()) {
+        const { data: existente } = await supabase
+          .from("clientes")
+          .select("id, nombre")
+          .eq("rfc", rfc.toUpperCase().trim())
+          .maybeSingle();
+        if (existente) {
+          toast.error(`Este RFC ya está registrado para: ${existente.nombre}. Verifica con oficina.`);
+          setLoading(false);
+          return;
+        }
+      }
 
       const codigo = await generarCodigo();
       const preferencia = csfProcessed ? "siempre_factura" : "siempre_remision";
