@@ -9,7 +9,8 @@ import { formatCurrency, cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { calcularDesgloseImpuestos, redondear, obtenerPrecioUnitarioVenta } from "@/lib/calculos";
+import { redondear, obtenerPrecioUnitarioVenta } from "@/lib/calculos";
+import { calcularTotalesPedido } from "@/lib/pedidoUtils";
 import { captureDeviceInfo, getPublicIP } from "@/lib/auditoria-pedidos";
 
 import { formatDistanceToNow } from "date-fns";
@@ -615,15 +616,11 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
   // ==================== Calculations ====================
 
   const calcularTotales = (): TotalesCalculados => {
-    let subtotalNeto = 0, totalIva = 0, totalIeps = 0, pesoTotalKg = 0, totalUnidades = 0, ahorroDescuentos = 0;
-    lineas.forEach((l) => {
-      const resultado = calcularDesgloseImpuestos({
-        precio_con_impuestos: l.subtotal, aplica_iva: l.producto.aplica_iva,
-        aplica_ieps: l.producto.aplica_ieps, nombre_producto: l.producto.nombre
-      });
-      subtotalNeto += resultado.base;
-      totalIva += resultado.iva;
-      totalIeps += resultado.ieps;
+    const base = calcularTotalesPedido(
+      lineas.map(l => ({ subtotal: l.subtotal, aplica_iva: l.producto.aplica_iva, aplica_ieps: l.producto.aplica_ieps, nombre: l.producto.nombre }))
+    );
+    let pesoTotalKg = 0, totalUnidades = 0, ahorroDescuentos = 0;
+    lineas.forEach(l => {
       pesoTotalKg += l.cantidad * (l.producto.peso_kg || 0);
       totalUnidades += l.cantidad;
       if (l.descuento > 0) {
@@ -633,8 +630,7 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
       }
     });
     return {
-      subtotal: redondear(subtotalNeto), iva: redondear(totalIva), ieps: redondear(totalIeps),
-      impuestos: redondear(totalIva + totalIeps), total: redondear(subtotalNeto + totalIva + totalIeps),
+      ...base,
       pesoTotalKg: redondear(pesoTotalKg), totalUnidades,
       ahorroDescuentos: redondear(ahorroDescuentos),
       productosConIva: lineas.filter(l => l.producto.aplica_iva).length,

@@ -31,7 +31,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, Search, ShoppingCart, Building2, AlertTriangle, Gift, MapPin, User, CreditCard, Truck } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { calcularSubtotal, calcularDesgloseImpuestos, validarAntesDeGuardar, redondear, LineaPedido, obtenerPrecioUnitarioVenta } from "@/lib/calculos";
+import { calcularSubtotal, validarAntesDeGuardar, LineaPedido, obtenerPrecioUnitarioVenta } from "@/lib/calculos";
+import { calcularTotalesPedido } from "@/lib/pedidoUtils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getDisplayName } from "@/lib/productUtils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -355,30 +356,9 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
   // Validación antes de guardar
   const validacionPedido = detalles.length > 0 ? validarAntesDeGuardar(getLineasPedido()) : null;
 
-  const calcularTotales = () => {
-    let subtotalGeneral = 0;
-    let ivaTotal = 0;
-    let iepsTotal = 0;
-
-    detalles.forEach(d => {
-      const resultado = calcularDesgloseImpuestos({
-        precio_con_impuestos: d.subtotal,
-        aplica_iva: d.producto.aplica_iva,
-        aplica_ieps: d.producto.aplica_ieps,
-        nombre_producto: d.producto.nombre
-      });
-      subtotalGeneral += resultado.base;
-      ivaTotal += resultado.iva;
-      iepsTotal += resultado.ieps;
-    });
-
-    return {
-      subtotal: redondear(subtotalGeneral),
-      iva: redondear(ivaTotal),
-      ieps: redondear(iepsTotal),
-      total: redondear(subtotalGeneral + ivaTotal + iepsTotal),
-    };
-  };
+  const calcularTotales = () => calcularTotalesPedido(
+    detalles.map(d => ({ subtotal: d.subtotal, aplica_iva: d.producto.aplica_iva, aplica_ieps: d.producto.aplica_ieps, nombre: d.producto.nombre }))
+  );
 
   const calcularPesoTotal = () => {
     let pesoTotal = 0;

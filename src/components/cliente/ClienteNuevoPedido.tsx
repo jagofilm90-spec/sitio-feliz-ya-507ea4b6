@@ -25,7 +25,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatCurrency } from "@/lib/utils";
-import { calcularDesgloseImpuestos, redondear, validarAntesDeGuardar, LineaPedido, obtenerPrecioUnitarioVenta } from "@/lib/calculos";
+import { validarAntesDeGuardar, LineaPedido, obtenerPrecioUnitarioVenta } from "@/lib/calculos";
+import { calcularTotalesPedido } from "@/lib/pedidoUtils";
 import { format, addDays, isWeekend } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -321,31 +322,9 @@ const ClienteNuevoPedido = ({ clienteId, limiteCredito, saldoPendiente }: Client
     }));
   };
 
-  const calcularTotales = () => {
-    let subtotalNeto = 0;
-    let totalIva = 0;
-    let totalIeps = 0;
-
-    detalles.forEach((d) => {
-      const resultado = calcularDesgloseImpuestos({
-        precio_con_impuestos: d.subtotal,
-        aplica_iva: d.aplica_iva,
-        aplica_ieps: d.aplica_ieps,
-        nombre_producto: d.nombre
-      });
-      subtotalNeto += resultado.base;
-      totalIva += resultado.iva;
-      totalIeps += resultado.ieps;
-    });
-
-    return { 
-      subtotal: redondear(subtotalNeto), 
-      iva: redondear(totalIva),
-      ieps: redondear(totalIeps),
-      impuestos: redondear(totalIva + totalIeps), 
-      total: redondear(subtotalNeto + totalIva + totalIeps)
-    };
-  };
+  const calcularTotales = () => calcularTotalesPedido(
+    detalles.map(d => ({ subtotal: d.subtotal, aplica_iva: d.aplica_iva, aplica_ieps: d.aplica_ieps, nombre: d.nombre }))
+  );
 
   // Peso total: siempre cantidad (bultos) × presentacion (kg/bulto)
   const calcularPesoTotal = () => {
