@@ -28,7 +28,7 @@ import { PedidoHistorialCambios } from "./PedidoHistorialCambios";
 import { CREDITO_LABELS } from "@/lib/creditoUtils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PedidoDetalleProductCards } from "./PedidoDetalleProductCards";
-import { useUserRoles } from "@/hooks/useUserRoles";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface PedidoDetalleDialogProps {
   pedidoId: string | null;
@@ -94,8 +94,8 @@ export default function PedidoDetalleDialog({
   const [pedido, setPedido] = useState<PedidoDetalle | null>(null);
   const [loading, setLoading] = useState(false);
   const isMobile = useIsMobile();
-  const { isAdmin } = useUserRoles();
-  const canEditPrice = isAdmin && pedido != null && ["pendiente", "por_autorizar", "borrador"].includes(pedido.status);
+  const hasEditPriceRole = usePermissions('pedidos', 'edit_price');
+  const canEditPrice = hasEditPriceRole && pedido != null && ["pendiente", "por_autorizar", "borrador"].includes(pedido.status);
 
   useEffect(() => {
     if (pedidoId && open) {

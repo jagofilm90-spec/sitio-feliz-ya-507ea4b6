@@ -88,10 +88,8 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
   const [solicitandoAutorizacion, setSolicitandoAutorizacion] = useState(false);
   const [autorizando, setAutorizando] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [isAdminLocal, setIsAdminLocal] = useState(false);
   const [programarEntregasOpen, setProgramarEntregasOpen] = useState(false);
-  
-  // Hook para verificar rol admin (para borrar OCs de prueba)
+
   const { isAdmin } = useUserRoles();
   
   // Removed: convertirEntregasOpen, dividirEntregaOpen - rarely used functionality
@@ -217,12 +215,6 @@ const OrdenAccionesDialog = ({ open, onOpenChange, orden, onEdit }: OrdenAccione
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setCurrentUserId(user.id);
-        // Check if admin (for local use, but we also have useUserRoles hook)
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id);
-        setIsAdminLocal(roles?.some(r => r.role === 'admin') || false);
       }
     };
     fetchCurrentUser();

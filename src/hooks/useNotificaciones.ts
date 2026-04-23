@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useUserRoles } from "@/hooks/useUserRoles";
 
 interface ProductoCaducidad {
   id: string;
@@ -100,21 +101,7 @@ export const useNotificaciones = () => {
     totalCount: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    const checkAdmin = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id);
-        setIsAdmin(roles?.some(r => r.role === 'admin') || false);
-      }
-    };
-    checkAdmin();
-  }, []);
+  const { isAdmin, isSecretaria, isVendedor, isAlmacen, isGerenteAlmacen, hasAnyRole } = useUserRoles();
 
   const cargarNotificaciones = async () => {
     try {
@@ -168,14 +155,7 @@ export const useNotificaciones = () => {
 
   const cargarNotificacionesRechazo = async (): Promise<NotificacionGeneral[]> => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id);
-      const isAdminOrSecretaria = roles?.some(r => r.role === 'admin' || r.role === 'secretaria') || false;
-      const isVendedor = roles?.some(r => r.role === 'vendedor') || false;
+      const isAdminOrSecretaria = isAdmin || isSecretaria;
 
       if (!isAdminOrSecretaria && !isVendedor) return [];
 
@@ -223,13 +203,7 @@ export const useNotificaciones = () => {
     try {
       // Only load for admin and secretaria
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id);
-      const hasAccess = roles?.some(r => r.role === 'admin' || r.role === 'secretaria') || false;
-      if (!hasAccess) return [];
+      if (!isAdmin && !isSecretaria) return [];
 
       const { data, error } = await supabase
         .from("notificaciones")
@@ -495,11 +469,7 @@ export const useNotificaciones = () => {
 
   const cargarNotificacionesCaducidadPush = async (): Promise<NotificacionGeneral[]> => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
-      const hasAccess = roles?.some(r => ['admin', 'almacen', 'gerente_almacen'].includes(r.role as string)) || false;
-      if (!hasAccess) return [];
+      if (!isAdmin && !isAlmacen && !isGerenteAlmacen) return [];
 
       const { data, error } = await supabase
         .from("notificaciones")
@@ -515,11 +485,7 @@ export const useNotificaciones = () => {
 
   const cargarNotificacionesFumigacionPush = async (): Promise<NotificacionGeneral[]> => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
-      const hasAccess = roles?.some(r => ['admin', 'almacen', 'gerente_almacen'].includes(r.role as string)) || false;
-      if (!hasAccess) return [];
+      if (!isAdmin && !isAlmacen && !isGerenteAlmacen) return [];
 
       const { data, error } = await supabase
         .from("notificaciones")
@@ -535,11 +501,7 @@ export const useNotificaciones = () => {
 
   const cargarNotificacionesVendedorPrecios = async (): Promise<NotificacionGeneral[]> => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
-      const hasAccess = roles?.some(r => ['admin', 'secretaria', 'vendedor'].includes(r.role as string)) || false;
-      if (!hasAccess) return [];
+      if (!isAdmin && !isSecretaria && !isVendedor) return [];
 
       const { data, error } = await supabase
         .from("notificaciones")
@@ -555,11 +517,7 @@ export const useNotificaciones = () => {
 
   const cargarNotificacionesAdminPrecios = async (): Promise<NotificacionGeneral[]> => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
-      const hasAccess = roles?.some(r => r.role === 'admin') || false;
-      if (!hasAccess) return [];
+      if (!isAdmin) return [];
 
       const { data, error } = await supabase
         .from("notificaciones")
@@ -575,11 +533,7 @@ export const useNotificaciones = () => {
 
   const cargarNotificacionesProductoNuevo = async (): Promise<NotificacionGeneral[]> => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
-      const hasAccess = roles?.some(r => ['admin', 'secretaria', 'vendedor'].includes(r.role as string)) || false;
-      if (!hasAccess) return [];
+      if (!isAdmin && !isSecretaria && !isVendedor) return [];
 
       const { data, error } = await supabase
         .from("notificaciones")

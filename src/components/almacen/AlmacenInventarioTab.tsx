@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Search, Package, ArrowUpDown, SlidersHorizontal, Loader2, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useUserRoles } from "@/hooks/useUserRoles";
+import { usePermissions } from "@/hooks/usePermissions";
 import { getDisplayName } from "@/lib/productUtils";
 import { cn } from "@/lib/utils";
 import { getCaducidadBadge, getStockStatusBadge } from "@/components/inventario/shared/badges";
@@ -60,8 +60,7 @@ export const AlmacenInventarioTab = () => {
   const [notasAjuste, setNotasAjuste] = useState("");
   const [guardandoAjuste, setGuardandoAjuste] = useState(false);
   const { toast } = useToast();
-  const { isGerenteAlmacen, isAdmin } = useUserRoles();
-  const canAdjust = isGerenteAlmacen || isAdmin;
+  const canAdjust = usePermissions('inventario', 'adjust_stock');
   const [bodegaFiltro, setBodegaFiltro] = useState<string>("todas");
   const [bodegasDisponibles, setBodegasDisponibles] = useState<BodegaOption[]>([]);
 

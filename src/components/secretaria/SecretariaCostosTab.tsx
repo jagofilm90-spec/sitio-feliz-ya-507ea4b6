@@ -33,7 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useUserRoles } from "@/hooks/useUserRoles";
+import { usePermissions } from "@/hooks/usePermissions";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -92,7 +92,7 @@ interface HistorialCosto {
 }
 
 export const SecretariaCostosTab = () => {
-  const { isAdmin } = useUserRoles();
+  const canSeeCosts = usePermissions('productos', 'see_costs');
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("analisis");
   const [categoriaFilter, setCategoriaFilter] = useState<string>("todas");
@@ -411,7 +411,7 @@ export const SecretariaCostosTab = () => {
         <TabsList>
           <TabsTrigger value="analisis" className="gap-2">
             <Target className="h-4 w-4" />
-            {isAdmin ? "Análisis de Margen" : "Costos"}
+            {canSeeCosts ? "Análisis de Margen" : "Costos"}
           </TabsTrigger>
           <TabsTrigger value="historial" className="gap-2">
             <History className="h-4 w-4" />
@@ -430,11 +430,11 @@ export const SecretariaCostosTab = () => {
                       <TableHead className="w-20">Código</TableHead>
                       <TableHead>Producto</TableHead>
                       <TableHead className="text-right w-24">Últ. Costo</TableHead>
-                      {isAdmin && (
+                      {canSeeCosts && (
                         <TableHead className="text-right w-24 hidden md:table-cell">Costo Prom.</TableHead>
                       )}
                       <TableHead className="text-right w-24">Precio Lista</TableHead>
-                      {isAdmin && (
+                      {canSeeCosts && (
                         <>
                           <TableHead className="text-center w-20">Margen</TableHead>
                           <TableHead className="text-right w-24 hidden lg:table-cell">Piso Mín.</TableHead>
@@ -442,7 +442,7 @@ export const SecretariaCostosTab = () => {
                           <TableHead className="w-20"></TableHead>
                         </>
                       )}
-                      {!isAdmin && (
+                      {!canSeeCosts && (
                         <TableHead className="text-right w-20">Stock</TableHead>
                       )}
                     </TableRow>
@@ -462,7 +462,7 @@ export const SecretariaCostosTab = () => {
                           {/* Productos */}
                           {prods.map((producto) => {
                             // Solo calcular análisis si es admin
-                            const analisis = isAdmin ? analizarMargen({
+                            const analisis = canSeeCosts ? analizarMargen({
                               costo_promedio: producto.costo_promedio_ponderado || 0,
                               costo_ultimo: producto.ultimo_costo_compra || 0,
                               precio_venta: producto.precio_venta || 0,
@@ -470,7 +470,7 @@ export const SecretariaCostosTab = () => {
                             }) : null;
                             
                             // Color de fila solo para admin
-                            const rowClass = isAdmin && analisis 
+                            const rowClass = canSeeCosts && analisis 
                               ? analisis.estado_margen === 'perdida' 
                                 ? 'bg-red-50' 
                                 : analisis.estado_margen === 'critico'
@@ -495,7 +495,7 @@ export const SecretariaCostosTab = () => {
                                 </TableCell>
                                 
                                 {/* Columnas solo para Admin */}
-                                {isAdmin && analisis && (
+                                {canSeeCosts && analisis && (
                                   <>
                                     <TableCell className="py-1.5 px-2 text-right hidden md:table-cell">
                                       {producto.costo_promedio_ponderado > 0 ? (
@@ -566,7 +566,7 @@ export const SecretariaCostosTab = () => {
                                 )}
 
                                 {/* Columnas para Secretaria (vista simplificada) */}
-                                {!isAdmin && (
+                                {!canSeeCosts && (
                                   <>
                                     <TableCell className="py-1.5 px-2 text-right">
                                       <span className="text-xs font-bold">
@@ -587,7 +587,7 @@ export const SecretariaCostosTab = () => {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={isAdmin ? 9 : 5} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={canSeeCosts ? 9 : 5} className="text-center py-8 text-muted-foreground">
                           No se encontraron productos
                         </TableCell>
                       </TableRow>
@@ -599,7 +599,7 @@ export const SecretariaCostosTab = () => {
           </Card>
 
           {/* Leyenda - Solo visible para Admin */}
-          {isAdmin && (
+          {canSeeCosts && (
             <div className="flex flex-wrap gap-4 text-xs text-muted-foreground mt-2">
               <div className="flex items-center gap-1">
                 <div className="w-3 h-3 rounded bg-red-200" />
@@ -718,7 +718,7 @@ export const SecretariaCostosTab = () => {
       </Tabs>
 
       {/* Dialog: Editar Costo - Solo Admin */}
-      {isAdmin && (
+      {canSeeCosts && (
         <Dialog open={editDialog} onOpenChange={setEditDialog}>
           <DialogContent className="sm:max-w-[560px] !p-0 !gap-0 !rounded-2xl shadow-[0_20px_60px_-20px_rgba(15,14,13,0.25)]">
             <DialogHeader className="px-8 pt-8 pb-6">
@@ -797,7 +797,7 @@ export const SecretariaCostosTab = () => {
       )}
 
       {/* Dialog: Simulador de Precio - Solo Admin */}
-      {isAdmin && (
+      {canSeeCosts && (
         <Dialog open={simuladorDialog} onOpenChange={setSimuladorDialog}>
           <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md overflow-x-hidden">
             <DialogHeader>

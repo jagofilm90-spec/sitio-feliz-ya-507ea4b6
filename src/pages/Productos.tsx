@@ -38,7 +38,7 @@ import { NotificacionesSistema } from "@/components/NotificacionesSistema";
 import { UNIDADES_SAT, UNIDADES_PRODUCTO, UNIDADES_LEGACY, getDisplayName } from "@/lib/productUtils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ProductoCardMobile from "@/components/productos/ProductoCardMobile";
-import { useUserRoles } from "@/hooks/useUserRoles";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useCategorias } from "@/hooks/useCategorias";
 
 const formatCurrency = (value: number) =>
@@ -61,8 +61,7 @@ const Productos = () => {
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const { isAdmin, isSecretaria, isContadora } = useUserRoles();
-  const canSeeCosts = isAdmin || isSecretaria || isContadora;
+  const canSeeCosts = usePermissions('productos', 'see_costs');
   const { data: categoriasCanon } = useCategorias();
 
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
