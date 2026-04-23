@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { PromocionBadge, ImpuestoBadges } from "@/components/precios/shared/ProductoBadges";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -576,15 +577,13 @@ export const AdminListaPreciosTab = () => {
                       <TableCell className="py-1 px-1.5">
                         <div className="flex items-center gap-1 flex-wrap">
                           <span className="text-xs">{getProductDisplayName(producto)}</span>
-                          {producto.es_promocion && <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 shrink-0">PROMO</Badge>}
+                          <PromocionBadge es_promocion={producto.es_promocion} />
                           {producto.bloqueado_venta && <span className="text-[8px] text-red-600 shrink-0" title="Requiere autorización">🔒</span>}
                         </div>
                       </TableCell>
                       <TableCell className="py-1 px-1.5 text-center">
                         <div className="flex items-center justify-center gap-0.5">
-                          {producto.aplica_iva && <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-blue-300 text-blue-600">IVA</Badge>}
-                          {producto.aplica_ieps && <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-orange-300 text-orange-600">IEPS</Badge>}
-                          {!producto.aplica_iva && !producto.aplica_ieps && <span className="text-[9px] text-muted-foreground">—</span>}
+                          <ImpuestoBadges aplica_iva={producto.aplica_iva} aplica_ieps={producto.aplica_ieps} showDash />
                         </div>
                       </TableCell>
                       <TableCell className="py-1 px-1.5 text-right"><span className="text-xs font-medium text-muted-foreground">{analisis.costo_referencia > 0 ? formatCurrency(analisis.costo_referencia) : "-"}</span></TableCell>

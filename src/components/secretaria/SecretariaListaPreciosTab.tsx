@@ -23,7 +23,7 @@ import {
   Download, FileText, AlertTriangle, ChevronDown, ChevronUp, Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
+import { PromocionBadge, ImpuestoBadges } from "@/components/precios/shared/ProductoBadges";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { redondear } from "@/lib/calculos";
 import { useListaPrecios, getProductDisplayName, formatCurrency } from "@/hooks/useListaPrecios";
@@ -145,11 +145,7 @@ export const SecretariaListaPreciosTab = () => {
                         <TableCell className="py-1 px-2">
                           <div className="flex items-center gap-1 flex-wrap">
                             <span className="text-xs">{getProductDisplayName(producto)}</span>
-                            {producto.es_promocion && (
-                              <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 shrink-0">
-                                PROMO
-                              </Badge>
-                            )}
+                            <PromocionBadge es_promocion={producto.es_promocion} />
                             {producto.bloqueado_venta && (
                               <span className="text-[8px] text-red-600 shrink-0" title="Requiere autorización">🔒</span>
                             )}
@@ -160,12 +156,7 @@ export const SecretariaListaPreciosTab = () => {
                             <span className="font-semibold text-xs">
                               {formatCurrency(producto.precio_venta)}{producto.precio_por_kilo && '/kg'}
                             </span>
-                            {producto.aplica_iva && (
-                              <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-blue-300 text-blue-600">IVA</Badge>
-                            )}
-                            {producto.aplica_ieps && (
-                              <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-orange-300 text-orange-600">IEPS</Badge>
-                            )}
+                            <ImpuestoBadges aplica_iva={producto.aplica_iva} aplica_ieps={producto.aplica_ieps} />
                           </div>
                         </TableCell>
                         <TableCell className="py-1 px-2 text-right">
@@ -218,11 +209,7 @@ export const SecretariaListaPreciosTab = () => {
                     <div className="min-w-0 flex-1 pr-2">
                       <p className="text-sm leading-tight">
                         {getProductDisplayName(producto)}
-                        {producto.es_promocion && (
-                          <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 ml-1 shrink-0 inline-flex">
-                            PROMO
-                          </Badge>
-                        )}
+                        <PromocionBadge es_promocion={producto.es_promocion} inline />
                       </p>
                       <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">{producto.codigo}</p>
                     </div>

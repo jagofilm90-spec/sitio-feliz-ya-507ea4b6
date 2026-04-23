@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
+import { PromocionBadge, ImpuestoBadges } from "@/components/precios/shared/ProductoBadges";
 import { Button } from "@/components/ui/button";
 import { Search, Package, Filter, Download, FileText, User, TrendingDown, TrendingUp, Shield } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -247,11 +247,7 @@ export function VendedorListaPreciosTab() {
                           <TableCell className="py-1 px-2">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="text-xs">{getProductDisplayName(producto)}</span>
-                              {producto.es_promocion && (
-                                <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 shrink-0">
-                                  PROMO
-                                </Badge>
-                              )}
+                              <PromocionBadge es_promocion={producto.es_promocion} />
                               {producto.bloqueado_venta && (
                                 <span className="text-[8px] text-red-600 shrink-0" title="Requiere autorización para vender">🔒</span>
                               )}
@@ -260,12 +256,7 @@ export function VendedorListaPreciosTab() {
                           <TableCell className="py-1 px-2 text-right">
                             <div className="flex items-center justify-end gap-1">
                               <span className="font-semibold text-xs">{formatPrecio(producto)}</span>
-                              {producto.aplica_iva && (
-                                <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-blue-300 text-blue-600 shrink-0">IVA</Badge>
-                              )}
-                              {producto.aplica_ieps && (
-                                <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-orange-300 text-orange-600 shrink-0">IEPS</Badge>
-                              )}
+                              <ImpuestoBadges aplica_iva={producto.aplica_iva} aplica_ieps={producto.aplica_ieps} />
                             </div>
                           </TableCell>
                           <TableCell className="py-1 px-2 text-right">
@@ -331,11 +322,7 @@ export function VendedorListaPreciosTab() {
                       <div className="min-w-0 flex-1 pr-2">
                         <p className="text-sm leading-tight">
                           {getProductDisplayName(producto)}
-                          {producto.es_promocion && (
-                            <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4 bg-amber-100 text-amber-800 ml-1 shrink-0 inline-flex">
-                              PROMO
-                            </Badge>
-                          )}
+                          <PromocionBadge es_promocion={producto.es_promocion} inline />
                           {producto.bloqueado_venta && (
                             <span className="text-[8px] text-red-600 ml-1" title="Requiere autorización">🔒</span>
                           )}
@@ -347,12 +334,7 @@ export function VendedorListaPreciosTab() {
                       <div className="text-right shrink-0 flex flex-col items-end gap-0.5">
                         <p className="font-bold text-sm leading-tight">{formatPrecio(producto)}</p>
                         <div className="flex gap-0.5">
-                          {producto.aplica_iva && (
-                            <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-blue-300 text-blue-600">IVA</Badge>
-                          )}
-                          {producto.aplica_ieps && (
-                            <Badge variant="outline" className="text-[7px] px-1 py-0 h-3.5 border-orange-300 text-orange-600">IEPS</Badge>
-                          )}
+                          <ImpuestoBadges aplica_iva={producto.aplica_iva} aplica_ieps={producto.aplica_ieps} />
                         </div>
                         {tieneEspacio && (
                           <p className="text-[10px] text-emerald-600 font-medium">
