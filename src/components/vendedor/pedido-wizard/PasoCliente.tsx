@@ -260,16 +260,18 @@ export function PasoCliente({
         </div>
       )}
 
-      {/* Continue button */}
+      {/* Continue button — sticky at bottom */}
       {selectedCliente && canContinue && (
-        <Button
-          onClick={onNext}
-          size="lg"
-          className="w-full h-14 text-base font-semibold bg-crimson-500 hover:bg-crimson-600 text-white"
-        >
-          Continuar con {selectedCliente.nombre}
-          <ChevronRight className="h-5 w-5 ml-2" />
-        </Button>
+        <div className="sticky bottom-0 pt-3 pb-1 bg-white">
+          <Button
+            onClick={onNext}
+            size="lg"
+            className="w-full h-14 text-base font-semibold bg-crimson-500 hover:bg-crimson-600 text-white shadow-[0_-4px_12px_rgba(0,0,0,0.04)]"
+          >
+            Continuar con {selectedCliente.nombre}
+            <ChevronRight className="h-5 w-5 ml-2" />
+          </Button>
+        </div>
       )}
     </div>
   );

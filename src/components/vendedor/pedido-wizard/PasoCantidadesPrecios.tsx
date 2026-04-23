@@ -77,7 +77,7 @@ export function PasoCantidadesPrecios({
   const canContinue = lineas.length > 0 && !!terminoCredito;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Client bar */}
       <div className="flex items-center gap-2 px-3 py-2 bg-ink-50/80 border-b border-ink-100 text-sm shrink-0">
         <MapPin className="h-3.5 w-3.5 text-ink-500 shrink-0" />
@@ -176,8 +176,8 @@ export function PasoCantidadesPrecios({
         </div>
       </div>
 
-      {/* Floating bar */}
-      <div className="shrink-0 border-t border-ink-100 bg-white p-3">
+      {/* Sticky navigation bar */}
+      <div className="shrink-0 border-t border-ink-100 bg-white p-3 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
         <div className="flex items-center justify-between text-sm mb-2">
           <div className="flex items-center gap-3 text-ink-600">
             <span className="tabular-nums font-semibold">{formatCurrency(totales.total)}</span>

@@ -309,8 +309,8 @@ export function PasoProductosInline({
         )}
       </div>
 
-      {/* Floating bar */}
-      <div className="shrink-0 border-t border-ink-100 bg-white p-3 flex items-center gap-3">
+      {/* Sticky navigation bar */}
+      <div className="shrink-0 border-t border-ink-100 bg-white p-3 flex items-center gap-3 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
         <Button variant="outline" onClick={onBack} className="h-11 px-4">
           <ChevronLeft className="h-4 w-4 mr-1" />
           Atrás

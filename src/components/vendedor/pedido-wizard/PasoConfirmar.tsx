@@ -51,7 +51,7 @@ export function PasoConfirmar({
   const direccion = sucursal?.direccion || cliente?.direccion || cliente?.zona?.nombre || null;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 min-h-0">
       <div className="flex-1 overflow-auto p-3 space-y-4">
         {/* Header */}
         <div className="flex items-start justify-between">
@@ -202,8 +202,8 @@ export function PasoConfirmar({
         </p>
       </div>
 
-      {/* Footer */}
-      <div className="shrink-0 border-t border-ink-100 bg-white p-3 flex gap-2">
+      {/* Sticky navigation bar */}
+      <div className="shrink-0 border-t border-ink-100 bg-white p-3 flex gap-2 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
         <Button variant="outline" onClick={onBack} className="h-12 px-4" disabled={submitting}>
           <ChevronLeft className="h-4 w-4 mr-1" />
           Regresar
