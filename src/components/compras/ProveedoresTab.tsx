@@ -872,23 +872,23 @@ const ProveedoresTab = () => {
     nombre: "",
     telefono: "",
     email: "",
-    recibe_ordenes: false,
-    recibe_pagos: false,
-    recibe_devoluciones: false,
-    recibe_logistica: false,
+    recibe_ordenes: true,
+    recibe_pagos: true,
+    recibe_devoluciones: true,
+    recibe_logistica: true,
     es_principal: false,
   });
-  
+
   // Contactos unificados - para editar
   const [contactosEdit, setContactosEdit] = useState<ContactoProveedor[]>([]);
   const [editContacto, setEditContacto] = useState<ContactoProveedor>({
     nombre: "",
     telefono: "",
     email: "",
-    recibe_ordenes: false,
-    recibe_pagos: false,
-    recibe_devoluciones: false,
-    recibe_logistica: false,
+    recibe_ordenes: true,
+    recibe_pagos: true,
+    recibe_devoluciones: true,
+    recibe_logistica: true,
     es_principal: false,
   });
   const [isLoadingContactos, setIsLoadingContactos] = useState(false);
@@ -937,10 +937,10 @@ const ProveedoresTab = () => {
       nombre: "",
       telefono: "",
       email: "",
-      recibe_ordenes: false,
-      recibe_pagos: false,
-      recibe_devoluciones: false,
-      recibe_logistica: false,
+      recibe_ordenes: true,
+      recibe_pagos: true,
+      recibe_devoluciones: true,
+      recibe_logistica: true,
       es_principal: false,
     });
   };
@@ -950,10 +950,10 @@ const ProveedoresTab = () => {
       nombre: "",
       telefono: "",
       email: "",
-      recibe_ordenes: false,
-      recibe_pagos: false,
-      recibe_devoluciones: false,
-      recibe_logistica: false,
+      recibe_ordenes: true,
+      recibe_pagos: true,
+      recibe_devoluciones: true,
+      recibe_logistica: true,
       es_principal: false,
     });
   };
@@ -1615,9 +1615,9 @@ const ProveedoresTab = () => {
                         email: "",
                         es_principal: false,
                         recibe_ordenes: true,
-                        recibe_pagos: false,
-                        recibe_devoluciones: false,
-                        recibe_logistica: false,
+                        recibe_pagos: true,
+                        recibe_devoluciones: true,
+                        recibe_logistica: true,
                       });
                     }
                     const contactoPrincipal = getContactoPrincipal(contactosFinales);
@@ -1928,9 +1928,9 @@ const ProveedoresTab = () => {
                         email: "",
                         es_principal: false,
                         recibe_ordenes: true,
-                        recibe_pagos: false,
-                        recibe_devoluciones: false,
-                        recibe_logistica: false,
+                        recibe_pagos: true,
+                        recibe_devoluciones: true,
+                        recibe_logistica: true,
                       });
                     }
                     updateProveedor.mutate(editingProveedor);
