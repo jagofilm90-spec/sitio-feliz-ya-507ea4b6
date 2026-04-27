@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -41,6 +42,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Edit, Globe, Package, Trash2, X, FileText, Upload, Loader2, CheckCircle2, Star, Phone, User, Mail, ChevronDown, Building2, Landmark, HandCoins, CreditCard, BookOpen, RotateCcw, Power } from "lucide-react";
 import CuentaCorrienteProveedorDialog from "./CuentaCorrienteProveedorDialog";
+import { REGIMENES_FISCALES } from "@/constants/catalogoSAT";
+import { BANCOS_MEXICO } from "@/constants/bancosMexico";
 import { Badge } from "@/components/ui/badge";
 import ProveedorProductosSelector from "./ProveedorProductosSelector";
 import {
@@ -496,9 +499,8 @@ interface SupplierFormData {
   nombre: string;
   nombre_comercial: string;
   categoria: string;
-  direccion: string;
-  pais: string;
   rfc: string;
+  rfcError: string;
   regimen_fiscal: string;
   calle: string;
   numero_exterior: string;
@@ -510,7 +512,10 @@ interface SupplierFormData {
   termino_pago: string;
   dias_visita: string[];
   frecuencia_compra: string;
+  metodo_contacto_preferido: string;
+  metodos_pago_aceptados: string[];
   banco: string;
+  banco_otro: string;
   beneficiario: string;
   cuenta_bancaria: string;
   clabe_interbancaria: string;
@@ -530,6 +535,17 @@ const SupplierFormFields = ({
   clabeError: string;
   setClabeError: (e: string) => void;
 }) => {
+  const RFC_REGEX = /^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$/;
+
+  const handleRfcChange = (val: string) => {
+    const upper = val.toUpperCase().replace(/\s/g, '');
+    let error = "";
+    if (upper.length > 0 && !RFC_REGEX.test(upper)) {
+      error = upper.length < 12 ? "RFC incompleto" : "Formato de RFC inválido";
+    }
+    setData({ ...data, rfc: upper, rfcError: error });
+  };
+
   const handleClabeChange = (val: string) => {
     const cleaned = val.replace(/\D/g, '').slice(0, 18);
     setData({ ...data, clabe_interbancaria: cleaned });
@@ -578,15 +594,6 @@ const SupplierFormFields = ({
             </Select>
           </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor={`${prefix}-pais`}>País</Label>
-          <Input
-            id={`${prefix}-pais`}
-            placeholder="México"
-            value={data.pais}
-            onChange={(e) => setData({ ...data, pais: e.target.value })}
-          />
-        </div>
       </FormSection>
 
       {/* SECCIÓN 2: Datos fiscales */}
@@ -602,17 +609,23 @@ const SupplierFormFields = ({
             id={`${prefix}-rfc`}
             placeholder="ABC123456XYZ"
             value={data.rfc}
-            onChange={(e) => setData({ ...data, rfc: e.target.value.toUpperCase() })}
+            onChange={(e) => handleRfcChange(e.target.value)}
+            className={data.rfcError ? "border-destructive" : ""}
           />
+          {data.rfcError && <p className="text-xs text-destructive">{data.rfcError}</p>}
         </div>
         <div className="space-y-2">
           <Label htmlFor={`${prefix}-regimen_fiscal`}>Régimen fiscal</Label>
-          <Input
-            id={`${prefix}-regimen_fiscal`}
-            placeholder="601 - General de Ley"
-            value={data.regimen_fiscal}
-            onChange={(e) => setData({ ...data, regimen_fiscal: e.target.value })}
-          />
+          <Select value={data.regimen_fiscal} onValueChange={(v) => setData({ ...data, regimen_fiscal: v })}>
+            <SelectTrigger id={`${prefix}-regimen_fiscal`}>
+              <SelectValue placeholder="Seleccionar régimen" />
+            </SelectTrigger>
+            <SelectContent>
+              {REGIMENES_FISCALES.map(r => (
+                <SelectItem key={r.clave} value={r.clave}>{r.clave} - {r.descripcion}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="space-y-1 sm:col-span-2">
@@ -649,15 +662,6 @@ const SupplierFormFields = ({
             <Label className="text-xs">Código postal</Label>
             <Input placeholder="64000" value={data.codigo_postal} onChange={(e) => setData({ ...data, codigo_postal: e.target.value })} />
           </div>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor={`${prefix}-direccion`}>Dirección completa (legacy)</Label>
-          <Input
-            id={`${prefix}-direccion`}
-            placeholder="Av. Principal #123, Col. Centro"
-            value={data.direccion}
-            onChange={(e) => setData({ ...data, direccion: e.target.value })}
-          />
         </div>
       </FormSection>
 
@@ -717,6 +721,21 @@ const SupplierFormFields = ({
             ))}
           </div>
         </div>
+        <div className="space-y-2">
+          <Label htmlFor={`${prefix}-metodo_contacto`}>Método de contacto preferido</Label>
+          <Select value={data.metodo_contacto_preferido} onValueChange={(v) => setData({ ...data, metodo_contacto_preferido: v })}>
+            <SelectTrigger id={`${prefix}-metodo_contacto`}>
+              <SelectValue placeholder="Seleccionar" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="correo">Correo electrónico</SelectItem>
+              <SelectItem value="whatsapp">WhatsApp</SelectItem>
+              <SelectItem value="telefono">Teléfono</SelectItem>
+              <SelectItem value="mezcla">Mezcla / variable</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">Cómo prefieres contactar a este proveedor para pedidos</p>
+        </div>
       </FormSection>
 
       {/* SECCIÓN 4: Datos bancarios */}
@@ -727,15 +746,57 @@ const SupplierFormFields = ({
         collapsible
         defaultOpen={false}
       >
+        <div className="space-y-2">
+          <Label>Métodos de pago aceptados</Label>
+          <div className="flex flex-wrap gap-3">
+            {[
+              { value: "transferencia", label: "Transferencia" },
+              { value: "cheque", label: "Cheque" },
+              { value: "efectivo", label: "Efectivo" },
+              { value: "tarjeta", label: "Tarjeta" },
+              { value: "deposito", label: "Depósito" },
+            ].map(m => (
+              <div key={m.value} className="flex items-center space-x-1.5">
+                <Checkbox
+                  id={`${prefix}-pago-${m.value}`}
+                  checked={(data.metodos_pago_aceptados || []).includes(m.value)}
+                  onCheckedChange={(checked) => {
+                    const current = data.metodos_pago_aceptados || [];
+                    setData({
+                      ...data,
+                      metodos_pago_aceptados: checked
+                        ? [...current, m.value]
+                        : current.filter(v => v !== m.value)
+                    });
+                  }}
+                />
+                <Label htmlFor={`${prefix}-pago-${m.value}`} className="text-sm font-normal cursor-pointer">{m.label}</Label>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">Marca los métodos que este proveedor acepta</p>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-2">
             <Label htmlFor={`${prefix}-banco`}>Banco</Label>
-            <Input
-              id={`${prefix}-banco`}
-              placeholder="Ej: BBVA, Banamex, Santander"
-              value={data.banco}
-              onChange={(e) => setData({ ...data, banco: e.target.value })}
-            />
+            <Select value={data.banco} onValueChange={(v) => setData({ ...data, banco: v, banco_otro: v !== "Otro" ? "" : data.banco_otro })}>
+              <SelectTrigger id={`${prefix}-banco`}>
+                <SelectValue placeholder="Seleccionar banco" />
+              </SelectTrigger>
+              <SelectContent>
+                {BANCOS_MEXICO.map(b => (
+                  <SelectItem key={b} value={b}>{b}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {data.banco === "Otro" && (
+              <Input
+                placeholder="Nombre del banco"
+                value={data.banco_otro}
+                onChange={(e) => setData({ ...data, banco_otro: e.target.value })}
+                className="mt-2"
+              />
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor={`${prefix}-beneficiario`}>Beneficiario</Label>
@@ -842,9 +903,8 @@ const ProveedoresTab = () => {
     nombre: "",
     nombre_comercial: "",
     categoria: "",
-    direccion: "",
-    pais: "México",
     rfc: "",
+    rfcError: "",
     regimen_fiscal: "",
     calle: "",
     numero_exterior: "",
@@ -856,7 +916,10 @@ const ProveedoresTab = () => {
     termino_pago: "contado",
     dias_visita: [],
     frecuencia_compra: "",
+    metodo_contacto_preferido: "",
+    metodos_pago_aceptados: [],
     banco: "",
+    banco_otro: "",
     beneficiario: "",
     cuenta_bancaria: "",
     clabe_interbancaria: "",
@@ -1148,7 +1211,7 @@ const ProveedoresTab = () => {
           ...prev,
           nombre: nombreCompleto.trim(),
           rfc: csfData.rfc || prev.rfc,
-          direccion: direccionCompleta || prev.direccion,
+          rfcError: "",
           calle: csfData.nombre_vialidad ? `${csfData.tipo_vialidad || ''} ${csfData.nombre_vialidad}`.trim() : prev.calle,
           numero_exterior: csfData.numero_exterior || prev.numero_exterior,
           numero_interior: csfData.numero_interior || prev.numero_interior,
@@ -1156,7 +1219,6 @@ const ProveedoresTab = () => {
           municipio: csfData.nombre_municipio || prev.municipio,
           estado: csfData.nombre_entidad_federativa || prev.estado,
           codigo_postal: csfData.codigo_postal || prev.codigo_postal,
-          pais: "México",
         }));
         
         setCSFParsed(true);
@@ -1205,9 +1267,15 @@ const ProveedoresTab = () => {
 
   const createProveedor = useMutation({
     mutationFn: async (proveedor: typeof newProveedor & { email: string; nombre_contacto: string | null; telefono: string | null }) => {
+      const { rfcError, banco_otro, banco, ...rest } = proveedor;
+      const payload = {
+        ...rest,
+        banco: banco === "Otro" ? banco_otro : banco,
+        pais: "México",
+      };
       const { data, error } = await supabase
         .from("proveedores")
-        .insert([proveedor])
+        .insert([payload])
         .select()
         .single();
       if (error) throw error;
@@ -1243,6 +1311,7 @@ const ProveedoresTab = () => {
   const updateProveedor = useMutation({
     mutationFn: async (proveedor: Proveedor) => {
       const contactoPrincipal = getContactoPrincipal(contactosEdit);
+      const bancoFinal = proveedor.banco === "Otro" ? ((proveedor as any).banco_otro || "") : proveedor.banco;
       const { error } = await supabase
         .from("proveedores")
         .update({
@@ -1252,8 +1321,6 @@ const ProveedoresTab = () => {
           nombre_contacto: contactoPrincipal.nombre,
           email: contactoPrincipal.email,
           telefono: contactoPrincipal.telefono,
-          direccion: proveedor.direccion,
-          pais: proveedor.pais,
           rfc: proveedor.rfc,
           regimen_fiscal: proveedor.regimen_fiscal,
           calle: proveedor.calle,
@@ -1266,7 +1333,9 @@ const ProveedoresTab = () => {
           termino_pago: proveedor.termino_pago,
           dias_visita: proveedor.dias_visita,
           frecuencia_compra: proveedor.frecuencia_compra,
-          banco: proveedor.banco,
+          metodo_contacto_preferido: (proveedor as any).metodo_contacto_preferido,
+          metodos_pago_aceptados: (proveedor as any).metodos_pago_aceptados,
+          banco: bancoFinal,
           beneficiario: proveedor.beneficiario,
           cuenta_bancaria: proveedor.cuenta_bancaria,
           clabe_interbancaria: proveedor.clabe_interbancaria,
@@ -1274,7 +1343,7 @@ const ProveedoresTab = () => {
           activo: proveedor.activo,
         })
         .eq("id", proveedor.id);
-      
+
       if (error) throw error;
       return proveedor.id;
     },
@@ -1370,9 +1439,8 @@ const ProveedoresTab = () => {
       nombre: editingProveedor.nombre,
       nombre_comercial: editingProveedor.nombre_comercial || "",
       categoria: editingProveedor.categoria || "",
-      direccion: editingProveedor.direccion || "",
-      pais: editingProveedor.pais,
       rfc: editingProveedor.rfc || "",
+      rfcError: "",
       regimen_fiscal: editingProveedor.regimen_fiscal || "",
       calle: editingProveedor.calle || "",
       numero_exterior: editingProveedor.numero_exterior || "",
@@ -1384,7 +1452,10 @@ const ProveedoresTab = () => {
       termino_pago: editingProveedor.termino_pago || "contado",
       dias_visita: editingProveedor.dias_visita || [],
       frecuencia_compra: editingProveedor.frecuencia_compra || "",
+      metodo_contacto_preferido: (editingProveedor as any).metodo_contacto_preferido || "",
+      metodos_pago_aceptados: (editingProveedor as any).metodos_pago_aceptados || [],
       banco: editingProveedor.banco || "",
+      banco_otro: "",
       beneficiario: editingProveedor.beneficiario || "",
       cuenta_bancaria: editingProveedor.cuenta_bancaria || "",
       clabe_interbancaria: editingProveedor.clabe_interbancaria || "",
@@ -1424,7 +1495,12 @@ const ProveedoresTab = () => {
             </DialogTrigger>
             <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
               <DialogHeader>
-                <DialogTitle>Registrar Nuevo Proveedor</DialogTitle>
+                <DialogTitle className="font-serif text-2xl font-light text-ink-900">
+                  Nuevo <em className="italic text-crimson-500 font-normal">proveedor</em>.
+                </DialogTitle>
+                <DialogDescription className="font-serif italic text-sm text-ink-500">
+                  Captura los datos del nuevo proveedor de ALMASA.
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-5">
                 {/* CSF Upload Section */}
@@ -1751,7 +1827,9 @@ const ProveedoresTab = () => {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
-            <DialogTitle>Editar Proveedor</DialogTitle>
+            <DialogTitle className="font-serif text-2xl font-light text-ink-900">
+              Editar <em className="italic text-crimson-500 font-normal">proveedor</em>.
+            </DialogTitle>
           </DialogHeader>
           {editingProveedor && (
             <div className="space-y-5">
