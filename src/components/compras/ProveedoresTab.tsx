@@ -40,7 +40,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Globe, Package, Trash2, X, FileText, Upload, Loader2, CheckCircle2, Star, Phone, User, Mail, ChevronDown, Building2, Landmark, HandCoins, CreditCard, BookOpen, RotateCcw, Power } from "lucide-react";
+import { Plus, Search, Edit, Globe, Package, Trash2, X, FileText, Upload, Loader2, CheckCircle2, Star, Phone, User, Mail, ChevronDown, Building2, Landmark, HandCoins, CreditCard, BookOpen, RotateCcw, Power, Eye } from "lucide-react";
 import CuentaCorrienteProveedorDialog from "./CuentaCorrienteProveedorDialog";
 import { REGIMENES_FISCALES } from "@/constants/catalogoSAT";
 import { BANCOS_MEXICO } from "@/constants/bancosMexico";
@@ -846,6 +846,9 @@ const ProveedoresTab = () => {
   const [isProductosDialogOpen, setIsProductosDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isCuentaDialogOpen, setIsCuentaDialogOpen] = useState(false);
+  const [isDetalleDialogOpen, setIsDetalleDialogOpen] = useState(false);
+  const [detalleProveedor, setDetalleProveedor] = useState<Proveedor | null>(null);
+  const [detalleContactos, setDetalleContactos] = useState<ContactoProveedor[]>([]);
   const [editingProveedor, setEditingProveedor] = useState<Proveedor | null>(null);
   const [productosProveedor, setProductosProveedor] = useState<Proveedor | null>(null);
   const [deletingProveedor, setDeletingProveedor] = useState<Proveedor | null>(null);
@@ -1756,40 +1759,33 @@ const ProveedoresTab = () => {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setProveedorCuenta(proveedor);
-                          setIsCuentaDialogOpen(true);
-                        }}
-                        title="Ver cuenta corriente"
-                      >
-                        <BookOpen className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setProductosProveedor(proveedor);
-                          setIsProductosDialogOpen(true);
-                        }}
-                        title="Gestionar productos"
-                      >
-                        <Package className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={async () => {
-                          setEditingProveedor(proveedor);
-                          await loadContactosProveedor(proveedor.id);
-                          setIsEditDialogOpen(true);
-                        }}
-                        title="Editar proveedor"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                      <TooltipProvider><Tooltip><TooltipTrigger asChild>
+                        <Button variant="ghost" size="sm" onClick={async () => {
+                          setDetalleProveedor(proveedor);
+                          try {
+                            const { data } = await supabase.from("proveedor_contactos").select("*").eq("proveedor_id", proveedor.id).eq("activo", true).order("es_principal", { ascending: false });
+                            setDetalleContactos((data || []).map((c: any) => ({ id: c.id, nombre: c.nombre, telefono: c.telefono || "", email: c.email || "", recibe_ordenes: c.recibe_ordenes || false, recibe_pagos: c.recibe_pagos || false, recibe_devoluciones: c.recibe_devoluciones || false, recibe_logistica: c.recibe_logistica || false, es_principal: c.es_principal || false })));
+                          } catch { setDetalleContactos([]); }
+                          setIsDetalleDialogOpen(true);
+                        }}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger><TooltipContent>Ver detalle completo</TooltipContent></Tooltip></TooltipProvider>
+                      <TooltipProvider><Tooltip><TooltipTrigger asChild>
+                        <Button variant="ghost" size="sm" onClick={() => { setProveedorCuenta(proveedor); setIsCuentaDialogOpen(true); }}>
+                          <BookOpen className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger><TooltipContent>Resumen financiero</TooltipContent></Tooltip></TooltipProvider>
+                      <TooltipProvider><Tooltip><TooltipTrigger asChild>
+                        <Button variant="ghost" size="sm" onClick={() => { setProductosProveedor(proveedor); setIsProductosDialogOpen(true); }}>
+                          <Package className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger><TooltipContent>Productos que vende</TooltipContent></Tooltip></TooltipProvider>
+                      <TooltipProvider><Tooltip><TooltipTrigger asChild>
+                        <Button variant="ghost" size="sm" onClick={async () => { setEditingProveedor(proveedor); await loadContactosProveedor(proveedor.id); setIsEditDialogOpen(true); }}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger><TooltipContent>Editar proveedor</TooltipContent></Tooltip></TooltipProvider>
                       {proveedor.activo ? (
                         <Button
                           variant="ghost"
@@ -1992,6 +1988,106 @@ const ProveedoresTab = () => {
         onOpenChange={setIsCuentaDialogOpen}
         proveedor={proveedorCuenta}
       />
+
+      {/* Dialog Detalle Proveedor */}
+      <Dialog open={isDetalleDialogOpen} onOpenChange={setIsDetalleDialogOpen}>
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-2xl font-light text-ink-900">
+              Detalle del <em className="italic text-crimson-500 font-normal">proveedor</em>.
+            </DialogTitle>
+          </DialogHeader>
+          {detalleProveedor && (
+            <div className="space-y-5">
+              {/* Información básica */}
+              <div className="space-y-2 p-4 border rounded-lg">
+                <h4 className="text-xs uppercase tracking-wide text-ink-500 font-medium">Información básica</h4>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                  <div><span className="text-ink-500">Razón social:</span> <span className="font-medium">{detalleProveedor.nombre}</span></div>
+                  {(detalleProveedor as any).nombre_comercial && <div><span className="text-ink-500">Nombre comercial:</span> <span className="font-medium">{(detalleProveedor as any).nombre_comercial}</span></div>}
+                  {detalleProveedor.rfc && <div><span className="text-ink-500">RFC:</span> <span className="font-mono font-medium">{detalleProveedor.rfc}</span></div>}
+                  {detalleProveedor.regimen_fiscal && <div className="col-span-2"><span className="text-ink-500">Régimen fiscal:</span> <span className="font-medium">{detalleProveedor.regimen_fiscal}</span></div>}
+                  {(detalleProveedor as any).categoria && <div><span className="text-ink-500">Categoría:</span> <span className="font-medium">{(detalleProveedor as any).categoria}</span></div>}
+                  {(detalleProveedor as any).termino_pago && <div><span className="text-ink-500">Término de pago:</span> <span className="font-medium">{TERMINOS_PAGO.find(t => t.value === (detalleProveedor as any).termino_pago)?.label || (detalleProveedor as any).termino_pago}</span></div>}
+                </div>
+              </div>
+
+              {/* Dirección */}
+              {(detalleProveedor.calle || detalleProveedor.direccion) && (
+                <div className="space-y-2 p-4 border rounded-lg">
+                  <h4 className="text-xs uppercase tracking-wide text-ink-500 font-medium">Dirección fiscal</h4>
+                  <p className="text-sm">
+                    {detalleProveedor.calle && <>{detalleProveedor.calle}{detalleProveedor.numero_exterior && ` #${detalleProveedor.numero_exterior}`}{detalleProveedor.numero_interior && `, Int. ${detalleProveedor.numero_interior}`}<br /></>}
+                    {detalleProveedor.colonia && <>Col. {detalleProveedor.colonia}<br /></>}
+                    {detalleProveedor.municipio && <>{detalleProveedor.municipio}, </>}
+                    {detalleProveedor.estado && <>{detalleProveedor.estado} </>}
+                    {detalleProveedor.codigo_postal && <>C.P. {detalleProveedor.codigo_postal}</>}
+                  </p>
+                </div>
+              )}
+
+              {/* Datos bancarios */}
+              {((detalleProveedor as any).banco || (detalleProveedor as any).clabe_interbancaria) && (
+                <div className="space-y-2 p-4 border rounded-lg">
+                  <h4 className="text-xs uppercase tracking-wide text-ink-500 font-medium">Datos bancarios</h4>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                    {(detalleProveedor as any).banco && <div><span className="text-ink-500">Banco:</span> <span className="font-medium">{(detalleProveedor as any).banco}</span></div>}
+                    {(detalleProveedor as any).beneficiario && <div><span className="text-ink-500">Beneficiario:</span> <span className="font-medium">{(detalleProveedor as any).beneficiario}</span></div>}
+                    {(detalleProveedor as any).cuenta_bancaria && <div><span className="text-ink-500">Cuenta:</span> <span className="font-mono">{(detalleProveedor as any).cuenta_bancaria}</span></div>}
+                    {(detalleProveedor as any).clabe_interbancaria && <div><span className="text-ink-500">CLABE:</span> <span className="font-mono">{(detalleProveedor as any).clabe_interbancaria}</span></div>}
+                  </div>
+                  {(detalleProveedor as any).metodos_pago_aceptados?.length > 0 && (
+                    <div className="text-sm mt-2"><span className="text-ink-500">Métodos de pago:</span> <span className="font-medium">{(detalleProveedor as any).metodos_pago_aceptados.join(', ')}</span></div>
+                  )}
+                </div>
+              )}
+
+              {/* Condiciones comerciales */}
+              {((detalleProveedor as any).dias_visita?.length > 0 || (detalleProveedor as any).frecuencia_compra || (detalleProveedor as any).metodo_contacto_preferido) && (
+                <div className="space-y-2 p-4 border rounded-lg">
+                  <h4 className="text-xs uppercase tracking-wide text-ink-500 font-medium">Condiciones comerciales</h4>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                    {(detalleProveedor as any).frecuencia_compra && <div><span className="text-ink-500">Frecuencia:</span> <span className="font-medium">{FRECUENCIAS.find(f => f.value === (detalleProveedor as any).frecuencia_compra)?.label || (detalleProveedor as any).frecuencia_compra}</span></div>}
+                    {(detalleProveedor as any).metodo_contacto_preferido && <div><span className="text-ink-500">Contacto preferido:</span> <span className="font-medium">{(detalleProveedor as any).metodo_contacto_preferido}</span></div>}
+                    {(detalleProveedor as any).dias_visita?.length > 0 && <div className="col-span-2"><span className="text-ink-500">Días de visita:</span> <span className="font-medium">{(detalleProveedor as any).dias_visita.map((d: string) => DIAS_VISITA.find(dv => dv.value === d)?.label || d).join(', ')}</span></div>}
+                  </div>
+                </div>
+              )}
+
+              {/* Contactos */}
+              {detalleContactos.length > 0 && (
+                <div className="space-y-2 p-4 border rounded-lg">
+                  <h4 className="text-xs uppercase tracking-wide text-ink-500 font-medium">Contactos ({detalleContactos.length})</h4>
+                  <div className="space-y-2">
+                    {detalleContactos.map((c, i) => (
+                      <div key={i} className="flex items-start gap-3 text-sm p-2 rounded bg-muted/30">
+                        <User className="h-4 w-4 text-ink-500 mt-0.5 shrink-0" />
+                        <div className="flex-1">
+                          <span className="font-medium">{c.nombre}</span>
+                          {c.es_principal && <Star className="inline h-3 w-3 text-yellow-500 fill-yellow-500 ml-1" />}
+                          <div className="flex gap-3 text-ink-500 text-xs mt-0.5">
+                            {c.telefono && <span>{c.telefono}</span>}
+                            {c.email && <span>{c.email}</span>}
+                          </div>
+                          <div className="flex gap-1 mt-1">{renderResponsabilidades(c)}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Notas */}
+              {detalleProveedor.notas && (
+                <div className="space-y-2 p-4 border rounded-lg">
+                  <h4 className="text-xs uppercase tracking-wide text-ink-500 font-medium">Notas</h4>
+                  <p className="text-sm whitespace-pre-wrap">{detalleProveedor.notas}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
