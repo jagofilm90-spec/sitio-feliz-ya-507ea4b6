@@ -180,7 +180,7 @@ const Productos = () => {
     unidad: "bulto" as "bulto" | "balon" | "caja" | "churla" | "costal" | "cubeta" | "paquete" | "pieza" | "balón",
     piezas_por_unidad: "1", precio_compra: "", precio_venta: "",
     precio_por_kilo: false, descuento_maximo: "", stock_minimo: "",
-    maneja_caducidad: false, aplica_iva: true, aplica_ieps: false, activo: true,
+    maneja_caducidad: false, aplica_iva: true, aplica_ieps: false, tasa_ieps: "8", activo: true,
     requiere_fumigacion: false, fecha_ultima_fumigacion: "", fecha_caducidad_inicial: "",
     stock_inicial: "", proveedor_id: "", solo_uso_interno: false, es_promocion: false,
     descripcion_promocion: "", bloqueado_venta: false,
@@ -275,6 +275,7 @@ const Productos = () => {
       maneja_caducidad: formData.maneja_caducidad,
       aplica_iva: formData.aplica_iva,
       aplica_ieps: formData.aplica_ieps,
+      tasa_ieps: formData.aplica_ieps ? parseFloat(formData.tasa_ieps) || 8 : null,
       activo: formData.activo,
       requiere_fumigacion: formData.requiere_fumigacion,
       fecha_ultima_fumigacion: formData.fecha_ultima_fumigacion || null,
@@ -373,7 +374,7 @@ const Productos = () => {
       precio_compra: product.precio_compra?.toString() || "", precio_venta: product.precio_venta?.toString() || "",
       precio_por_kilo: product.precio_por_kilo || false, descuento_maximo: product.descuento_maximo?.toString() || "",
       stock_minimo: product.stock_minimo?.toString() || "0", maneja_caducidad: product.maneja_caducidad,
-      aplica_iva: product.aplica_iva || false, aplica_ieps: product.aplica_ieps || false,
+      aplica_iva: product.aplica_iva || false, aplica_ieps: product.aplica_ieps || false, tasa_ieps: product.tasa_ieps?.toString() || "8",
       activo: product.activo !== false, requiere_fumigacion: product.requiere_fumigacion || false,
       fecha_ultima_fumigacion: product.fecha_ultima_fumigacion || "", fecha_caducidad_inicial: "",
       stock_inicial: "", proveedor_id: "", solo_uso_interno: product.solo_uso_interno || false,
@@ -418,7 +419,7 @@ const Productos = () => {
       especificaciones: "", contenido_empaque: "", unidad_sat: "", peso_kg: "",
       unidad: "bulto", piezas_por_unidad: "1", precio_compra: "", precio_venta: "",
       precio_por_kilo: false, descuento_maximo: "", stock_minimo: "",
-      maneja_caducidad: false, aplica_iva: true, aplica_ieps: false, activo: true,
+      maneja_caducidad: false, aplica_iva: true, aplica_ieps: false, tasa_ieps: "8", activo: true,
       requiere_fumigacion: false, fecha_ultima_fumigacion: "", fecha_caducidad_inicial: "",
       stock_inicial: "", proveedor_id: "", solo_uso_interno: false, es_promocion: false,
       descripcion_promocion: "", bloqueado_venta: false,
@@ -692,7 +693,7 @@ const Productos = () => {
                           onChange={(e) => setFormData({ ...formData, codigo_sat: e.target.value })}
                           required autoComplete="off" placeholder="Ej: 50161800" className="font-mono"
                         />
-                        <p className="text-xs text-ink-500">Búscalo en <strong>sat.gob.mx</strong> o pregunta al contador</p>
+                        <p className="text-xs text-ink-500">Búscalo en <a href="https://www.sat.gob.mx/consultas/53693/catalogo-de-productos-y-servicios" target="_blank" rel="noopener noreferrer" className="text-crimson-500 hover:underline font-medium">sat.gob.mx</a> o pregunta al contador</p>
                       </div>
                     </div>
 
@@ -727,14 +728,14 @@ const Productos = () => {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="peso_kg">Peso (kg) <span className="text-crimson-500">*</span></Label>
+                        <Label htmlFor="peso_kg">{formData.precio_por_kilo ? 'Peso aproximado (kg)' : 'Peso (kg)'} <span className="text-crimson-500">*</span></Label>
                         <div className="relative">
                           <Input id="peso_kg" type="number" step="0.1" value={formData.peso_kg}
                             onChange={(e) => setFormData({ ...formData, peso_kg: e.target.value })}
                             placeholder="Ej: 50" required className="pr-10" />
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">kg</span>
                         </div>
-                        <p className="text-xs text-ink-500">Peso del bulto/caja para cálculos de carga del camión</p>
+                        <p className="text-xs text-ink-500">{formData.precio_por_kilo ? 'Cada bulto puede pesar distinto. Almacén pesará al cargar.' : 'Peso del bulto/caja para cálculos de carga del camión'}</p>
                       </div>
                     </div>
 
@@ -775,12 +776,27 @@ const Productos = () => {
                           <p className="text-[11px] text-muted-foreground">Mayoría. Desactiva si exento.</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 p-3 rounded-lg border border-ink-100 bg-white">
-                        <Switch id="aplica_ieps" checked={formData.aplica_ieps} onCheckedChange={(c) => setFormData({ ...formData, aplica_ieps: c })} />
-                        <div>
-                          <Label htmlFor="aplica_ieps" className="cursor-pointer text-sm font-medium">IEPS 8%</Label>
-                          <p className="text-[11px] text-muted-foreground">Solo botanas, golosinas, refrescos.</p>
+                      <div className="space-y-2 p-3 rounded-lg border border-ink-100 bg-white">
+                        <div className="flex items-center gap-3">
+                          <Switch id="aplica_ieps" checked={formData.aplica_ieps} onCheckedChange={(c) => setFormData({ ...formData, aplica_ieps: c })} />
+                          <div>
+                            <Label htmlFor="aplica_ieps" className="cursor-pointer text-sm font-medium">IEPS</Label>
+                            <p className="text-[11px] text-muted-foreground">Confirma con tu contador</p>
+                          </div>
                         </div>
+                        {formData.aplica_ieps && (
+                          <Select value={formData.tasa_ieps} onValueChange={(v) => setFormData({ ...formData, tasa_ieps: v })}>
+                            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="8">8% — Botanas con grasa saturada</SelectItem>
+                              <SelectItem value="25">25% — Bebidas alcohólicas hasta 14°</SelectItem>
+                              <SelectItem value="30">30% — Bebidas alcohólicas más de 20°</SelectItem>
+                              <SelectItem value="50">50% — Refrescos, azucarados</SelectItem>
+                              <SelectItem value="53">53% — Cerveza</SelectItem>
+                              <SelectItem value="160">160% — Tabaco</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
                       </div>
                     </div>
                     <p className="text-[11px] text-ink-500 text-center italic">El precio es el FINAL. El sistema desglosa al facturar.</p>
@@ -974,6 +990,25 @@ const Productos = () => {
                     ) : <div />}
                     <div className="flex gap-2">
                       <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+                      {!editingProduct && (
+                        <Button type="button" variant="outline" disabled={saving} onClick={async () => {
+                          setSaving(true);
+                          try {
+                            const ok = await saveProduct();
+                            if (ok) {
+                              toast({ title: "Producto creado" });
+                              loadProductos();
+                              resetForm();
+                              setDialogOpen(true);
+                              setTimeout(() => document.getElementById('nombre')?.focus(), 100);
+                            }
+                          } catch (error: any) {
+                            toast({ title: "Error", description: error.message, variant: "destructive" });
+                          } finally { setSaving(false); }
+                        }}>
+                          {saving ? "Guardando..." : "Crear y nuevo"}
+                        </Button>
+                      )}
                       <Button type="submit" disabled={saving} className="bg-crimson-500 hover:bg-crimson-600 text-white">
                         {saving ? "Guardando..." : editingProduct ? "Guardar" : "Crear producto"}
                       </Button>
