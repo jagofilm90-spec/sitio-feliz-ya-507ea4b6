@@ -1951,27 +1951,27 @@ const CrearOrdenCompraWizard = ({
                 ) : null
               )}
 
-              {/* Advanced options - collapsed */}
-              <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
-                <CollapsibleTrigger className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground py-2">
-                  {showAdvanced ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                  Opciones avanzadas
-                </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-4 pt-2">
-                  {/* Notas */}
-                  <div>
-                    <Label>Notas</Label>
-                    <Textarea
-                      value={notas}
-                      onChange={(e) => setNotas(e.target.value)}
-                      placeholder="Notas adicionales..."
-                      rows={2}
-                      className="mt-2"
-                    />
-                  </div>
+              {/* Notas visibles */}
+              <div>
+                <Label>Notas para tu equipo</Label>
+                <Textarea
+                  value={notas}
+                  onChange={(e) => setNotas(e.target.value)}
+                  placeholder="Ej: 'Pedir solo si está Jose', 'manda factura el lunes', 'cobra contra entrega en efectivo'..."
+                  rows={2}
+                  className="mt-2"
+                />
+                <p className="text-xs text-muted-foreground mt-1">Visibles para almacén, contadora y administración.</p>
+              </div>
 
-                  {/* Teléfono (solo manual) */}
-                  {tipoProveedor === 'manual' && (
+              {/* Advanced options - collapsed (solo teléfono manual) */}
+              {tipoProveedor === 'manual' && (
+                <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
+                  <CollapsibleTrigger className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground py-2">
+                    {showAdvanced ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    Opciones avanzadas
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-4 pt-2">
                     <div>
                       <Label>Teléfono del proveedor</Label>
                       <Input
@@ -1981,9 +1981,9 @@ const CrearOrdenCompraWizard = ({
                         className="mt-2"
                       />
                     </div>
-                  )}
-                </CollapsibleContent>
-              </Collapsible>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
             </div>
 
             <div className="flex justify-end pt-4 border-t">
@@ -2109,6 +2109,9 @@ const CrearOrdenCompraWizard = ({
                     placeholder="$0.00"
                     disabled={usaPrecioPorKg}
                   />
+                  {usaPrecioPorKg && (
+                    <p className="text-xs text-muted-foreground italic mt-1">Calculado automáticamente: $/kg × kg por unidad</p>
+                  )}
                 </div>
 
                 <div className="col-span-2">
@@ -2300,6 +2303,9 @@ const CrearOrdenCompraWizard = ({
                         </label>
                       )}
                     </div>
+                    <p className="text-xs text-amber-700 mt-2">
+                      Si el proveedor te da el precio SIN IVA, desmarca la casilla. Pregunta: "¿el precio que me das ya incluye IVA?"
+                    </p>
                   </div>
 
                   {/* Desglose en tiempo real */}
