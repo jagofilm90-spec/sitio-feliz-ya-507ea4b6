@@ -173,18 +173,19 @@ const Productos = () => {
     return null;
   };
 
-  // ─── Form state ───
+  // ─── Form state (v4) ───
   const [formData, setFormData] = useState({
     codigo: "", codigo_sat: "", nombre: "", marca: "", categoria: "",
     especificaciones: "", contenido_empaque: "", unidad_sat: "", peso_kg: "",
     unidad: "bulto" as "bulto" | "balon" | "caja" | "churla" | "costal" | "cubeta" | "paquete" | "pieza" | "balón",
     piezas_por_unidad: "1", precio_compra: "", precio_venta: "",
     precio_por_kilo: false, descuento_maximo: "", stock_minimo: "",
-    maneja_caducidad: false, aplica_iva: false, aplica_ieps: false, activo: true,
+    maneja_caducidad: false, aplica_iva: true, aplica_ieps: false, activo: true,
     requiere_fumigacion: false, fecha_ultima_fumigacion: "", fecha_caducidad_inicial: "",
     stock_inicial: "", proveedor_id: "", solo_uso_interno: false, es_promocion: false,
     descripcion_promocion: "", bloqueado_venta: false,
   });
+  const [showBanner, setShowBanner] = useState(true);
 
   useEffect(() => { loadProductos(); loadProveedores(); }, []);
 
@@ -213,8 +214,16 @@ const Productos = () => {
       toast({ title: "Error", description: "El precio de venta es requerido y debe ser mayor a 0", variant: "destructive" });
       return false;
     }
-    if (formData.precio_por_kilo && (!formData.peso_kg || parseFloat(formData.peso_kg) <= 0)) {
-      toast({ title: "Error", description: "Los productos por kilo requieren peso_kg", variant: "destructive" });
+    if (!formData.peso_kg || parseFloat(formData.peso_kg) <= 0) {
+      toast({ title: "Error", description: "El peso (kg) es requerido", variant: "destructive" });
+      return false;
+    }
+    if (!formData.codigo_sat?.trim()) {
+      toast({ title: "Error", description: "El código SAT es requerido para facturación", variant: "destructive" });
+      return false;
+    }
+    if (!formData.categoria?.trim()) {
+      toast({ title: "Error", description: "La categoría es requerida", variant: "destructive" });
       return false;
     }
     const descMax = parseFloat(formData.descuento_maximo) || 0;
@@ -409,7 +418,7 @@ const Productos = () => {
       especificaciones: "", contenido_empaque: "", unidad_sat: "", peso_kg: "",
       unidad: "bulto", piezas_por_unidad: "1", precio_compra: "", precio_venta: "",
       precio_por_kilo: false, descuento_maximo: "", stock_minimo: "",
-      maneja_caducidad: false, aplica_iva: false, aplica_ieps: false, activo: true,
+      maneja_caducidad: false, aplica_iva: true, aplica_ieps: false, activo: true,
       requiere_fumigacion: false, fecha_ultima_fumigacion: "", fecha_caducidad_inicial: "",
       stock_inicial: "", proveedor_id: "", solo_uso_interno: false, es_promocion: false,
       descripcion_promocion: "", bloqueado_venta: false,
@@ -477,7 +486,8 @@ const Productos = () => {
   const descuentoExcesivo = descMaxForm > 0 && precioVenta > 0 && descMaxForm >= precioVenta;
   const kiloPesoError = formData.precio_por_kilo && pesoKg <= 0;
 
-  const specialConfigCount = [formData.requiere_fumigacion, formData.solo_uso_interno, formData.bloqueado_venta, formData.es_promocion].filter(Boolean).length;
+  const specialConfigCount = [formData.requiere_fumigacion, formData.maneja_caducidad, formData.es_promocion].filter(Boolean).length;
+  const uLabel = formData.precio_por_kilo ? 'kilo' : formData.unidad;
 
   const handleSort = (col: SortColumn) => {
     if (sortColumn === col) setSortDirection(prev => prev === "asc" ? "desc" : "asc");
@@ -571,22 +581,36 @@ const Productos = () => {
               {/* ═══════════════════════════════════════════════════
                   FORMULARIO COMPLETO
                   ═══════════════════════════════════════════════════ */}
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>{editingProduct ? "Editar Producto" : "Nuevo Producto"}</DialogTitle>
-                  <DialogDescription>Completa la información del producto</DialogDescription>
+                  <DialogTitle className="font-serif text-2xl font-light text-ink-900">
+                    {editingProduct ? <>Editar <em className="italic text-crimson-500 font-normal">producto</em>.</> : <>Nuevo <em className="italic text-crimson-500 font-normal">producto</em>.</>}
+                  </DialogTitle>
+                  <DialogDescription className="font-serif italic text-sm text-ink-500">
+                    Tal cual lo captures, así aparecerá en todos lados.
+                  </DialogDescription>
                 </DialogHeader>
 
                 <form id="producto-form" onSubmit={handleSave} className="space-y-5">
-                  {/* ── SECCIÓN 1: Información básica ── */}
-                  <div className="space-y-3">
-                    <span className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                      <Package className="h-4 w-4 text-muted-foreground" /> Información básica
-                    </span>
 
-                    {/* Nombre (full width, PRIMERO) */}
+                  {/* ── BANNER EDUCATIVO ── */}
+                  {showBanner && !editingProduct && (
+                    <div className="relative border border-ink-100 bg-[#F5F2EA] rounded-xl p-5 space-y-2">
+                      <button type="button" onClick={() => setShowBanner(false)} className="absolute top-3 right-3 text-ink-300 hover:text-ink-700 text-lg leading-none">&times;</button>
+                      <p className="text-sm font-medium text-ink-900">Antes de capturar</p>
+                      <p className="text-sm text-ink-700">Lo que escribas aquí aparecerá <strong>idéntico</strong> en:</p>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-ink-700">
+                        <span>&#128203; Lista de precios</span><span>&#128228; Órdenes de compra</span>
+                        <span>&#128241; Pedidos del almacén</span><span>&#129534; Notas y facturas</span>
+                      </div>
+                      <p className="text-xs text-ink-500 italic border-t border-ink-100 pt-2">Si está mal escrito una vez, estará mal en seis lados.</p>
+                    </div>
+                  )}
+
+                  {/* ── SECCIÓN 1: Identidad del producto ── */}
+                  <div className="space-y-3">
                     <div className="space-y-2">
-                      <Label htmlFor="nombre">Nombre del producto *</Label>
+                      <Label htmlFor="nombre" className="text-base">Nombre completo del producto <span className="text-crimson-500">*</span></Label>
                       <Input
                         id="nombre"
                         value={formData.nombre}
@@ -598,9 +622,10 @@ const Productos = () => {
                         }}
                         required autoComplete="off" spellCheck={true} lang="es-MX"
                         list="nombres-existentes"
-                        placeholder="Ej: Azúcar refinada, Frijol bayo, Arroz"
-                        className="text-base"
+                        placeholder="Ej: AZUCAR ESTANDAR 50 KG, ALPISTE 25 KG APROX"
+                        className="text-lg font-medium uppercase"
                       />
+                      <p className="text-xs text-ink-500 italic font-serif">Como aparecerá en OC, pedidos, factura y lista de precios</p>
                       <datalist id="nombres-existentes">
                         {[...new Set(productos.map(p => p.nombre).filter(Boolean))].sort().map(nom => (
                           <option key={nom} value={nom} />
@@ -619,16 +644,29 @@ const Productos = () => {
                       )}
                     </div>
 
-                    {/* Código + Marca + Categoría (3 cols) */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {/* Marca + Categoría (2 cols) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-2">
-                        <div className="flex items-center gap-1">
-                          <Label htmlFor="codigo">Código *</Label>
-                          <Tooltip>
-                            <TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger>
-                            <TooltipContent><p className="text-xs max-w-[200px]">Escribe un prefijo + guión (ej: AZU-) y el sistema sugiere el siguiente número</p></TooltipContent>
-                          </Tooltip>
-                        </div>
+                        <Label htmlFor="marca">Marca</Label>
+                        <Input id="marca" value={formData.marca}
+                          onChange={(e) => { setFormData({ ...formData, marca: e.target.value }); setDuplicateWarning(checkDuplicateProduct(formData.nombre, e.target.value, formData.especificaciones, formData.unidad)); }}
+                          placeholder="Ej: Ingenio Potrero, Malta" autoComplete="off" spellCheck={true} lang="es-MX" list="marcas-existentes"
+                        />
+                        <datalist id="marcas-existentes">{[...new Set(productos.map(p => p.marca).filter(Boolean))].sort().map(m => <option key={m} value={m} />)}</datalist>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="categoria">Categoría <span className="text-crimson-500">*</span></Label>
+                        <Select value={formData.categoria || ""} onValueChange={(value) => setFormData({ ...formData, categoria: value })}>
+                          <SelectTrigger><SelectValue placeholder="Selecciona categoría" /></SelectTrigger>
+                          <SelectContent>{(categoriasCanon || []).map(cat => <SelectItem key={cat.id} value={cat.nombre}>{cat.nombre}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Código interno + Código SAT (2 cols) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="codigo">Código interno <span className="text-crimson-500">*</span></Label>
                         <Input
                           id="codigo"
                           value={formData.codigo}
@@ -641,298 +679,264 @@ const Productos = () => {
                             setFormData({ ...formData, codigo: value });
                             checkCodigoGap(value);
                           }}
-                          required autoComplete="off" placeholder="Ej: AZU-001"
+                          required autoComplete="off" placeholder="AZU-001" className="font-mono"
                         />
                         {codigoGapWarning && !editingProduct && (
-                          <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
-                            ⚠️ {codigoGapWarning}
-                          </p>
+                          <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">{codigoGapWarning}</p>
                         )}
+                        <p className="text-xs text-ink-500">Se sugiere al elegir categoría</p>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="marca">Marca</Label>
-                        <Input
-                          id="marca" value={formData.marca}
-                          onChange={(e) => {
-                            const marca = e.target.value;
-                            setFormData({ ...formData, marca });
-                            setDuplicateWarning(checkDuplicateProduct(formData.nombre, marca, formData.especificaciones, formData.unidad));
-                          }}
-                          placeholder="Ej: Nestlé, Potrero" autoComplete="off" spellCheck={true} lang="es-MX" list="marcas-existentes"
+                        <Label htmlFor="codigo_sat">Código SAT <span className="text-crimson-500">*</span></Label>
+                        <Input id="codigo_sat" value={formData.codigo_sat}
+                          onChange={(e) => setFormData({ ...formData, codigo_sat: e.target.value })}
+                          required autoComplete="off" placeholder="Ej: 50161800" className="font-mono"
                         />
-                        <datalist id="marcas-existentes">
-                          {[...new Set(productos.map(p => p.marca).filter(Boolean))].sort().map(m => (
-                            <option key={m} value={m} />
-                          ))}
-                        </datalist>
+                        <p className="text-xs text-ink-500">Búscalo en <strong>sat.gob.mx</strong> o pregunta al contador</p>
                       </div>
+                    </div>
+
+                    {duplicateWarning && <p className="text-xs text-destructive bg-destructive/10 p-2 rounded border border-destructive/20">{duplicateWarning}</p>}
+                  </div>
+
+                  {/* ── VISTA PREVIA ── */}
+                  <div className="px-4 py-3 rounded-lg border border-ink-100 bg-[#F7F5EF] text-center">
+                    <span className="text-[10px] uppercase tracking-widest text-ink-300 font-medium block">Así aparecerá en OC y pedidos</span>
+                    <p className="font-medium text-ink-900 mt-1 tracking-wide uppercase">
+                      {formData.nombre || 'PRODUCTO'}
+                      {formData.marca && ` · ${formData.marca}`}
+                      {formData.unidad && ` · ${formData.unidad.charAt(0).toUpperCase() + formData.unidad.slice(1)}`}
+                    </p>
+                  </div>
+
+                  {/* ── SECCIÓN 2: Unidad, peso y precio ── */}
+                  <div className="space-y-4 p-4 rounded-xl bg-[#F5F2EA]">
+                    <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
-                        <Label htmlFor="categoria">Categoría</Label>
-                        <Select
-                          value={formData.categoria || ""}
-                          onValueChange={(value) => setFormData({ ...formData, categoria: value })}
+                        <Label htmlFor="unidad">Unidad de venta <span className="text-crimson-500">*</span></Label>
+                        <Select value={formData.unidad}
+                          onValueChange={(value: typeof formData.unidad) => setFormData({ ...formData, unidad: value })}
                         >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Seleccionar categoría" />
-                          </SelectTrigger>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            {(categoriasCanon || []).map(cat => (
-                              <SelectItem key={cat.id} value={cat.nombre}>{cat.nombre}</SelectItem>
-                            ))}
+                            {UNIDADES_PRODUCTO.map(u => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}
+                            {editingProduct && formData.unidad && !UNIDADES_PRODUCTO.find(u => u.value === formData.unidad) && (
+                              <SelectItem value={formData.unidad}>{UNIDADES_LEGACY.find(u => u.value === formData.unidad)?.label || formData.unidad} (legacy)</SelectItem>
+                            )}
                           </SelectContent>
                         </Select>
                       </div>
-                    </div>
-
-                    {/* Especificaciones (full width) */}
-                    <div className="space-y-1">
-                      <Label htmlFor="especificaciones">Presentación / Especificaciones</Label>
-                      <Input
-                        id="especificaciones" value={formData.especificaciones}
-                        onChange={(e) => {
-                          const especificaciones = e.target.value;
-                          setFormData({ ...formData, especificaciones });
-                          setDuplicateWarning(checkDuplicateProduct(formData.nombre, formData.marca, especificaciones, formData.unidad));
-                        }}
-                        placeholder="Ej: 25kg, 6/2.8kg, 30/40" autoComplete="off"
-                      />
-                      <p className="text-[11px] text-muted-foreground">Aparece en facturas y pedidos</p>
-                    </div>
-                  </div>
-
-                  {duplicateWarning && (
-                    <p className="text-xs text-destructive bg-destructive/10 p-2 rounded border border-destructive/20">{duplicateWarning}</p>
-                  )}
-
-                  {/* ── Unidad + Peso + Contenido ── */}
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="unidad">Unidad *</Label>
-                      <Select
-                        value={formData.unidad}
-                        onValueChange={(value: typeof formData.unidad) => {
-                          const newFormData = { ...formData, unidad: value };
-                          setFormData(newFormData);
-                          setDuplicateWarning(checkDuplicateProduct(newFormData.nombre, newFormData.marca, newFormData.especificaciones, value));
-                        }}
-                      >
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {UNIDADES_PRODUCTO.map(u => (
-                            <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
-                          ))}
-                          {editingProduct && formData.unidad && !UNIDADES_PRODUCTO.find(u => u.value === formData.unidad) && (
-                            <SelectItem value={formData.unidad}>
-                              {UNIDADES_LEGACY.find(u => u.value === formData.unidad)?.label || formData.unidad} (legacy)
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="peso_kg">Peso (kg)</Label>
-                      <div className="relative">
-                        <Input
-                          id="peso_kg" type="number" step="0.01" value={formData.peso_kg}
-                          onChange={(e) => setFormData({ ...formData, peso_kg: e.target.value })}
-                          placeholder="Ej: 25" autoComplete="off" className="pr-10"
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">kg</span>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="contenido_empaque">Contenido</Label>
-                      <Input
-                        id="contenido_empaque" value={formData.contenido_empaque}
-                        onChange={(e) => setFormData({ ...formData, contenido_empaque: e.target.value })}
-                        placeholder="Ej: 24×800g, 6×3kg" autoComplete="off"
-                      />
-                    </div>
-                  </div>
-
-                  {/* ── Preview del nombre completo ── */}
-                  {formData.nombre && (
-                    <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded border truncate">
-                      Vista previa: <strong>{getDisplayName({ nombre: formData.nombre, marca: formData.marca || undefined, especificaciones: formData.especificaciones || undefined, unidad: formData.unidad, contenido_empaque: formData.contenido_empaque || undefined, peso_kg: parseFloat(formData.peso_kg) || undefined })}</strong>
-                    </p>
-                  )}
-
-                  {/* ── Precio y fiscal ── */}
-                  <div className="space-y-3 p-3 rounded-lg border bg-muted/30">
-                    <span className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                      <Tag className="h-4 w-4 text-muted-foreground" /> Precio
-                    </span>
-
-                    {/* Precio venta + Costo */}
-                    <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
-                        <Label htmlFor="precio_venta">
-                          {formData.precio_por_kilo ? "Precio por kg ($/kg) *" : "Precio por unidad *"}
-                        </Label>
+                        <Label htmlFor="peso_kg">Peso (kg) <span className="text-crimson-500">*</span></Label>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                          <Input
-                            id="precio_venta" type="number" step="0.01" value={formData.precio_venta}
-                            onChange={(e) => setFormData({ ...formData, precio_venta: e.target.value })}
-                            placeholder="0.00" required className="pl-7" autoComplete="off"
-                          />
+                          <Input id="peso_kg" type="number" step="0.1" value={formData.peso_kg}
+                            onChange={(e) => setFormData({ ...formData, peso_kg: e.target.value })}
+                            placeholder="Ej: 50" required className="pr-10" />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">kg</span>
                         </div>
-                        {formData.precio_por_kilo && precioVenta > 0 && pesoKg > 0 && (
-                          <p className="text-xs text-blue-600">
-                            = {formatCurrency(precioVenta * pesoKg)} por {formData.unidad}
-                          </p>
-                        )}
-                      </div>
-                      {canSeeCosts && (
-                        <div className="space-y-2">
-                          <Label htmlFor="precio_compra">
-                            {formData.precio_por_kilo ? "Costo de compra ($/kg)" : "Costo de compra"}
-                          </Label>
-                          <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                            <Input
-                              id="precio_compra" type="number" step="0.01" value={formData.precio_compra}
-                              onChange={(e) => setFormData({ ...formData, precio_compra: e.target.value })}
-                              placeholder="0.00" className="pl-7" autoComplete="off"
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* IVA + IEPS + Descuento máximo */}
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="flex items-center gap-2 p-2 rounded border bg-background">
-                        <Switch id="aplica_iva" checked={formData.aplica_iva} onCheckedChange={(checked) => setFormData({ ...formData, aplica_iva: checked })} />
-                        <Label htmlFor="aplica_iva" className="cursor-pointer text-sm">IVA 16%</Label>
-                      </div>
-                      <div className="flex items-center gap-2 p-2 rounded border bg-background">
-                        <Switch id="aplica_ieps" checked={formData.aplica_ieps} onCheckedChange={(checked) => setFormData({ ...formData, aplica_ieps: checked })} />
-                        <Label htmlFor="aplica_ieps" className="cursor-pointer text-sm">IEPS 8%</Label>
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="descuento_maximo" className="text-xs">
-                          {formData.precio_por_kilo ? "Desc. máx ($/kg)" : "Desc. máximo"}
-                        </Label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                          <Input
-                            id="descuento_maximo" type="number" step="0.01" value={formData.descuento_maximo}
-                            onChange={(e) => setFormData({ ...formData, descuento_maximo: e.target.value })}
-                            placeholder="0.00" className="pl-7 h-9" autoComplete="off"
-                          />
-                        </div>
+                        <p className="text-xs text-ink-500">Peso del bulto/caja para cálculos de carga del camión</p>
                       </div>
                     </div>
 
-                    {/* Se vende por kilo? */}
-                    <div className="flex items-center gap-3 p-2 rounded border bg-background">
+                    <div className="flex items-center gap-3 p-3 rounded-lg border border-ink-100 bg-white">
                       <Switch id="precio_por_kilo" checked={formData.precio_por_kilo} onCheckedChange={(v) => setFormData({ ...formData, precio_por_kilo: v })} />
                       <div>
-                        <Label htmlFor="precio_por_kilo" className="cursor-pointer text-sm">Se vende por kilo</Label>
-                        <p className="text-[11px] text-muted-foreground">{formData.precio_por_kilo ? "Total = cantidad × peso × $/kg" : "Total = cantidad × precio"}</p>
+                        <Label htmlFor="precio_por_kilo" className="cursor-pointer text-sm font-medium">Se vende por kilo (granel)</Label>
+                        <p className="text-[11px] text-muted-foreground">Activa si el peso varía. El cliente pide bultos, pero el precio se calcula sobre el peso real.</p>
                       </div>
                     </div>
 
-                    {/* Margen en tiempo real */}
-                    {canSeeCosts && precioVenta > 0 && precioCompra > 0 && (
-                      <div className={`text-xs p-2 rounded border flex items-center justify-between ${
-                        ((precioVenta - precioCompra) / precioVenta * 100) >= 10
-                          ? "bg-green-50 text-green-700 border-green-200"
-                          : ((precioVenta - precioCompra) / precioVenta * 100) >= 5
-                            ? "bg-yellow-50 text-yellow-700 border-yellow-200"
-                            : "bg-red-50 text-red-700 border-red-200"
-                      }`}>
-                        <span>Margen: {((precioVenta - precioCompra) / precioVenta * 100).toFixed(1)}%</span>
-                        <span>Ganancia: {formatCurrency(precioVenta - precioCompra)}{formData.precio_por_kilo ? "/kg" : `/${formData.unidad}`}</span>
+                    <div className="space-y-2">
+                      <Label htmlFor="precio_venta">{formData.precio_por_kilo ? 'Precio por kilo' : `Precio por ${formData.unidad}`} <span className="text-crimson-500">*</span></Label>
+                      <div className="relative" style={{maxWidth: '280px'}}>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                        <Input id="precio_venta" type="number" step="0.01" value={formData.precio_venta}
+                          onChange={(e) => setFormData({ ...formData, precio_venta: e.target.value })}
+                          placeholder="0.00" required className="pl-7 font-mono" />
+                      </div>
+                      <p className="text-xs text-ink-500">Precio FINAL que paga el cliente. Incluye IVA si aplica.</p>
+                    </div>
+
+                    {formData.precio_por_kilo && precioVenta > 0 && pesoKg > 0 && (
+                      <div className="px-4 py-3 rounded-lg bg-white border border-crimson-500/20 text-sm text-ink-900">
+                        <span className="font-medium">Estimado por {formData.unidad}</span> = {formatCurrency(precioVenta)}/kg &times; {pesoKg} kg = <strong>{formatCurrency(precioVenta * pesoKg)}</strong>
+                        <br /><span className="text-xs text-ink-500">(peso real al cargar puede variar)</span>
                       </div>
                     )}
-                    {kiloPesoError && <p className="text-xs text-destructive bg-destructive/10 p-2 rounded border border-destructive/20">Ingresa el peso para productos vendidos por kilo</p>}
-                    {margenNegativo && canSeeCosts && <p className="text-xs p-2 rounded bg-red-50 text-red-700 border border-red-200">El precio de venta es menor al costo. El margen es negativo.</p>}
+                  </div>
+
+                  {/* ── SECCIÓN 3: Impuestos ── */}
+                  <div className="space-y-3 p-4 rounded-xl bg-[#F5F2EA]">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex items-center gap-3 p-3 rounded-lg border border-ink-100 bg-white">
+                        <Switch id="aplica_iva" checked={formData.aplica_iva} onCheckedChange={(c) => setFormData({ ...formData, aplica_iva: c })} />
+                        <div>
+                          <Label htmlFor="aplica_iva" className="cursor-pointer text-sm font-medium">IVA 16%</Label>
+                          <p className="text-[11px] text-muted-foreground">Mayoría. Desactiva si exento.</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 rounded-lg border border-ink-100 bg-white">
+                        <Switch id="aplica_ieps" checked={formData.aplica_ieps} onCheckedChange={(c) => setFormData({ ...formData, aplica_ieps: c })} />
+                        <div>
+                          <Label htmlFor="aplica_ieps" className="cursor-pointer text-sm font-medium">IEPS 8%</Label>
+                          <p className="text-[11px] text-muted-foreground">Solo botanas, golosinas, refrescos.</p>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-ink-500 text-center italic">El precio es el FINAL. El sistema desglosa al facturar.</p>
+                  </div>
+
+                  {/* ── SECCIÓN 4: Rentabilidad y piso ── */}
+                  <div className="space-y-4 border border-ink-100 rounded-xl p-5 bg-[#F7F5EF]">
+                    <p className="text-xs font-medium text-ink-700 uppercase tracking-wide">Rentabilidad y piso de precios</p>
+                    <div className="grid grid-cols-3 gap-4">
+                      {canSeeCosts && (
+                        <div className="space-y-2">
+                          <Label htmlFor="precio_compra">{formData.precio_por_kilo ? 'Costo por kilo' : `Costo por ${formData.unidad}`}</Label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                            <Input id="precio_compra" type="number" step="0.01" value={formData.precio_compra}
+                              onChange={(e) => setFormData({ ...formData, precio_compra: e.target.value })}
+                              placeholder="0.00" className="pl-7 font-mono" />
+                          </div>
+                          <p className="text-xs text-ink-500">Se actualiza al recibir mercancía</p>
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        <Label htmlFor="descuento_maximo">{formData.precio_por_kilo ? 'Desc. máx por kilo' : `Desc. máx por ${formData.unidad}`}</Label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                          <Input id="descuento_maximo" type="number" step="0.01" value={formData.descuento_maximo}
+                            onChange={(e) => setFormData({ ...formData, descuento_maximo: e.target.value })}
+                            placeholder="0.00" className="pl-7 font-mono" />
+                        </div>
+                        <p className="text-xs text-crimson-500 italic">Piso de precios para vendedores</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="stock_minimo">Stock mínimo</Label>
+                        <Input id="stock_minimo" type="number" value={formData.stock_minimo}
+                          onChange={(e) => setFormData({ ...formData, stock_minimo: e.target.value })}
+                          placeholder="0" />
+                        <p className="text-xs text-ink-500">Alerta cuando baje</p>
+                      </div>
+                    </div>
+
+                    {/* Análisis financiero condicional */}
+                    {canSeeCosts && precioVenta > 0 && precioCompra > 0 && (() => {
+                      const ut = precioVenta - precioCompra;
+                      const m = (ut / precioVenta) * 100;
+                      const mk = (ut / precioCompra) * 100;
+                      const sfx = formData.precio_por_kilo ? ' / kg' : ` / ${formData.unidad}`;
+                      const piso = descMaxForm > 0 ? precioVenta - descMaxForm : 0;
+                      const utProt = piso > 0 ? piso - precioCompra : 0;
+                      const mProt = piso > 0 ? (utProt / piso) * 100 : 0;
+                      const clr = m < 10 ? 'text-crimson-500' : m < 20 ? 'text-amber-600' : 'text-green-700';
+                      const bg = m < 10 ? 'bg-red-50 border-red-200' : m < 20 ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200';
+                      return (
+                        <div className={`rounded-lg border overflow-hidden ${bg}`}>
+                          <div className={`px-4 py-2 text-xs font-semibold ${clr}`}>
+                            {m < 0 ? 'Margen negativo' : 'Análisis de rentabilidad'} <span className="font-normal opacity-60">({formData.precio_por_kilo ? 'Por kilo' : `Por ${formData.unidad}`})</span>
+                          </div>
+                          <div className="px-4 py-3 bg-white font-mono text-sm space-y-1.5">
+                            <div className="flex justify-between text-ink-500"><span>Costo:</span><span className="text-ink-900">{formatCurrency(precioCompra)}{sfx}</span></div>
+                            <div className="flex justify-between text-ink-500"><span>Precio lista:</span><span className="text-ink-900">{formatCurrency(precioVenta)}{sfx}</span></div>
+                            <div className="border-t border-ink-100 my-1" />
+                            <div className="flex justify-between text-ink-500"><span>Utilidad:</span><span className="text-ink-900 font-semibold">{formatCurrency(ut)}{sfx}</span></div>
+                            <div className="flex justify-between text-ink-500"><span>Markup (sobre costo):</span><span className={clr}>{mk.toFixed(1)}%</span></div>
+                            <div className={`flex justify-between font-semibold ${clr}`}><span>Margen (sobre venta):</span><span>{m.toFixed(1)}%</span></div>
+                            {descMaxForm > 0 && m > 0 && (
+                              <>
+                                <div className="border-t border-ink-100 my-2" />
+                                <div className="text-[11px] text-ink-500">Desc. máx {formatCurrency(descMaxForm)}{sfx}:</div>
+                                <div className="flex justify-between text-ink-500"><span>Piso:</span><span className="text-ink-900 font-bold">{formatCurrency(piso)}{sfx}</span></div>
+                                {utProt > 0 ? (
+                                  <div className="flex justify-between text-ink-500"><span>Utilidad protegida:</span><span className={clr}>{formatCurrency(utProt)}{sfx} ({mProt.toFixed(1)}%)</span></div>
+                                ) : (
+                                  <p className="text-crimson-500 font-semibold text-xs">El descuento elimina la utilidad</p>
+                                )}
+                              </>
+                            )}
+                          </div>
+                          {descMaxForm > 0 && m > 0 && (
+                            <div className="px-4 py-2 border-t text-[11px] text-ink-500 italic">Vendedores no podrán vender por debajo del piso sin tu autorización.</div>
+                          )}
+                          {m < 0 && (
+                            <div className="px-4 py-2 border-t text-[11px] text-crimson-500 italic">Estás vendiendo por debajo del costo.</div>
+                          )}
+                        </div>
+                      );
+                    })()}
                     {descuentoExcesivo && <p className="text-xs text-destructive bg-destructive/10 p-2 rounded border border-destructive/20">El descuento no puede ser mayor al precio</p>}
                   </div>
 
-                  {/* ── Inventario (colapsable) ── */}
-                  <details className="border rounded-lg p-3">
-                    <summary className="text-sm font-medium cursor-pointer text-muted-foreground flex items-center gap-1.5"><Package className="h-4 w-4" /> Inventario y proveedor</summary>
-                    <div className="space-y-3 mt-3">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-2">
-                          <Label htmlFor="stock_minimo">Stock mínimo de alerta</Label>
-                          <Input id="stock_minimo" type="number" value={formData.stock_minimo} onChange={(e) => setFormData({ ...formData, stock_minimo: e.target.value })} autoComplete="off" placeholder="0" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="proveedor">Proveedor principal</Label>
-                          <Select value={formData.proveedor_id} onValueChange={(value) => setFormData({ ...formData, proveedor_id: value })}>
-                            <SelectTrigger><SelectValue placeholder="Seleccionar (opcional)" /></SelectTrigger>
-                            <SelectContent>
-                              {proveedores.map(prov => (
-                                <SelectItem key={prov.id} value={prov.id}>{prov.nombre}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-2 rounded border bg-background">
-                        <Switch id="maneja_caducidad" checked={formData.maneja_caducidad} onCheckedChange={(checked) => setFormData({ ...formData, maneja_caducidad: checked })} />
-                        <div>
-                          <Label htmlFor="maneja_caducidad" className="cursor-pointer text-sm">Maneja fecha de caducidad</Label>
-                          <p className="text-[11px] text-muted-foreground">El almacén registrará la fecha al recibir cada lote</p>
-                        </div>
-                      </div>
-                    </div>
-                  </details>
-
-                  {/* ── Configuración (colapsable) ── */}
-                  <details className="border rounded-lg p-3" open={specialConfigCount > 0 ? true : undefined}>
-                    <summary className="text-sm font-medium cursor-pointer text-muted-foreground">
-                      Configuración especial {specialConfigCount > 0 && <Badge variant="secondary" className="ml-2 text-[10px]">{specialConfigCount}</Badge>}
-                    </summary>
-                    <div className="space-y-2 mt-3">
-                      <div className="flex items-center gap-3 p-2 rounded border bg-background">
-                        <Switch id="requiere_fumigacion" checked={formData.requiere_fumigacion} onCheckedChange={(checked) => setFormData({ ...formData, requiere_fumigacion: checked })} />
-                        <div><Label htmlFor="requiere_fumigacion" className="cursor-pointer text-sm">Requiere fumigación</Label><p className="text-[11px] text-muted-foreground">El sistema alertará cada 6 meses</p></div>
-                      </div>
-                      {formData.requiere_fumigacion && (
-                        <div className="ml-8 space-y-1"><Label htmlFor="fecha_ultima_fumigacion" className="text-xs">Última fumigación</Label><Input id="fecha_ultima_fumigacion" type="date" value={formData.fecha_ultima_fumigacion} onChange={(e) => setFormData({ ...formData, fecha_ultima_fumigacion: e.target.value })} className="h-8" /></div>
-                      )}
-                      <div className="flex items-center gap-3 p-2 rounded border bg-background">
-                        <Switch id="solo_uso_interno" checked={formData.solo_uso_interno} onCheckedChange={(checked) => setFormData({ ...formData, solo_uso_interno: checked })} />
-                        <div><Label htmlFor="solo_uso_interno" className="cursor-pointer text-sm">Solo uso interno</Label><p className="text-[11px] text-muted-foreground">No aparece en pedidos de clientes</p></div>
-                      </div>
-                      <div className={`flex items-center gap-3 p-2 rounded border ${formData.bloqueado_venta ? 'bg-destructive/10 border-destructive/30' : 'bg-background'}`}>
-                        <Switch id="bloqueado_venta" checked={formData.bloqueado_venta} onCheckedChange={(checked) => setFormData({ ...formData, bloqueado_venta: checked })} />
-                        <div><Label htmlFor="bloqueado_venta" className="cursor-pointer text-sm">Ventas bloqueadas</Label><p className="text-[11px] text-muted-foreground">Nadie puede venderlo temporalmente</p></div>
-                      </div>
-                      <div className="flex items-center gap-3 p-2 rounded border bg-background">
-                        <Switch id="es_promocion" checked={formData.es_promocion} onCheckedChange={(checked) => setFormData({ ...formData, es_promocion: checked })} />
-                        <Label htmlFor="es_promocion" className="cursor-pointer text-sm">En promoción</Label>
-                      </div>
-                      {formData.es_promocion && (
-                        <div className="ml-8 space-y-1"><Label htmlFor="descripcion_promocion" className="text-xs">Descripción de la promoción</Label><Input id="descripcion_promocion" value={formData.descripcion_promocion} onChange={(e) => setFormData({ ...formData, descripcion_promocion: e.target.value })} placeholder="Ej: Compra 3 lleva 4" autoComplete="off" className="h-8" /></div>
-                      )}
-                    </div>
-                  </details>
-
-                  {/* ── Datos fiscales CFDI (colapsable) ── */}
+                  {/* ── SECCIÓN 5: Datos fiscales CFDI ── */}
                   <details className="border rounded-lg p-3">
                     <summary className="text-sm font-medium cursor-pointer text-muted-foreground flex items-center gap-1.5"><FileText className="h-4 w-4" /> Datos fiscales (CFDI)</summary>
                     <div className="space-y-3 mt-3">
                       <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1"><Label htmlFor="codigo_sat" className="text-xs">Clave SAT</Label><Input id="codigo_sat" value={formData.codigo_sat} onChange={(e) => setFormData({ ...formData, codigo_sat: e.target.value })} placeholder="Ej: 50201502" autoComplete="off" className="h-8" /></div>
                         <div className="space-y-1">
                           <Label htmlFor="unidad_sat" className="text-xs">Unidad SAT</Label>
                           <Select value={formData.unidad_sat} onValueChange={(value) => setFormData({ ...formData, unidad_sat: value })}>
                             <SelectTrigger className="h-8"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                            <SelectContent>{UNIDADES_SAT.map(u => (<SelectItem key={u.clave} value={u.clave}>{u.clave} — {u.descripcion}</SelectItem>))}</SelectContent>
+                            <SelectContent>{UNIDADES_SAT.map(u => <SelectItem key={u.clave} value={u.clave}>{u.clave} — {u.descripcion}</SelectItem>)}</SelectContent>
                           </Select>
                         </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="piezas_por_unidad" className="text-xs">Piezas por unidad</Label>
+                          <Input id="piezas_por_unidad" type="number" value={formData.piezas_por_unidad}
+                            onChange={(e) => setFormData({ ...formData, piezas_por_unidad: e.target.value })}
+                            placeholder="24" className="h-8" />
+                        </div>
                       </div>
-                      <div className="space-y-1"><Label htmlFor="piezas_por_unidad" className="text-xs">Piezas por unidad</Label><Input id="piezas_por_unidad" type="number" value={formData.piezas_por_unidad} onChange={(e) => setFormData({ ...formData, piezas_por_unidad: e.target.value })} placeholder="Ej: 24" autoComplete="off" className="h-8" /></div>
                     </div>
                   </details>
 
-                  {/* ── Card informativo (solo al EDITAR) ── */}
+                  {/* ── SECCIÓN 6: Más detalles ── */}
+                  <details className="border rounded-lg p-3" open={specialConfigCount > 0 ? true : undefined}>
+                    <summary className="text-sm font-medium cursor-pointer text-muted-foreground">
+                      Más detalles {specialConfigCount > 0 && <Badge variant="secondary" className="ml-2 text-[10px]">{specialConfigCount}</Badge>}
+                    </summary>
+                    <div className="space-y-2 mt-3">
+                      <div className="flex items-center gap-3 p-2 rounded border bg-background">
+                        <Switch id="maneja_caducidad" checked={formData.maneja_caducidad} onCheckedChange={(c) => setFormData({ ...formData, maneja_caducidad: c })} />
+                        <div>
+                          <Label htmlFor="maneja_caducidad" className="cursor-pointer text-sm">Maneja caducidad</Label>
+                          <p className="text-[11px] text-muted-foreground">Almacén registra fecha al recibir cada lote</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 p-2 rounded border bg-background">
+                        <Switch id="requiere_fumigacion" checked={formData.requiere_fumigacion} onCheckedChange={(c) => setFormData({ ...formData, requiere_fumigacion: c })} />
+                        <div>
+                          <Label htmlFor="requiere_fumigacion" className="cursor-pointer text-sm">Requiere fumigación periódica</Label>
+                          <p className="text-[11px] text-muted-foreground">Para semillas, granos. El sistema avisa al almacén.</p>
+                        </div>
+                      </div>
+                      {formData.requiere_fumigacion && (
+                        <div className="ml-8 space-y-1">
+                          <Label className="text-xs">Frecuencia (meses)</Label>
+                          <Input type="number" defaultValue="6" min="1" max="24" style={{maxWidth: '120px'}} className="h-8" />
+                          <p className="text-[11px] text-ink-500">Cada cuántos meses. El sistema notificará al almacenista cuando se acerque la fecha.</p>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-3 p-2 rounded border bg-background">
+                        <Switch id="es_promocion" checked={formData.es_promocion} onCheckedChange={(c) => setFormData({ ...formData, es_promocion: c })} />
+                        <div>
+                          <Label htmlFor="es_promocion" className="cursor-pointer text-sm">Es promoción</Label>
+                          <p className="text-[11px] text-muted-foreground">Variante promocional (ej: "+ 3KG GRATIS")</p>
+                        </div>
+                      </div>
+                      {formData.es_promocion && (
+                        <div className="ml-8 space-y-1">
+                          <Label htmlFor="descripcion_promocion" className="text-xs">Descripción de la promoción</Label>
+                          <Input id="descripcion_promocion" value={formData.descripcion_promocion}
+                            onChange={(e) => setFormData({ ...formData, descripcion_promocion: e.target.value })}
+                            placeholder="Ej: Promoción abril 2026 — 3kg gratis" className="h-8" />
+                        </div>
+                      )}
+                    </div>
+                  </details>
+
+                  {/* ── Card info (solo editar) ── */}
                   {editingProduct && (
                     <div className="p-3 rounded-lg border bg-muted/50 space-y-1.5 text-sm">
                       <div className="flex justify-between items-center">
@@ -947,45 +951,32 @@ const Productos = () => {
                           )}
                         </span>
                       </div>
-                      {canSeeCosts && editingProduct.precio_compra > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Último costo:</span>
-                          <span>{formatCurrency(editingProduct.precio_compra)}{editingProduct.precio_por_kilo ? "/kg" : `/${editingProduct.unidad}`}</span>
-                        </div>
-                      )}
                       {canSeeCosts && editingProduct.costo_promedio_ponderado > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">CPP:</span>
-                          <span>{formatCurrency(editingProduct.costo_promedio_ponderado)}</span>
-                        </div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">CPP:</span><span>{formatCurrency(editingProduct.costo_promedio_ponderado)}</span></div>
                       )}
                     </div>
                   )}
 
-                  {/* Toggle activo (discreto) */}
+                  {/* Toggle activo */}
                   <div className="flex items-center justify-between p-2 rounded border bg-muted/30">
                     <Label htmlFor="activo" className="cursor-pointer text-sm text-muted-foreground">Producto activo</Label>
-                    <Switch id="activo" checked={formData.activo} onCheckedChange={(checked) => setFormData({ ...formData, activo: checked })} />
+                    <Switch id="activo" checked={formData.activo} onCheckedChange={(c) => setFormData({ ...formData, activo: c })} />
                   </div>
 
                   {/* Botones */}
                   <div className="flex items-center justify-between pt-2 border-t">
                     {editingProduct ? (
                       <div className="flex items-center gap-1">
-                        <Button type="button" variant="ghost" size="sm" disabled={!canGoPrev || saving} onClick={() => handleNavigateAndSave('prev')} title="Anterior">
-                          ← Ant
-                        </Button>
-                        <span className="text-xs text-muted-foreground px-1">
-                          {editingIndex >= 0 ? `${editingIndex + 1} de ${filteredProductos.length}` : ""}
-                        </span>
-                        <Button type="button" variant="ghost" size="sm" disabled={!canGoNext || saving} onClick={() => handleNavigateAndSave('next')} title="Siguiente">
-                          Sig →
-                        </Button>
+                        <Button type="button" variant="ghost" size="sm" disabled={!canGoPrev || saving} onClick={() => handleNavigateAndSave('prev')} title="Anterior">← Ant</Button>
+                        <span className="text-xs text-muted-foreground px-1">{editingIndex >= 0 ? `${editingIndex + 1} de ${filteredProductos.length}` : ""}</span>
+                        <Button type="button" variant="ghost" size="sm" disabled={!canGoNext || saving} onClick={() => handleNavigateAndSave('next')} title="Siguiente">Sig →</Button>
                       </div>
                     ) : <div />}
                     <div className="flex gap-2">
                       <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-                      <Button type="submit" disabled={saving}>{saving ? "Guardando..." : editingProduct ? "Guardar" : "Crear producto"}</Button>
+                      <Button type="submit" disabled={saving} className="bg-crimson-500 hover:bg-crimson-600 text-white">
+                        {saving ? "Guardando..." : editingProduct ? "Guardar" : "Crear producto"}
+                      </Button>
                     </div>
                   </div>
                 </form>
@@ -1145,7 +1136,7 @@ const Productos = () => {
                                   {p.precio_por_kilo ? (
                                     <Badge className="text-[10px] px-1.5 py-0 h-4 bg-blue-100 text-blue-700 border-blue-200">/kilo</Badge>
                                   ) : (
-                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">/unidad</Badge>
+                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">{p.unidad ? p.unidad.charAt(0).toUpperCase() + p.unidad.slice(1) : 'Unidad'}</Badge>
                                   )}
                                 </TableCell>
 
