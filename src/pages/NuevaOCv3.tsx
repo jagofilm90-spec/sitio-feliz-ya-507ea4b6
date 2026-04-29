@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import SeccionProveedor from "@/components/compras/oc-v3/SeccionProveedor";
@@ -16,6 +16,9 @@ function defaultFechaEntrega(): string {
 
 export default function NuevaOCv3() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const productosRef = useRef<HTMLDivElement | null>(null);
+  const preloadAttemptedRef = useRef(false);
 
   // Sección 1
   const [proveedor, setProveedor] = useState<ProveedorLite | null>(null);
@@ -33,6 +36,39 @@ export default function NuevaOCv3() {
   const [notasInternas, setNotasInternas] = useState<string>("");
 
   const [submitting, setSubmitting] = useState(false);
+
+  // Pre-cargar proveedor desde ?proveedor={id}
+  useEffect(() => {
+    if (preloadAttemptedRef.current) return;
+    const proveedorId = searchParams.get("proveedor");
+    if (!proveedorId) return;
+    preloadAttemptedRef.current = true;
+
+    (async () => {
+      const { data, error } = await supabase
+        .from("proveedores")
+        .select("id, nombre, rfc, termino_pago, activo")
+        .eq("id", proveedorId)
+        .maybeSingle();
+
+      if (error || !data || !data.activo) {
+        toast.warning("Proveedor no encontrado o inactivo");
+        return;
+      }
+
+      setProveedor({
+        id: data.id,
+        nombre: data.nombre,
+        rfc: data.rfc,
+        termino_pago: data.termino_pago,
+      });
+
+      // Hacer scroll a la sección de productos
+      setTimeout(() => {
+        productosRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 250);
+    })();
+  }, [searchParams]);
 
   const calcularPlazoDias = (): number => {
     if (!plazoTipo) return 0;
@@ -164,11 +200,13 @@ export default function NuevaOCv3() {
               setFechaPagoAnticipado={setFechaPagoAnticipado}
             />
 
-            <SeccionProductos
-              proveedorId={proveedor?.id ?? null}
-              lineas={lineas}
-              setLineas={setLineas}
-            />
+            <div ref={productosRef} className="scroll-mt-6">
+              <SeccionProductos
+                proveedorId={proveedor?.id ?? null}
+                lineas={lineas}
+                setLineas={setLineas}
+              />
+            </div>
 
             <SeccionEntrega
               fechaEntrega={fechaEntrega}
