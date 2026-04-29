@@ -105,7 +105,7 @@ export default function NuevaOCv3() {
       if (error) throw error;
       const folio = (data as any)?.folio ?? "";
       toast.success(folio ? `OC creada · Folio: ${folio}` : "OC creada");
-      navigate("/compras");
+      navigate("/compras?tab=ordenes");
     } catch (err: any) {
       console.error("[NuevaOCv3] error", err);
       toast.error(err?.message ?? "Error al crear la OC");
