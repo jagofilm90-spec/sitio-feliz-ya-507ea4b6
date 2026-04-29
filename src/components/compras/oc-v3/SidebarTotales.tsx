@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
-import type { LineaOC, ProveedorLite, TipoPlazo } from "./types";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { type LineaOC, type ProveedorLite, type TipoPlazo, calcularSubtotalLinea } from "./types";
 
 interface Props {
   proveedor: ProveedorLite | null;
@@ -9,6 +10,7 @@ interface Props {
   submitting: boolean;
   onSubmit: () => void;
   onSaveDraft: () => void;
+  validationError: string | null;
 }
 
 const formatMoney = (n: number) =>
@@ -30,21 +32,26 @@ export default function SidebarTotales({
   submitting,
   onSubmit,
   onSaveDraft,
+  validationError,
 }: Props) {
-  const subtotalBruto = lineas.reduce(
-    (acc, l) => acc + (Number(l.cantidad) || 0) * (Number(l.precio_unitario) || 0),
-    0,
-  );
-  // Asumimos precios con IVA incluido (modelo común): subtotal sin iva = bruto / 1.16
+  const subtotalBruto = lineas.reduce((acc, l) => acc + calcularSubtotalLinea(l), 0);
+  // Asumimos precios con IVA incluido: subtotal sin iva = bruto / 1.16
   const subtotal = subtotalBruto / 1.16;
   const iva = subtotalBruto - subtotal;
   const ieps = 0;
   const total = subtotalBruto + ieps;
 
+  const disabled = submitting || !!validationError;
+
+  const submitBtn = (
+    <Button onClick={onSubmit} disabled={disabled} className="w-full" size="lg">
+      {submitting ? "Creando..." : "Crear orden de compra"}
+    </Button>
+  );
+
   return (
     <aside className="w-[320px] shrink-0">
       <div className="sticky top-6 space-y-4">
-        {/* Card proveedor seleccionado */}
         <div
           className={
             proveedor
@@ -68,7 +75,6 @@ export default function SidebarTotales({
           )}
         </div>
 
-        {/* Card resumen */}
         <div className="rounded-xl border border-ink-100 bg-white p-5 shadow-xs-soft">
           <p className="text-[10px] uppercase tracking-[0.18em] text-ink-400 font-medium mb-4">Resumen</p>
 
@@ -97,11 +103,19 @@ export default function SidebarTotales({
           </div>
         </div>
 
-        {/* Acciones */}
         <div className="space-y-2">
-          <Button onClick={onSubmit} disabled={submitting} className="w-full" size="lg">
-            {submitting ? "Creando..." : "Crear orden de compra"}
-          </Button>
+          {validationError ? (
+            <TooltipProvider delayDuration={100}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span tabIndex={0} className="block w-full">{submitBtn}</span>
+                </TooltipTrigger>
+                <TooltipContent side="left">{validationError}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            submitBtn
+          )}
           <Button onClick={onSaveDraft} disabled={submitting} variant="secondary" className="w-full">
             Guardar borrador
           </Button>
