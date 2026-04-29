@@ -175,10 +175,7 @@ export const TabProductos = ({ proveedorId }: Props) => {
                   </div>
                   <div className="text-right">
                     <button
-                      onClick={() => {
-                        console.log("Compare placeholder Fase D", p.producto_id);
-                        toast.info("Comparador disponible en Fase D");
-                      }}
+                      onClick={() => setProductoComparar(p.producto_id)}
                       className="px-2.5 py-1 rounded-md text-[11px] font-medium bg-crimson-50 text-crimson-700 hover:bg-crimson-100 transition-colors"
                     >
                       Comparar
@@ -189,6 +186,13 @@ export const TabProductos = ({ proveedorId }: Props) => {
             })}
           </div>
         </div>
+      )}
+
+      {productoComparar && (
+        <ModalComparador
+          productoId={productoComparar}
+          onClose={() => setProductoComparar(null)}
+        />
       )}
     </div>
   );
