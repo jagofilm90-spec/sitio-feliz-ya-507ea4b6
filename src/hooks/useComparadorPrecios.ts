@@ -157,17 +157,6 @@ export interface ProductoMultiProveedor {
   proveedores_count: number;
 }
 
-async function fetchProductosMulti(): Promise<ProductoMultiProveedor[]> {
-  const { data, error } = await supabase
-    .from("proveedor_productos")
-    .select("producto_id, productos:producto_id(id, nombre, precio_por_kilo, activo)");
-  if (error) throw error;
-
-  const counter = new Map<string, { count: Set<string>; nombre: string; ppk: boolean }>();
-  // We need distinct proveedor_id per producto — re-query with proveedor_id:
-  return [];
-}
-
 async function fetchProductosMultiV2(): Promise<ProductoMultiProveedor[]> {
   const { data, error } = await supabase
     .from("proveedor_productos")
