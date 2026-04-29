@@ -119,11 +119,12 @@ const ProveedorProductosSelector = ({ proveedorId, proveedorNombre }: ProveedorP
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["proveedor-productos-config", proveedorId] });
+      queryClient.invalidateQueries({ queryKey: ["proveedores"] });
     },
     onError: (error: any) => {
       toast({
         variant: "destructive",
-        title: "Error",
+        title: "Error al asociar producto",
         description: error.message,
       });
     },
