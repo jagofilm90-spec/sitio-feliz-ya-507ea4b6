@@ -87,12 +87,12 @@ async function syncPedidoToSupabase(pedido: PedidoPendiente): Promise<void> {
 
   // In-app notification
   bgPromises.push(
-    supabase.from("notificaciones").insert({
+    (supabase.from("notificaciones").insert({
       tipo: "nuevo_pedido_vendedor",
       titulo: `Pedido ${folio} (sync offline)`,
       descripcion: `Pedido para ${pedido.cliente_nombre} sincronizado desde cola offline`,
       leida: false,
-    }).catch(() => {})
+    }) as unknown as Promise<any>).catch(() => {})
   );
 
   // Push notification to secretaría
