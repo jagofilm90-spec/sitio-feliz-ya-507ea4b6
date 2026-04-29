@@ -1061,10 +1061,10 @@ function AlertasPrecioList({ refreshKey, onPedidoClick }: { refreshKey?: number;
 
   useEffect(() => {
     const load = async () => {
-      const { data } = await supabase
-        .from("pedidos")
+      const { data } = await (supabase
+        .from("pedidos") as any)
         .select("id, folio, fecha_pedido, total, alertas_precio, clientes(nombre), profiles:vendedor_id(full_name)")
-        .neq("alertas_precio" as any, "[]")
+        .neq("alertas_precio", "[]")
         .in("status", ["pendiente", "en_ruta"])
         .order("fecha_pedido", { ascending: false })
         .limit(50);
