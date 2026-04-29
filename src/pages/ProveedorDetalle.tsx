@@ -104,15 +104,18 @@ const ProveedorDetalle = () => {
             eventosCount={data.eventosCount}
           />
 
-          {activeTab === "resumen" ? (
+          {activeTab === "resumen" && (
             <TabResumen data={data} onVerTodasOCs={() => setActiveTab("ocs")} />
-          ) : (
+          )}
+          {activeTab === "productos" && <TabProductos proveedorId={data.proveedor.id} />}
+          {activeTab === "ocs" && <TabHistoricoOCs proveedorId={data.proveedor.id} />}
+          {activeTab === "faltantes" && <TabFaltantes proveedorId={data.proveedor.id} />}
+          {activeTab === "cuenta" && <TabCuentaCorriente proveedorId={data.proveedor.id} />}
+          {activeTab === "memoria" && (
             <div className="px-8 py-20 text-center">
-              <div className="text-5xl mb-3">{PLACEHOLDER[activeTab].icon}</div>
-              <h2 className="font-serif text-2xl text-ink-500 mb-1">
-                {PLACEHOLDER[activeTab].title}
-              </h2>
-              <p className="font-serif italic text-ink-500">Próximamente en Fase C.2</p>
+              <div className="text-5xl mb-3">📝</div>
+              <h2 className="font-serif text-2xl text-ink-500 mb-1">Memoria</h2>
+              <p className="font-serif italic text-ink-500">Próximamente en Fase C.2.B</p>
             </div>
           )}
         </>
