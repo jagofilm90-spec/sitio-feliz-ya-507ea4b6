@@ -114,7 +114,11 @@ export const useCreateProveedor = (onSuccess?: (id: string) => void) => {
       qc.invalidateQueries({ queryKey: ["proveedores-v3"] });
       onSuccess?.(id);
     },
-    onError: (e: any) => toast.error(e?.message || "Error al crear proveedor"),
+    onError: (e: any) =>
+      toast.error("Error al guardar", {
+        description: e?.message || "Intenta de nuevo",
+        duration: 6000,
+      }),
   });
 };
 
