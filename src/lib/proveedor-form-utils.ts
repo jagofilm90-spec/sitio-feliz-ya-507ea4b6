@@ -91,7 +91,7 @@ export const emptyProveedor = (): ProveedorForm => ({
   direccion: "",
   municipio: "",
   estado: "",
-  termino_pago: "15",
+  termino_pago: "15_dias",
   metodos_pago_aceptados: [],
   notas_operativas: "",
   contactos: [
