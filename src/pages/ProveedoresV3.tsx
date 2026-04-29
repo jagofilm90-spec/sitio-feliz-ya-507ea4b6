@@ -130,17 +130,17 @@ const ProveedoresV3 = () => {
               : `${totalActivos} proveedores activos · ${conAlertas} con alertas activas`
           }
           actions={
-            <div className="flex items-center gap-2">
-              <button
+            <>
+              <Button
+                variant="outline"
                 onClick={() => setComparadorAbierto(true)}
-                className="px-[18px] py-[11px] rounded-lg bg-white border border-ink-100 text-ink-700 text-sm font-medium hover:bg-bg-warm transition-colors"
               >
                 🔍 Comparar precios
-              </button>
+              </Button>
               <Button onClick={() => navigate("/compras?tab=proveedores&accion=nuevo")}>
                 + Nuevo proveedor
               </Button>
-            </div>
+            </>
           }
         />
 
