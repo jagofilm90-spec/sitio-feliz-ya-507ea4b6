@@ -87,12 +87,12 @@ async function syncPedidoToSupabase(pedido: PedidoPendiente): Promise<void> {
 
   // In-app notification
   bgPromises.push(
-    supabase.from("notificaciones").insert({
+    (supabase.from("notificaciones").insert({
       tipo: "nuevo_pedido_vendedor",
       titulo: `Pedido ${folio} (sync offline)`,
       descripcion: `Pedido para ${pedido.cliente_nombre} sincronizado desde cola offline`,
       leida: false,
-    }).catch(() => {})
+    }) as unknown as Promise<any>).catch(() => {})
   );
 
   // Push notification to secretaría
@@ -162,13 +162,13 @@ async function syncPedidoToSupabase(pedido: PedidoPendiente): Promise<void> {
 
   // Audit log
   bgPromises.push(
-    supabase.from("security_audit_log").insert([{
+    (supabase.from("security_audit_log").insert([{
       user_id: vendedorId,
       action: "pedido_creado_offline_sync",
       table_name: "pedidos",
       record_id: inserted.id,
       details: { folio, cliente_nombre: pedido.cliente_nombre, total: pedido.totales.total, offline_sync: true },
-    }]).catch(() => {})
+    }]) as unknown as Promise<any>).catch(() => {})
   );
 
   await Promise.all(bgPromises).catch(() => {});

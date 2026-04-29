@@ -196,20 +196,22 @@ export default function ProductosModoCobro() {
 
       if (toTrue.length > 0) {
         promises.push(
-          supabase
-            .from("productos")
-            .update({ precio_por_kilo: true, updated_at: new Date().toISOString() })
-            .in("id", toTrue)
-            .then(({ error }) => { if (error) throw error; })
+          Promise.resolve(
+            supabase
+              .from("productos")
+              .update({ precio_por_kilo: true, updated_at: new Date().toISOString() })
+              .in("id", toTrue)
+          ).then(({ error }) => { if (error) throw error; })
         );
       }
       if (toFalse.length > 0) {
         promises.push(
-          supabase
-            .from("productos")
-            .update({ precio_por_kilo: false, updated_at: new Date().toISOString() })
-            .in("id", toFalse)
-            .then(({ error }) => { if (error) throw error; })
+          Promise.resolve(
+            supabase
+              .from("productos")
+              .update({ precio_por_kilo: false, updated_at: new Date().toISOString() })
+              .in("id", toFalse)
+          ).then(({ error }) => { if (error) throw error; })
         );
       }
 

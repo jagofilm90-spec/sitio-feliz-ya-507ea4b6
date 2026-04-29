@@ -720,11 +720,11 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
           const selectedCliente = clientes.find(c => c.id === selectedClienteId);
 
           const notifPromises: Promise<any>[] = [
-            supabase.from("notificaciones").insert({
+            (supabase.from("notificaciones").insert({
               tipo: "nuevo_pedido_vendedor", titulo: `Nuevo pedido ${folio}`,
               descripcion: `${vNombre} creó pedido para ${clienteNombre} - ${formatCurrency(totales.total)}`,
               pedido_id: pedido.id, leida: false,
-            }).catch(e => console.error("Notif error:", e)),
+            }) as unknown as Promise<any>).catch(e => console.error("Notif error:", e)),
           ];
 
           // Push + email to secretaría (all orders are now "pendiente")
@@ -748,14 +748,14 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
             ).join("; ");
             const hasErrorDedo = alertasPrec.some(a => a.tipo === 'error_dedo');
             notifPromises.push(
-              supabase.from("notificaciones").insert({
+              (supabase.from("notificaciones").insert({
                 tipo: "precio_modificado_admin",
                 titulo: hasErrorDedo
                   ? `🚨 Precio sospechoso en ${folio}`
                   : `⚠️ Precio bajo piso en ${folio}`,
                 descripcion: `${vNombre} → ${clienteNombre}: ${alertDesc}`,
                 leida: false,
-              }).catch(() => {}),
+              }) as unknown as Promise<any>).catch(() => {}),
               supabase.functions.invoke('send-push-notification', {
                 body: { roles: ['admin'],
                   title: hasErrorDedo ? `🚨 Precio sospechoso — ${folio}` : `⚠️ Bajo piso — ${folio}`,

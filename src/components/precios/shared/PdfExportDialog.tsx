@@ -14,7 +14,7 @@ export function PdfExportDialog({ open, onOpenChange, productos, categoriaFilter
   const handleDownload = async (version: "cliente" | "interno") => {
     onOpenChange(false);
     await generarListaPreciosPDF({
-      productos,
+      productos: productos as any,
       version,
       categoriaFilter: categoriaFilter && categoriaFilter !== "all" && categoriaFilter !== "todas" ? categoriaFilter : null,
     });
