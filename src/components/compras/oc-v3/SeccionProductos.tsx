@@ -149,13 +149,9 @@ export default function SeccionProductos({ proveedorId, lineas, setLineas }: Pro
 
           <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" disabled={loading || productosDisponibles.length === 0} className="gap-2">
+              <Button variant="outline" disabled={loading} className="gap-2">
                 <Plus className="h-4 w-4" />
-                {loading
-                  ? "Cargando productos..."
-                  : productosDisponibles.length === 0 && productos.length > 0
-                    ? "Todos los productos agregados"
-                    : "Agregar producto"}
+                {loading ? "Cargando productos..." : "Agregar producto"}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[420px] p-0 bg-popover" align="start">
