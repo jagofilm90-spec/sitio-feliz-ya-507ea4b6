@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import SeccionProveedor from "@/components/compras/oc-v3/SeccionProveedor";
@@ -16,6 +16,9 @@ function defaultFechaEntrega(): string {
 
 export default function NuevaOCv3() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const productosRef = useRef<HTMLDivElement | null>(null);
+  const preloadAttemptedRef = useRef(false);
 
   // Sección 1
   const [proveedor, setProveedor] = useState<ProveedorLite | null>(null);
