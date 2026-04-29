@@ -167,6 +167,10 @@ export const useUpdateProveedor = (onSuccess?: () => void) => {
       qc.invalidateQueries({ queryKey: ["proveedor-detalle", id] });
       onSuccess?.();
     },
-    onError: (e: any) => toast.error(e?.message || "Error al actualizar"),
+    onError: (e: any) =>
+      toast.error("Error al actualizar", {
+        description: e?.message || "Intenta de nuevo",
+        duration: 6000,
+      }),
   });
 };
