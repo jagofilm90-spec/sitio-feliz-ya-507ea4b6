@@ -8,7 +8,7 @@ import { useProveedorCuentaCorriente } from "@/hooks/useProveedorTabsData";
 
 const fmtMoney = (n: number) =>
   "$" +
-  Number(n || 0).toLocaleString("es-MX", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  Number(n || 0).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 interface Props {
   proveedorId: string;
