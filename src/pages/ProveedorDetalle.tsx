@@ -122,6 +122,14 @@ const ProveedorDetalle = () => {
           )}
         </>
       )}
+
+      {editandoProveedor && data && (
+        <ProveedorFormModal
+          mode="edit"
+          proveedorId={data.proveedor.id}
+          onClose={() => setEditandoProveedor(false)}
+        />
+      )}
     </Layout>
   );
 };
