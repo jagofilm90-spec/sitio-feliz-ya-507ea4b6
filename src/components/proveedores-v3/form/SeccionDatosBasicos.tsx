@@ -64,14 +64,6 @@ export const SeccionDatosBasicos = ({ form, errors, onChange }: Props) => {
               ))}
             </SelectContent>
           </Select>
-          {(isOtra || form.categoria === "") && form.categoria !== "" && (
-            <Input
-              className="mt-2"
-              value={form.categoria}
-              onChange={(e) => onChange({ categoria: e.target.value })}
-              placeholder="Especifica la categoría"
-            />
-          )}
           {isOtra && (
             <Input
               className="mt-2"
