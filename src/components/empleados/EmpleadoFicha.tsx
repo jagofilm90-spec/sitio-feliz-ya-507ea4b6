@@ -639,6 +639,8 @@ export function EmpleadoFicha({ empleado: initialEmpleado, foto, onBack, onEmple
           historial={{
             sueldo_anterior: sueldoHist[0].sueldo_anterior,
             sueldo_nuevo: sueldoHist[0].sueldo_nuevo,
+            premio_anterior: (sueldoHist[0] as any).premio_anterior ?? 0,
+            premio_nuevo: (sueldoHist[0] as any).premio_nuevo ?? 0,
           }}
           onClose={() => setShowAddendum(false)}
           onSigned={() => setShowAddendum(false)}
