@@ -64,19 +64,6 @@ export const useProveedorParaEditar = (id?: string) => {
   });
 };
 
-const buildProveedorPayload = (form: ProveedorForm) => ({
-  nombre: form.nombre.trim(),
-  nombre_comercial: form.nombre_comercial.trim() || null,
-  categoria: form.categoria.trim() || null,
-  rfc: form.rfc.trim().toUpperCase() || null,
-  regimen_fiscal: form.regimen_fiscal || null,
-  direccion: form.direccion.trim() || null,
-  municipio: form.municipio.trim() || null,
-  estado: form.estado.trim() || null,
-  termino_pago: form.termino_pago || null,
-    },
-  });
-};
 
 const buildProveedorPayload = (form: ProveedorForm) => ({
   nombre: form.nombre.trim(),
