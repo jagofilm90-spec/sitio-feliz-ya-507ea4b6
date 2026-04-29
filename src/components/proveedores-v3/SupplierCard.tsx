@@ -7,6 +7,7 @@ import type { ProveedorEnriquecido, RatingValue } from "@/types/proveedor-v3";
 
 interface SupplierCardProps {
   proveedor: ProveedorEnriquecido;
+  onEdit?: (id: string) => void;
 }
 
 const RATING_BORDER: Record<RatingValue, string> = {
@@ -78,7 +79,7 @@ const TAG_STYLES = {
   info: "bg-crimson-50 text-crimson-700 border-crimson-100",
 };
 
-export const SupplierCard = ({ proveedor: p }: SupplierCardProps) => {
+export const SupplierCard = ({ proveedor: p, onEdit }: SupplierCardProps) => {
   const navigate = useNavigate();
   const rating = p.score.rating;
   const isSinHist = rating === "sin_historial";
