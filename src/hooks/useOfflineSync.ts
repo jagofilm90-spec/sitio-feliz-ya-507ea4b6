@@ -162,13 +162,13 @@ async function syncPedidoToSupabase(pedido: PedidoPendiente): Promise<void> {
 
   // Audit log
   bgPromises.push(
-    supabase.from("security_audit_log").insert([{
+    (supabase.from("security_audit_log").insert([{
       user_id: vendedorId,
       action: "pedido_creado_offline_sync",
       table_name: "pedidos",
       record_id: inserted.id,
       details: { folio, cliente_nombre: pedido.cliente_nombre, total: pedido.totales.total, offline_sync: true },
-    }]).catch(() => {})
+    }]) as unknown as Promise<any>).catch(() => {})
   );
 
   await Promise.all(bgPromises).catch(() => {});
