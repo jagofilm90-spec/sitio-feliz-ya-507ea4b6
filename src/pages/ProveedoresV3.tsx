@@ -8,6 +8,7 @@ import { PulseBar } from "@/components/proveedores-v3/PulseBar";
 import { SearchFilters } from "@/components/proveedores-v3/SearchFilters";
 import { SupplierCard } from "@/components/proveedores-v3/SupplierCard";
 import { SelectorProductoComparar } from "@/components/proveedores-v3/comparador/SelectorProductoComparar";
+import { ProveedorFormModal } from "@/components/proveedores-v3/form/ProveedorFormModal";
 import { useProveedoresV3, usePulseStatsV3, RATING_ORDER } from "@/hooks/useProveedoresV3";
 import type {
   FiltroConfiabilidad,
@@ -31,6 +32,7 @@ const ProveedoresV3 = () => {
   const [sort, setSort] = useState<SortKey>("confiabilidad_desc");
   const [pulseFilter, setPulseFilter] = useState<PulseFilter>("ninguno");
   const [comparadorAbierto, setComparadorAbierto] = useState(false);
+  const [formAbierto, setFormAbierto] = useState<{ mode: "create" | "edit"; id?: string } | null>(null);
 
   const categorias = useMemo(() => {
     if (!proveedores) return [];
@@ -137,7 +139,7 @@ const ProveedoresV3 = () => {
               >
                 🔍 Comparar precios
               </Button>
-              <Button onClick={() => navigate("/compras?tab=proveedores&accion=nuevo")}>
+              <Button onClick={() => setFormAbierto({ mode: "create" })}>
                 + Nuevo proveedor
               </Button>
             </>
@@ -194,7 +196,7 @@ const ProveedoresV3 = () => {
             <p className="font-serif italic text-ink-500 mb-5">
               Crea tu primer proveedor para empezar
             </p>
-            <Button onClick={() => navigate("/compras?tab=proveedores&accion=nuevo")}>
+            <Button onClick={() => setFormAbierto({ mode: "create" })}>
               + Nuevo proveedor
             </Button>
           </div>
@@ -217,7 +219,11 @@ const ProveedoresV3 = () => {
         {!isLoading && filtered.length > 0 && (
           <div className="space-y-3">
             {filtered.map((p) => (
-              <SupplierCard key={p.id} proveedor={p} />
+              <SupplierCard
+                key={p.id}
+                proveedor={p}
+                onEdit={(id) => setFormAbierto({ mode: "edit", id })}
+              />
             ))}
           </div>
         )}
@@ -225,6 +231,14 @@ const ProveedoresV3 = () => {
 
       {comparadorAbierto && (
         <SelectorProductoComparar onClose={() => setComparadorAbierto(false)} />
+      )}
+
+      {formAbierto && (
+        <ProveedorFormModal
+          mode={formAbierto.mode}
+          proveedorId={formAbierto.id}
+          onClose={() => setFormAbierto(null)}
+        />
       )}
     </Layout>
   );
