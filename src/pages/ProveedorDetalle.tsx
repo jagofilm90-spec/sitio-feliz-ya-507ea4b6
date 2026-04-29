@@ -11,6 +11,7 @@ import { TabProductos } from "@/components/proveedores-v3/detalle/TabProductos";
 import { TabHistoricoOCs } from "@/components/proveedores-v3/detalle/TabHistoricoOCs";
 import { TabFaltantes } from "@/components/proveedores-v3/detalle/TabFaltantes";
 import { TabCuentaCorriente } from "@/components/proveedores-v3/detalle/TabCuentaCorriente";
+import { TabMemoria } from "@/components/proveedores-v3/detalle/memoria/TabMemoria";
 
 const ProveedorDetalle = () => {
   const { id } = useParams<{ id: string }>();
@@ -112,11 +113,10 @@ const ProveedorDetalle = () => {
           {activeTab === "faltantes" && <TabFaltantes proveedorId={data.proveedor.id} />}
           {activeTab === "cuenta" && <TabCuentaCorriente proveedorId={data.proveedor.id} />}
           {activeTab === "memoria" && (
-            <div className="px-8 py-20 text-center">
-              <div className="text-5xl mb-3">📝</div>
-              <h2 className="font-serif text-2xl text-ink-500 mb-1">Memoria</h2>
-              <p className="font-serif italic text-ink-500">Próximamente en Fase C.2.B</p>
-            </div>
+            <TabMemoria
+              proveedorId={data.proveedor.id}
+              proveedorNombre={breadcrumbName}
+            />
           )}
         </>
       )}
