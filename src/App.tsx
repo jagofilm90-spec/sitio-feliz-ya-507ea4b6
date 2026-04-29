@@ -26,6 +26,7 @@ import Usuarios from "./pages/Usuarios";
 import Empleados from "./pages/Empleados";
 import Chat from "./pages/Chat";
 import Compras from "./pages/Compras";
+import NuevaOCv3 from "./pages/NuevaOCv3";
 import Rentabilidad from "./pages/Rentabilidad";
 import Fumigaciones from "./pages/Fumigaciones";
 import CorreosCorporativos from "./pages/CorreosCorporativos";
@@ -222,6 +223,11 @@ const App = () => (
               <Route path="/compras" element={
                 <ProtectedRoute allowedRoles={['admin', 'secretaria', 'contadora']} redirectTo="/auth">
                   <Compras />
+                </ProtectedRoute>
+              } />
+              <Route path="/compras/nueva-oc-v3" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria']} redirectTo="/auth">
+                  <NuevaOCv3 />
                 </ProtectedRoute>
               } />
               <Route path="/rentabilidad" element={
