@@ -8,6 +8,7 @@ import { PulseBar } from "@/components/proveedores-v3/PulseBar";
 import { SearchFilters } from "@/components/proveedores-v3/SearchFilters";
 import { SupplierCard } from "@/components/proveedores-v3/SupplierCard";
 import { SelectorProductoComparar } from "@/components/proveedores-v3/comparador/SelectorProductoComparar";
+import { ProveedorFormModal } from "@/components/proveedores-v3/form/ProveedorFormModal";
 import { useProveedoresV3, usePulseStatsV3, RATING_ORDER } from "@/hooks/useProveedoresV3";
 import type {
   FiltroConfiabilidad,
