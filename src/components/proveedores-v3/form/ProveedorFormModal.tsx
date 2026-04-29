@@ -69,18 +69,22 @@ export const ProveedorFormModal = ({ mode, proveedorId, onClose, onSuccess }: Pr
           <div className="text-[11px] uppercase tracking-[0.14em] text-ink-500 font-medium">
             COMPRAS · PROVEEDORES
           </div>
-          <h2 className="font-serif text-3xl text-ink-900 font-medium mt-1">
-            {mode === "create" ? (
-              <>Nuevo <em className="italic">proveedor</em>.</>
-            ) : (
-              <>Editar <em className="italic">{tituloNombre}</em>.</>
-            )}
-          </h2>
-          <p className="font-serif italic text-ink-500 mt-1">
-            {mode === "create"
-              ? "Registra los datos básicos. Todo es editable después."
-              : "Modifica la información del proveedor."}
-          </p>
+          <DialogTitle asChild>
+            <h2 className="font-serif text-3xl text-ink-900 font-medium mt-1">
+              {mode === "create" ? (
+                <>Nuevo <em className="italic">proveedor</em>.</>
+              ) : (
+                <>Editar <em className="italic">{tituloNombre}</em>.</>
+              )}
+            </h2>
+          </DialogTitle>
+          <DialogDescription asChild>
+            <p className="font-serif italic text-ink-500 mt-1">
+              {mode === "create"
+                ? "Registra los datos básicos. Todo es editable después."
+                : "Modifica la información del proveedor."}
+            </p>
+          </DialogDescription>
         </div>
 
         {/* Body */}
