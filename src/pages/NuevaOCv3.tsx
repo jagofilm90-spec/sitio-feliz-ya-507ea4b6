@@ -200,11 +200,13 @@ export default function NuevaOCv3() {
               setFechaPagoAnticipado={setFechaPagoAnticipado}
             />
 
-            <SeccionProductos
-              proveedorId={proveedor?.id ?? null}
-              lineas={lineas}
-              setLineas={setLineas}
-            />
+            <div ref={productosRef} className="scroll-mt-6">
+              <SeccionProductos
+                proveedorId={proveedor?.id ?? null}
+                lineas={lineas}
+                setLineas={setLineas}
+              />
+            </div>
 
             <SeccionEntrega
               fechaEntrega={fechaEntrega}
