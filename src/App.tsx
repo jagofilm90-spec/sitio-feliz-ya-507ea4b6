@@ -225,6 +225,11 @@ const App = () => (
                   <Compras />
                 </ProtectedRoute>
               } />
+              <Route path="/compras/nueva-oc-v3" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria']} redirectTo="/auth">
+                  <NuevaOCv3 />
+                </ProtectedRoute>
+              } />
               <Route path="/rentabilidad" element={
                 <ProtectedRoute allowedRoles={['admin', 'contadora']} redirectTo="/auth">
                   <Rentabilidad />
