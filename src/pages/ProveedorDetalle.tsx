@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { TabHistoricoOCs } from "@/components/proveedores-v3/detalle/TabHistoric
 import { TabFaltantes } from "@/components/proveedores-v3/detalle/TabFaltantes";
 import { TabCuentaCorriente } from "@/components/proveedores-v3/detalle/TabCuentaCorriente";
 import { TabMemoria } from "@/components/proveedores-v3/detalle/memoria/TabMemoria";
+import { ProveedorFormModal } from "@/components/proveedores-v3/form/ProveedorFormModal";
 
 const ProveedorDetalle = () => {
   const { id } = useParams<{ id: string }>();

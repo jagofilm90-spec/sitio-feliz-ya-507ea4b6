@@ -41,9 +41,10 @@ function termPagoTexto(termino_pago: string | null): string | null {
 interface Props {
   proveedor: ProveedorDetalleRow;
   kpis: KpisProveedor;
+  onEdit?: () => void;
 }
 
-export const DetailHero = ({ proveedor, kpis }: Props) => {
+export const DetailHero = ({ proveedor, kpis, onEdit }: Props) => {
   const navigate = useNavigate();
   const rating = kpis.score.rating;
   const score = kpis.score.score;
@@ -100,7 +101,9 @@ export const DetailHero = ({ proveedor, kpis }: Props) => {
             <Button
               variant="outline"
               onClick={() =>
-                navigate(`/compras?tab=proveedores&accion=editar&id=${proveedor.id}`)
+                onEdit
+                  ? onEdit()
+                  : navigate(`/compras?tab=proveedores&accion=editar&id=${proveedor.id}`)
               }
             >
               ✏️ Editar
