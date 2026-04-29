@@ -55,7 +55,7 @@ export const useProveedorParaEditar = (id?: string) => {
         direccion: prov.direccion || "",
         municipio: prov.municipio || "",
         estado: prov.estado || "",
-        termino_pago: prov.termino_pago || "15",
+        termino_pago: prov.termino_pago || "15_dias",
         metodos_pago_aceptados: prov.metodos_pago_aceptados || [],
         notas_operativas: prov.notas_operativas || "",
         contactos: lista,
@@ -63,6 +63,7 @@ export const useProveedorParaEditar = (id?: string) => {
     },
   });
 };
+
 
 const buildProveedorPayload = (form: ProveedorForm) => ({
   nombre: form.nombre.trim(),
@@ -113,7 +114,11 @@ export const useCreateProveedor = (onSuccess?: (id: string) => void) => {
       qc.invalidateQueries({ queryKey: ["proveedores-v3"] });
       onSuccess?.(id);
     },
-    onError: (e: any) => toast.error(e?.message || "Error al crear proveedor"),
+    onError: (e: any) =>
+      toast.error("Error al guardar", {
+        description: e?.message || "Intenta de nuevo",
+        duration: 6000,
+      }),
   });
 };
 
@@ -162,6 +167,10 @@ export const useUpdateProveedor = (onSuccess?: () => void) => {
       qc.invalidateQueries({ queryKey: ["proveedor-detalle", id] });
       onSuccess?.();
     },
-    onError: (e: any) => toast.error(e?.message || "Error al actualizar"),
+    onError: (e: any) =>
+      toast.error("Error al actualizar", {
+        description: e?.message || "Intenta de nuevo",
+        duration: 6000,
+      }),
   });
 };

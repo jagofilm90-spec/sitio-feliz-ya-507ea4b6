@@ -1,9 +1,13 @@
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PLAZOS_PAGO, METODOS_PAGO_OPCIONES, type ProveedorForm } from "@/lib/proveedor-form-utils";
+import {
+  PLAZOS_PAGO,
+  PLAZOS_PAGO_VALUES,
+  METODOS_PAGO_OPCIONES,
+  type ProveedorForm,
+} from "@/lib/proveedor-form-utils";
 
 interface Props {
   form: ProveedorForm;
@@ -12,8 +16,9 @@ interface Props {
 }
 
 export const SeccionCondiciones = ({ form, onChange }: Props) => {
-  const isCustomPlazo =
-    form.termino_pago && !PLAZOS_PAGO.some((p) => p.value === form.termino_pago);
+  const valorActual = form.termino_pago || "";
+  const esLegacy = valorActual !== "" && !PLAZOS_PAGO_VALUES.includes(valorActual);
+  const valorSelect = esLegacy ? "" : valorActual;
 
   const toggleMetodo = (metodo: string) => {
     const set = new Set(form.metodos_pago_aceptados);
@@ -35,27 +40,22 @@ export const SeccionCondiciones = ({ form, onChange }: Props) => {
             Plazo de pago default *
           </Label>
           <Select
-            value={isCustomPlazo ? "otro" : form.termino_pago}
-            onValueChange={(v) => onChange({ termino_pago: v === "otro" ? "0" : v })}
+            value={valorSelect}
+            onValueChange={(v) => onChange({ termino_pago: v })}
           >
             <SelectTrigger>
-              <SelectValue />
+              <SelectValue placeholder="Selecciona un plazo" />
             </SelectTrigger>
             <SelectContent>
               {PLAZOS_PAGO.map((p) => (
                 <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
               ))}
-              <SelectItem value="otro">Otro</SelectItem>
             </SelectContent>
           </Select>
-          {isCustomPlazo && (
-            <Input
-              type="number"
-              className="mt-2"
-              value={form.termino_pago}
-              onChange={(e) => onChange({ termino_pago: e.target.value })}
-              placeholder="Días custom"
-            />
+          {esLegacy && (
+            <p className="text-xs text-amber-600 mt-1">
+              Plazo anterior no estándar ("{valorActual}"), selecciona uno.
+            </p>
           )}
         </div>
 
