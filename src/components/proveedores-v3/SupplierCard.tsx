@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { StarRating } from "./StarRating";
 import { cn } from "@/lib/utils";
 import type { ProveedorEnriquecido, RatingValue } from "@/types/proveedor-v3";
+import { formatCurrency } from "@/lib/currency";
 
 interface SupplierCardProps {
   proveedor: ProveedorEnriquecido;
@@ -37,8 +38,7 @@ const RATING_LABEL: Record<RatingValue, string> = {
   sin_historial: "Sin historial",
 };
 
-const fmtMoney = (n: number) =>
-  "$" + n.toLocaleString("es-MX", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+const fmtMoney = (n: number) => formatCurrency(n);
 
 function colorForPct(value: number, thresholds: [number, number]): string {
   if (value >= thresholds[0]) return "text-green-700";

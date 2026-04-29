@@ -2,9 +2,9 @@ import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { OCResumen } from "@/hooks/useProveedorDetalle";
+import { formatCurrency } from "@/lib/currency";
 
-const fmtMoney = (n: number) =>
-  "$" + Number(n || 0).toLocaleString("es-MX", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+const fmtMoney = (n: number) => formatCurrency(Number(n || 0));
 
 type StatusKind = "ok" | "parcial" | "pending" | "danger";
 

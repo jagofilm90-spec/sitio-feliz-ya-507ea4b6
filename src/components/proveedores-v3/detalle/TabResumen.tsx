@@ -4,9 +4,9 @@ import { ChartComprasMensuales } from "./ChartComprasMensuales";
 import { ChartPrecioEvolucion } from "./ChartPrecioEvolucion";
 import { TimelineOCs } from "./TimelineOCs";
 import type { ProveedorDetalleData } from "@/hooks/useProveedorDetalle";
+import { formatCurrency } from "@/lib/currency";
 
-const fmtMoney = (n: number) =>
-  "$" + Number(n || 0).toLocaleString("es-MX", { maximumFractionDigits: 0 });
+const fmtMoney = (n: number) => formatCurrency(Number(n || 0));
 
 interface Props {
   data: ProveedorDetalleData;
