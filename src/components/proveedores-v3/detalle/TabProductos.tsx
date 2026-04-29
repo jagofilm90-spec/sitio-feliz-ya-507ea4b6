@@ -135,7 +135,14 @@ export const TabProductos = ({ proveedorId }: Props) => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="tabular-nums text-ink-900">{fmtMoney(p.ultimo_precio)}</div>
+                    <div className="tabular-nums text-ink-900">
+                      {fmtMoney(p.ultimo_precio)}
+                      {p.ultimo_precio !== null && (
+                        <span className="text-xs text-ink-500 ml-1">
+                          {p.precio_por_kilo ? "/ kg" : "/ bulto"}
+                        </span>
+                      )}
+                    </div>
                     <div className="text-xs text-ink-500">
                       {p.ultimo_precio_fecha
                         ? `hace ${formatDistanceToNowStrict(new Date(p.ultimo_precio_fecha), { locale: es })}`
