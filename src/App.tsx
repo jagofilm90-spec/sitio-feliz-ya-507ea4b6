@@ -28,6 +28,7 @@ import Chat from "./pages/Chat";
 import Compras from "./pages/Compras";
 import NuevaOCv3 from "./pages/NuevaOCv3";
 import ProveedoresV3 from "./pages/ProveedoresV3";
+import ProveedorDetalle from "./pages/ProveedorDetalle";
 import Rentabilidad from "./pages/Rentabilidad";
 import Fumigaciones from "./pages/Fumigaciones";
 import CorreosCorporativos from "./pages/CorreosCorporativos";
@@ -234,6 +235,11 @@ const App = () => (
               <Route path="/compras/proveedores-v3" element={
                 <ProtectedRoute allowedRoles={['admin', 'secretaria', 'contadora']} redirectTo="/auth">
                   <ProveedoresV3 />
+                </ProtectedRoute>
+              } />
+              <Route path="/compras/proveedores-v3/:id" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'contadora']} redirectTo="/auth">
+                  <ProveedorDetalle />
                 </ProtectedRoute>
               } />
               <Route path="/rentabilidad" element={
