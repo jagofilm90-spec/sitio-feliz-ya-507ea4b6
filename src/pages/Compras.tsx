@@ -161,6 +161,14 @@ const Compras = ({ mode = "admin" }: ComprasProps) => {
           ? { eyebrow: "Operaciones", title: "Tus", titleAccent: "compras.", lead: "Órdenes a proveedores nacionales e internacionales." }
           : { title: "Compras.", lead: "Órdenes, recepciones y proveedores" }
         )}
+        actions={
+          <a
+            href="/compras/proveedores-v3"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border border-crimson-100 bg-crimson-50 text-crimson-700 hover:bg-crimson-100 transition-colors"
+          >
+            🆕 Ver Proveedores v3 (beta)
+          </a>
+        }
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>

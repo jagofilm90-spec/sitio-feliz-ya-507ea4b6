@@ -2608,6 +2608,50 @@ export type Database = {
           },
         ]
       }
+      eventos_proveedor: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          descripcion: string | null
+          id: string
+          metadata: Json | null
+          origen: string | null
+          proveedor_id: string
+          tipo_evento: string
+          titulo: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          descripcion?: string | null
+          id?: string
+          metadata?: Json | null
+          origen?: string | null
+          proveedor_id: string
+          tipo_evento: string
+          titulo: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          descripcion?: string | null
+          id?: string
+          metadata?: Json | null
+          origen?: string | null
+          proveedor_id?: string
+          tipo_evento?: string
+          titulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventos_proveedor_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       factura_detalles: {
         Row: {
           cantidad: number
@@ -5498,6 +5542,7 @@ export type Database = {
           nombre_comercial: string | null
           nombre_contacto: string | null
           notas: string | null
+          notas_operativas: string | null
           numero_exterior: string | null
           numero_interior: string | null
           pais: string
@@ -5531,6 +5576,7 @@ export type Database = {
           nombre_comercial?: string | null
           nombre_contacto?: string | null
           notas?: string | null
+          notas_operativas?: string | null
           numero_exterior?: string | null
           numero_interior?: string | null
           pais?: string
@@ -5564,6 +5610,7 @@ export type Database = {
           nombre_comercial?: string | null
           nombre_contacto?: string | null
           notas?: string | null
+          notas_operativas?: string | null
           numero_exterior?: string | null
           numero_interior?: string | null
           pais?: string
@@ -7146,6 +7193,12 @@ export type Database = {
       generar_folio_venta_mostrador: { Args: never; Returns: string }
       generar_notificaciones_fumigacion: { Args: never; Returns: undefined }
       get_cliente_id_for_user: { Args: { user_uuid: string }; Returns: string }
+      get_proveedor_compras_mensuales: {
+        Args: { p_proveedor_id: string }
+        Returns: Json
+      }
+      get_proveedor_kpis: { Args: { p_proveedor_id: string }; Returns: Json }
+      get_proveedor_score: { Args: { p_proveedor_id: string }; Returns: Json }
       get_user_roles: {
         Args: never
         Returns: Database["public"]["Enums"]["app_role"][]
