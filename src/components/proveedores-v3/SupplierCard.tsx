@@ -224,6 +224,16 @@ export const SupplierCard = ({ proveedor: p, onEdit }: SupplierCardProps) => {
           <Button size="sm" variant="outline" className="text-xs" onClick={handleCuenta}>
             Cuenta corriente
           </Button>
+          {onEdit && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs"
+              onClick={() => onEdit(p.id)}
+            >
+              ✏️ Editar
+            </Button>
+          )}
           {p.saldo_vencido > 0 && (
             <Button
               size="sm"
