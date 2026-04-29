@@ -196,8 +196,9 @@ const PedidosContent = () => {
         .in("status", ["pendiente", "en_ruta"]);
 
       // Count pedidos with price alerts (alertas_precio is non-empty array)
-      const { count: alertasCount } = await (supabase
-        .from("pedidos") as any)
+      const sb: any = supabase;
+      const { count: alertasCount } = await sb
+        .from("pedidos")
         .select("id", { count: "exact", head: true })
         .neq("alertas_precio", "[]")
         .in("status", ["pendiente", "en_ruta"]);
