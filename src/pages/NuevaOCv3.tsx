@@ -37,6 +37,39 @@ export default function NuevaOCv3() {
 
   const [submitting, setSubmitting] = useState(false);
 
+  // Pre-cargar proveedor desde ?proveedor={id}
+  useEffect(() => {
+    if (preloadAttemptedRef.current) return;
+    const proveedorId = searchParams.get("proveedor");
+    if (!proveedorId) return;
+    preloadAttemptedRef.current = true;
+
+    (async () => {
+      const { data, error } = await supabase
+        .from("proveedores")
+        .select("id, nombre, rfc, termino_pago, activo")
+        .eq("id", proveedorId)
+        .maybeSingle();
+
+      if (error || !data || !data.activo) {
+        toast.warning("Proveedor no encontrado o inactivo");
+        return;
+      }
+
+      setProveedor({
+        id: data.id,
+        nombre: data.nombre,
+        rfc: data.rfc,
+        termino_pago: data.termino_pago,
+      });
+
+      // Hacer scroll a la sección de productos
+      setTimeout(() => {
+        productosRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 250);
+    })();
+  }, [searchParams]);
+
   const calcularPlazoDias = (): number => {
     if (!plazoTipo) return 0;
     if (plazoTipo === "contado" || plazoTipo === "anticipado") return 0;
