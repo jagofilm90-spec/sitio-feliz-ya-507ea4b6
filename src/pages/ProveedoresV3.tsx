@@ -32,6 +32,7 @@ const ProveedoresV3 = () => {
   const [sort, setSort] = useState<SortKey>("confiabilidad_desc");
   const [pulseFilter, setPulseFilter] = useState<PulseFilter>("ninguno");
   const [comparadorAbierto, setComparadorAbierto] = useState(false);
+  const [formAbierto, setFormAbierto] = useState<{ mode: "create" | "edit"; id?: string } | null>(null);
 
   const categorias = useMemo(() => {
     if (!proveedores) return [];
