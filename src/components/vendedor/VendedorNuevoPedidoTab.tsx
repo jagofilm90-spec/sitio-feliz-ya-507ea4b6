@@ -720,11 +720,11 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
           const selectedCliente = clientes.find(c => c.id === selectedClienteId);
 
           const notifPromises: Promise<any>[] = [
-            supabase.from("notificaciones").insert({
+            (supabase.from("notificaciones").insert({
               tipo: "nuevo_pedido_vendedor", titulo: `Nuevo pedido ${folio}`,
               descripcion: `${vNombre} creó pedido para ${clienteNombre} - ${formatCurrency(totales.total)}`,
               pedido_id: pedido.id, leida: false,
-            }).catch(e => console.error("Notif error:", e)),
+            }) as unknown as Promise<any>).catch(e => console.error("Notif error:", e)),
           ];
 
           // Push + email to secretaría (all orders are now "pendiente")
