@@ -14,6 +14,8 @@ export interface ProveedorProductoRow {
   nombre: string;
   peso_kg: number | null;
   precio_por_kilo: boolean | null;
+  aplica_iva: boolean | null;
+  aplica_ieps: boolean | null;
   // Computed
   ultimo_precio: number | null;
   ultimo_precio_fecha: string | null;
@@ -24,7 +26,7 @@ async function fetchProductos(proveedorId: string): Promise<ProveedorProductoRow
   const { data: pps, error } = await supabase
     .from("proveedor_productos")
     .select(
-      "id, producto_id, costo_proveedor, precio_por_kilo_compra, tipo_carga_default, productos:producto_id(nombre, peso_kg, precio_por_kilo)"
+      "id, producto_id, costo_proveedor, precio_por_kilo_compra, tipo_carga_default, productos:producto_id(nombre, peso_kg, precio_por_kilo, aplica_iva, aplica_ieps)"
     )
     .eq("proveedor_id", proveedorId);
   if (error) throw error;
@@ -82,6 +84,8 @@ async function fetchProductos(proveedorId: string): Promise<ProveedorProductoRow
         nombre: pp.productos?.nombre || "—",
         peso_kg: pp.productos?.peso_kg ?? null,
         precio_por_kilo: pp.productos?.precio_por_kilo ?? null,
+        aplica_iva: pp.productos?.aplica_iva ?? null,
+        aplica_ieps: pp.productos?.aplica_ieps ?? null,
         ultimo_precio: ultimo?.precio ?? null,
         ultimo_precio_fecha: ultimo?.fecha ?? null,
         avg_3m: avg,
