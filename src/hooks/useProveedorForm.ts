@@ -55,11 +55,25 @@ export const useProveedorParaEditar = (id?: string) => {
         direccion: prov.direccion || "",
         municipio: prov.municipio || "",
         estado: prov.estado || "",
-        termino_pago: prov.termino_pago || "15",
+        termino_pago: prov.termino_pago || "15_dias",
         metodos_pago_aceptados: prov.metodos_pago_aceptados || [],
         notas_operativas: prov.notas_operativas || "",
         contactos: lista,
       };
+    },
+  });
+};
+
+const buildProveedorPayload = (form: ProveedorForm) => ({
+  nombre: form.nombre.trim(),
+  nombre_comercial: form.nombre_comercial.trim() || null,
+  categoria: form.categoria.trim() || null,
+  rfc: form.rfc.trim().toUpperCase() || null,
+  regimen_fiscal: form.regimen_fiscal || null,
+  direccion: form.direccion.trim() || null,
+  municipio: form.municipio.trim() || null,
+  estado: form.estado.trim() || null,
+  termino_pago: form.termino_pago || null,
     },
   });
 };
