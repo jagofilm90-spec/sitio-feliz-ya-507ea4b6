@@ -37,13 +37,17 @@ export const CATEGORIAS_PROVEEDOR = [
 ];
 
 export const PLAZOS_PAGO = [
+  { value: "pendiente_definir", label: "Por definir" },
   { value: "contado", label: "Contado" },
-  { value: "8", label: "8 días" },
-  { value: "15", label: "15 días" },
-  { value: "30", label: "30 días" },
-  { value: "45", label: "45 días" },
-  { value: "60", label: "60 días" },
+  { value: "8_dias", label: "8 días" },
+  { value: "15_dias", label: "15 días" },
+  { value: "30_dias", label: "30 días" },
+  { value: "45_dias", label: "45 días" },
+  { value: "60_dias", label: "60 días" },
+  { value: "anticipado", label: "Anticipado" },
 ];
+
+export const PLAZOS_PAGO_VALUES = PLAZOS_PAGO.map((p) => p.value);
 
 export const METODOS_PAGO_OPCIONES = [
   "Transferencia",
