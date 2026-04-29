@@ -7,14 +7,10 @@ import { useProveedorDetalle } from "@/hooks/useProveedorDetalle";
 import { DetailHero } from "@/components/proveedores-v3/detalle/DetailHero";
 import { DetailTabs, type TabKey } from "@/components/proveedores-v3/detalle/DetailTabs";
 import { TabResumen } from "@/components/proveedores-v3/detalle/TabResumen";
-
-const PLACEHOLDER: Record<Exclude<TabKey, "resumen">, { icon: string; title: string }> = {
-  productos: { icon: "📦", title: "Productos" },
-  ocs: { icon: "📋", title: "Histórico OCs" },
-  faltantes: { icon: "⚠", title: "Faltantes" },
-  cuenta: { icon: "💰", title: "Cuenta corriente" },
-  memoria: { icon: "📝", title: "Memoria" },
-};
+import { TabProductos } from "@/components/proveedores-v3/detalle/TabProductos";
+import { TabHistoricoOCs } from "@/components/proveedores-v3/detalle/TabHistoricoOCs";
+import { TabFaltantes } from "@/components/proveedores-v3/detalle/TabFaltantes";
+import { TabCuentaCorriente } from "@/components/proveedores-v3/detalle/TabCuentaCorriente";
 
 const ProveedorDetalle = () => {
   const { id } = useParams<{ id: string }>();
