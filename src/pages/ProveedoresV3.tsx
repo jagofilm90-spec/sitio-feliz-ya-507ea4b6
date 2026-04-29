@@ -139,7 +139,7 @@ const ProveedoresV3 = () => {
               >
                 🔍 Comparar precios
               </Button>
-              <Button onClick={() => navigate("/compras?tab=proveedores&accion=nuevo")}>
+              <Button onClick={() => setFormAbierto({ mode: "create" })}>
                 + Nuevo proveedor
               </Button>
             </>
@@ -196,7 +196,7 @@ const ProveedoresV3 = () => {
             <p className="font-serif italic text-ink-500 mb-5">
               Crea tu primer proveedor para empezar
             </p>
-            <Button onClick={() => navigate("/compras?tab=proveedores&accion=nuevo")}>
+            <Button onClick={() => setFormAbierto({ mode: "create" })}>
               + Nuevo proveedor
             </Button>
           </div>
@@ -219,7 +219,11 @@ const ProveedoresV3 = () => {
         {!isLoading && filtered.length > 0 && (
           <div className="space-y-3">
             {filtered.map((p) => (
-              <SupplierCard key={p.id} proveedor={p} />
+              <SupplierCard
+                key={p.id}
+                proveedor={p}
+                onEdit={(id) => setFormAbierto({ mode: "edit", id })}
+              />
             ))}
           </div>
         )}
@@ -227,6 +231,14 @@ const ProveedoresV3 = () => {
 
       {comparadorAbierto && (
         <SelectorProductoComparar onClose={() => setComparadorAbierto(false)} />
+      )}
+
+      {formAbierto && (
+        <ProveedorFormModal
+          mode={formAbierto.mode}
+          proveedorId={formAbierto.id}
+          onClose={() => setFormAbierto(null)}
+        />
       )}
     </Layout>
   );
