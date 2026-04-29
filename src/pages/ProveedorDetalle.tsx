@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { TabHistoricoOCs } from "@/components/proveedores-v3/detalle/TabHistoric
 import { TabFaltantes } from "@/components/proveedores-v3/detalle/TabFaltantes";
 import { TabCuentaCorriente } from "@/components/proveedores-v3/detalle/TabCuentaCorriente";
 import { TabMemoria } from "@/components/proveedores-v3/detalle/memoria/TabMemoria";
+import { ProveedorFormModal } from "@/components/proveedores-v3/form/ProveedorFormModal";
 
 const ProveedorDetalle = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +20,7 @@ const ProveedorDetalle = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const activeTab = (searchParams.get("tab") as TabKey) || "resumen";
+  const [editandoProveedor, setEditandoProveedor] = useState(false);
   const setActiveTab = (k: TabKey) => {
     const next = new URLSearchParams(searchParams);
     next.set("tab", k);
@@ -95,7 +97,7 @@ const ProveedorDetalle = () => {
       {/* Content */}
       {!isLoading && data && (
         <>
-          <DetailHero proveedor={data.proveedor} kpis={data.kpis} />
+          <DetailHero proveedor={data.proveedor} kpis={data.kpis} onEdit={() => setEditandoProveedor(true)} />
           <DetailTabs
             active={activeTab}
             onChange={setActiveTab}
@@ -119,6 +121,14 @@ const ProveedorDetalle = () => {
             />
           )}
         </>
+      )}
+
+      {editandoProveedor && data && (
+        <ProveedorFormModal
+          mode="edit"
+          proveedorId={data.proveedor.id}
+          onClose={() => setEditandoProveedor(false)}
+        />
       )}
     </Layout>
   );
