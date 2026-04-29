@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PulseBar } from "@/components/proveedores-v3/PulseBar";
 import { SearchFilters } from "@/components/proveedores-v3/SearchFilters";
 import { SupplierCard } from "@/components/proveedores-v3/SupplierCard";
+import { SelectorProductoComparar } from "@/components/proveedores-v3/comparador/SelectorProductoComparar";
 import { useProveedoresV3, usePulseStatsV3, RATING_ORDER } from "@/hooks/useProveedoresV3";
 import type {
   FiltroConfiabilidad,
@@ -29,6 +30,7 @@ const ProveedoresV3 = () => {
   const [saldo, setSaldo] = useState<FiltroSaldo>("todos");
   const [sort, setSort] = useState<SortKey>("confiabilidad_desc");
   const [pulseFilter, setPulseFilter] = useState<PulseFilter>("ninguno");
+  const [comparadorAbierto, setComparadorAbierto] = useState(false);
 
   const categorias = useMemo(() => {
     if (!proveedores) return [];
@@ -128,9 +130,17 @@ const ProveedoresV3 = () => {
               : `${totalActivos} proveedores activos · ${conAlertas} con alertas activas`
           }
           actions={
-            <Button onClick={() => navigate("/compras?tab=proveedores&accion=nuevo")}>
-              + Nuevo proveedor
-            </Button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setComparadorAbierto(true)}
+                className="px-[18px] py-[11px] rounded-lg bg-white border border-ink-100 text-ink-700 text-sm font-medium hover:bg-bg-warm transition-colors"
+              >
+                🔍 Comparar precios
+              </button>
+              <Button onClick={() => navigate("/compras?tab=proveedores&accion=nuevo")}>
+                + Nuevo proveedor
+              </Button>
+            </div>
           }
         />
 
