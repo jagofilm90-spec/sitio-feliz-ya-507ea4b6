@@ -20,6 +20,7 @@ const ProveedorDetalle = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const activeTab = (searchParams.get("tab") as TabKey) || "resumen";
+  const [editandoProveedor, setEditandoProveedor] = useState(false);
   const setActiveTab = (k: TabKey) => {
     const next = new URLSearchParams(searchParams);
     next.set("tab", k);
@@ -96,7 +97,7 @@ const ProveedorDetalle = () => {
       {/* Content */}
       {!isLoading && data && (
         <>
-          <DetailHero proveedor={data.proveedor} kpis={data.kpis} />
+          <DetailHero proveedor={data.proveedor} kpis={data.kpis} onEdit={() => setEditandoProveedor(true)} />
           <DetailTabs
             active={activeTab}
             onChange={setActiveTab}
