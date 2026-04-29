@@ -748,14 +748,14 @@ export function VendedorNuevoPedidoTab({ onPedidoCreado, onNavigateToVentas, pre
             ).join("; ");
             const hasErrorDedo = alertasPrec.some(a => a.tipo === 'error_dedo');
             notifPromises.push(
-              supabase.from("notificaciones").insert({
+              (supabase.from("notificaciones").insert({
                 tipo: "precio_modificado_admin",
                 titulo: hasErrorDedo
                   ? `🚨 Precio sospechoso en ${folio}`
                   : `⚠️ Precio bajo piso en ${folio}`,
                 descripcion: `${vNombre} → ${clienteNombre}: ${alertDesc}`,
                 leida: false,
-              }).catch(() => {}),
+              }) as unknown as Promise<any>).catch(() => {}),
               supabase.functions.invoke('send-push-notification', {
                 body: { roles: ['admin'],
                   title: hasErrorDedo ? `🚨 Precio sospechoso — ${folio}` : `⚠️ Bajo piso — ${folio}`,
