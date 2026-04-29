@@ -1,17 +1,50 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, X, Check, ChevronsUpDown } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import type { LineaOC, ProductoLite } from "./types";
+import {
+  type LineaOC,
+  type ProductoLite,
+  calcularPesoLinea,
+  calcularSubtotalLinea,
+} from "./types";
 
 interface Props {
   proveedorId: string | null;
   lineas: LineaOC[];
   setLineas: React.Dispatch<React.SetStateAction<LineaOC[]>>;
+}
+
+const fmt2 = (n: number) =>
+  n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+async function obtenerPrecioDefault(
+  productoId: string,
+  proveedorId: string,
+  fallbackProveedor: number | null,
+  fallbackProducto: number | null,
+): Promise<number> {
+  // 1) Último precio comprado a este proveedor
+  const { data, error } = await supabase
+    .from("ordenes_compra_detalles")
+    .select("precio_unitario_compra, ordenes_compra!inner(proveedor_id, created_at)")
+    .eq("producto_id", productoId)
+    .eq("ordenes_compra.proveedor_id", proveedorId)
+    .order("created_at", { foreignTable: "ordenes_compra", ascending: false })
+    .limit(1);
+  if (!error && data && data.length > 0) {
+    const v = Number((data[0] as any).precio_unitario_compra);
+    if (v > 0) return v;
+  }
+  // 2) costo_proveedor
+  if (fallbackProveedor != null && Number(fallbackProveedor) > 0) return Number(fallbackProveedor);
+  // 3) precio_compra
+  if (fallbackProducto != null && Number(fallbackProducto) > 0) return Number(fallbackProducto);
+  // 4)
+  return 0;
 }
 
 export default function SeccionProductos({ proveedorId, lineas, setLineas }: Props) {
@@ -28,7 +61,9 @@ export default function SeccionProductos({ proveedorId, lineas, setLineas }: Pro
       setLoading(true);
       const { data, error } = await supabase
         .from("proveedor_productos")
-        .select("costo_proveedor, productos!inner(id, codigo, nombre, precio_compra, activo)")
+        .select(
+          "costo_proveedor, productos!inner(id, codigo, nombre, precio_compra, activo, aplica_iva, aplica_ieps, tasa_ieps, precio_por_kilo, peso_kg)",
+        )
         .eq("proveedor_id", proveedorId);
       if (!error && data) {
         const list: ProductoLite[] = (data as any[])
@@ -39,6 +74,11 @@ export default function SeccionProductos({ proveedorId, lineas, setLineas }: Pro
             nombre: r.productos.nombre,
             precio_compra: r.productos.precio_compra ?? 0,
             costo_proveedor: r.costo_proveedor ?? null,
+            aplica_iva: !!r.productos.aplica_iva,
+            aplica_ieps: !!r.productos.aplica_ieps,
+            tasa_ieps: r.productos.tasa_ieps ?? null,
+            precio_por_kilo: !!r.productos.precio_por_kilo,
+            peso_kg: r.productos.peso_kg ?? null,
           }))
           .sort((a, b) => a.nombre.localeCompare(b.nombre));
         setProductos(list);
@@ -52,8 +92,11 @@ export default function SeccionProductos({ proveedorId, lineas, setLineas }: Pro
     return productos.filter((p) => !usados.has(p.id));
   }, [productos, lineas]);
 
-  const agregarProducto = (p: ProductoLite) => {
-    const precio = p.costo_proveedor ?? p.precio_compra ?? 0;
+  const agregarProducto = async (p: ProductoLite) => {
+    setOpen(false);
+    const precio = proveedorId
+      ? await obtenerPrecioDefault(p.id, proveedorId, p.costo_proveedor, p.precio_compra)
+      : Number(p.costo_proveedor ?? p.precio_compra ?? 0);
     setLineas((prev) => [
       ...prev,
       {
@@ -61,10 +104,11 @@ export default function SeccionProductos({ proveedorId, lineas, setLineas }: Pro
         producto_id: p.id,
         producto: p,
         cantidad: 1,
-        precio_unitario: Number(precio) || 0,
+        cantidadStr: "1",
+        precio_unitario: precio,
+        precioStr: precio.toFixed(2),
       },
     ]);
-    setOpen(false);
   };
 
   const updateLinea = (uid: string, patch: Partial<LineaOC>) => {
@@ -92,43 +136,100 @@ export default function SeccionProductos({ proveedorId, lineas, setLineas }: Pro
                 <thead className="bg-bg-soft">
                   <tr className="text-left text-[10px] uppercase tracking-[0.14em] text-ink-500">
                     <th className="px-4 py-3 font-medium">Producto</th>
-                    <th className="px-4 py-3 font-medium w-32 text-right">Cantidad</th>
-                    <th className="px-4 py-3 font-medium w-40 text-right">Precio unitario</th>
-                    <th className="px-4 py-3 font-medium w-36 text-right">Subtotal</th>
+                    <th className="px-3 py-3 font-medium w-24 text-right">Cantidad</th>
+                    <th className="px-3 py-3 font-medium w-24 text-right">Peso (kg)</th>
+                    <th className="px-3 py-3 font-medium w-40 text-right">Precio unit.</th>
+                    <th className="px-4 py-3 font-medium w-32 text-right">Subtotal</th>
                     <th className="px-2 py-3 w-10"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-ink-100">
                   {lineas.map((l) => {
-                    const subtotal = (Number(l.cantidad) || 0) * (Number(l.precio_unitario) || 0);
+                    const peso = calcularPesoLinea(l);
+                    const subtotal = calcularSubtotalLinea(l);
+                    const porKilo = l.producto.precio_por_kilo;
                     return (
-                      <tr key={l.uid} className="hover:bg-bg-soft/50">
+                      <tr key={l.uid} className="hover:bg-bg-soft/50 align-top">
                         <td className="px-4 py-3">
                           <div className="text-ink-900">{l.producto.nombre}</div>
                           <div className="text-xs text-ink-400">{l.producto.codigo}</div>
+                          {(l.producto.aplica_iva || l.producto.aplica_ieps) && (
+                            <div className="flex gap-1 mt-1.5 flex-wrap">
+                              {l.producto.aplica_iva && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-ink-100 text-muted-foreground">
+                                  IVA 16%
+                                </span>
+                              )}
+                              {l.producto.aplica_ieps && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-ink-100 text-muted-foreground">
+                                  IEPS {Number(l.producto.tasa_ieps ?? 0)}%
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </td>
-                        <td className="px-4 py-2 text-right">
+                        <td className="px-3 py-2 text-right">
                           <Input
-                            type="number"
-                            min={1}
-                            step={1}
-                            value={l.cantidad}
-                            onChange={(e) => updateLinea(l.uid, { cantidad: Number(e.target.value) || 0 })}
+                            type="text"
+                            inputMode="numeric"
+                            value={l.cantidadStr}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/[^0-9]/g, "");
+                              updateLinea(l.uid, {
+                                cantidadStr: val,
+                                cantidad: parseInt(val, 10) || 0,
+                              });
+                            }}
+                            onBlur={() => {
+                              if (l.cantidadStr === "" || l.cantidadStr === "0") {
+                                updateLinea(l.uid, { cantidadStr: "1", cantidad: 1 });
+                              } else {
+                                // strip leading zeros
+                                const clean = String(parseInt(l.cantidadStr, 10) || 1);
+                                updateLinea(l.uid, { cantidadStr: clean, cantidad: parseInt(clean, 10) });
+                              }
+                            }}
                             className="h-9 text-right tabular-nums"
                           />
                         </td>
-                        <td className="px-4 py-2 text-right">
-                          <Input
-                            type="number"
-                            min={0}
-                            step={0.01}
-                            value={l.precio_unitario}
-                            onChange={(e) => updateLinea(l.uid, { precio_unitario: Number(e.target.value) || 0 })}
-                            className="h-9 text-right tabular-nums"
-                          />
+                        <td className="px-3 py-3 text-right tabular-nums text-ink-500">
+                          {fmt2(peso)}
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          <div className="relative">
+                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                              $
+                            </span>
+                            <Input
+                              type="text"
+                              inputMode="decimal"
+                              value={l.precioStr}
+                              onChange={(e) => {
+                                let val = e.target.value.replace(/[^0-9.]/g, "");
+                                // solo un punto
+                                const parts = val.split(".");
+                                if (parts.length > 2) val = parts[0] + "." + parts.slice(1).join("");
+                                updateLinea(l.uid, {
+                                  precioStr: val,
+                                  precio_unitario: parseFloat(val) || 0,
+                                });
+                              }}
+                              onBlur={() => {
+                                const num = parseFloat(l.precioStr) || 0;
+                                updateLinea(l.uid, {
+                                  precioStr: num.toFixed(2),
+                                  precio_unitario: num,
+                                });
+                              }}
+                              className="h-9 pl-6 pr-12 text-right tabular-nums"
+                            />
+                            <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">
+                              {porKilo ? "/ kg" : "/ bulto"}
+                            </span>
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-ink-900">
-                          ${subtotal.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          ${fmt2(subtotal)}
                         </td>
                         <td className="px-2 py-3 text-center">
                           <button

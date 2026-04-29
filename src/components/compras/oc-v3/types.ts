@@ -11,6 +11,11 @@ export interface ProductoLite {
   nombre: string;
   precio_compra: number | null;
   costo_proveedor: number | null;
+  aplica_iva: boolean;
+  aplica_ieps: boolean;
+  tasa_ieps: number | null;
+  precio_por_kilo: boolean;
+  peso_kg: number | null;
 }
 
 export interface LineaOC {
@@ -18,7 +23,23 @@ export interface LineaOC {
   producto_id: string;
   producto: ProductoLite;
   cantidad: number;
+  cantidadStr: string;
   precio_unitario: number;
+  precioStr: string;
 }
 
 export type TipoPlazo = "contado" | "8" | "15" | "30" | "anticipado" | "otro";
+
+export function calcularPesoLinea(l: { cantidad: number; producto: ProductoLite }): number {
+  return (Number(l.cantidad) || 0) * (Number(l.producto.peso_kg) || 0);
+}
+
+export function calcularSubtotalLinea(l: { cantidad: number; precio_unitario: number; producto: ProductoLite }): number {
+  const cant = Number(l.cantidad) || 0;
+  const precio = Number(l.precio_unitario) || 0;
+  if (l.producto.precio_por_kilo) {
+    const peso = Number(l.producto.peso_kg) || 0;
+    return cant * peso * precio;
+  }
+  return cant * precio;
+}
