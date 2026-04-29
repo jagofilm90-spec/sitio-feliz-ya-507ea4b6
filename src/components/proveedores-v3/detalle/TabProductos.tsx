@@ -1,9 +1,10 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
 import { formatDistanceToNowStrict } from "date-fns";
 import { es } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useProveedorProductos } from "@/hooks/useProveedorTabsData";
+import { ModalComparador } from "@/components/proveedores-v3/comparador/ModalComparador";
 
 const fmtMoney = (n: number | null | undefined) =>
   n === null || n === undefined
@@ -18,6 +19,7 @@ interface Props {
 export const TabProductos = ({ proveedorId }: Props) => {
   const navigate = useNavigate();
   const { data, isLoading, error, refetch } = useProveedorProductos(proveedorId);
+  const [productoComparar, setProductoComparar] = useState<string | null>(null);
 
   return (
     <div>
