@@ -222,6 +222,10 @@ const ProveedoresV3 = () => {
           </div>
         )}
       </div>
+
+      {comparadorAbierto && (
+        <SelectorProductoComparar onClose={() => setComparadorAbierto(false)} />
+      )}
     </Layout>
   );
 };
