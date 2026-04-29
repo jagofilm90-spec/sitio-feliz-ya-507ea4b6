@@ -118,6 +118,23 @@ export default function NuevaOCv3() {
     toast.info("Guardar borrador llegará en la iteración 3");
   };
 
+  const validationError: string | null = (() => {
+    if (!proveedor) return "Selecciona un proveedor";
+    if (!plazoTipo) return "Selecciona el plazo de pago";
+    if (plazoTipo === "otro" && plazoOtroDias <= 0) return "Ingresa los días del plazo";
+    if (plazoTipo === "anticipado") {
+      if (!fechaPagoAnticipado) return "Captura la fecha de pago anticipado";
+      if (!metodoAnticipado) return "Selecciona el método de pago anticipado";
+    }
+    if (lineas.length === 0) return "Agrega al menos un producto";
+    for (const l of lineas) {
+      if (l.cantidad <= 0) return `Cantidad inválida en ${l.producto.nombre}`;
+      if (l.precio_unitario <= 0) return `Precio inválido en ${l.producto.nombre}`;
+    }
+    if (!fechaEntrega) return "Selecciona la fecha de entrega";
+    return null;
+  })();
+
   return (
     <div className="min-h-screen bg-warm-50">
       <div className="mx-auto max-w-[1280px] px-8 py-10">
@@ -172,6 +189,7 @@ export default function NuevaOCv3() {
             submitting={submitting}
             onSubmit={handleSubmit}
             onSaveDraft={handleSaveDraft}
+            validationError={validationError}
           />
         </div>
       </div>
