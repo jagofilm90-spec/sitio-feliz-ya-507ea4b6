@@ -32,6 +32,7 @@ async function fetchProveedoresConScore(): Promise<ProveedorEnriquecido[]> {
   const { data: prodRows } = await supabase
     .from("proveedor_productos")
     .select("proveedor_id")
+    .eq("activo", true)
     .in("proveedor_id", ids);
 
   const productosCount = new Map<string, number>();
