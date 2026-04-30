@@ -3,7 +3,6 @@ import { formatDistanceToNowStrict } from "date-fns";
 import { es } from "date-fns/locale";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { BuscadorProductos, type ProductoBuscado } from "./BuscadorProductos";
@@ -167,16 +166,14 @@ export const ModalAsociarProducto = ({
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-[720px] w-[calc(100%-2rem)] p-0 gap-0 max-h-[85vh] overflow-hidden flex flex-col bg-white">
-        <VisuallyHidden>
-          <DialogTitle>
-            {mode === "create" ? "Asociar producto" : "Editar asociación"}
-          </DialogTitle>
-          <DialogDescription>
-            {mode === "create"
-              ? `Asocia un producto existente al proveedor ${proveedorNombre}`
-              : "Modifica los términos de esta asociación"}
-          </DialogDescription>
-        </VisuallyHidden>
+        <DialogTitle className="sr-only">
+          {mode === "create" ? "Asociar producto" : "Editar asociación"}
+        </DialogTitle>
+        <DialogDescription className="sr-only">
+          {mode === "create"
+            ? `Asocia un producto existente al proveedor ${proveedorNombre}`
+            : "Modifica los términos de esta asociación"}
+        </DialogDescription>
 
         {/* HEADER */}
         <div className="px-8 pt-7 pb-5 border-b border-ink-100">
