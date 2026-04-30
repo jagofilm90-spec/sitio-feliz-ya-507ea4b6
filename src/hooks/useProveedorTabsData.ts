@@ -28,7 +28,8 @@ async function fetchProductos(proveedorId: string): Promise<ProveedorProductoRow
     .select(
       "id, producto_id, costo_proveedor, precio_por_kilo_compra, tipo_carga_default, productos:producto_id(nombre, peso_kg, precio_por_kilo, aplica_iva, aplica_ieps)"
     )
-    .eq("proveedor_id", proveedorId);
+    .eq("proveedor_id", proveedorId)
+    .eq("activo", true);
   if (error) throw error;
 
   if (!pps || pps.length === 0) return [];
