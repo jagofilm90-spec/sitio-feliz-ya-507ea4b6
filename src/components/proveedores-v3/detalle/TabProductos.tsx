@@ -37,7 +37,6 @@ type ModalState =
   | { mode: "edit"; asociacionId: string };
 
 export const TabProductos = ({ proveedorId, autoAsociar, onAutoAsociarConsumido }: Props) => {
-  const navigate = useNavigate();
   const { data, isLoading, error, refetch } = useProveedorProductos(proveedorId);
   const [productoComparar, setProductoComparar] = useState<string | null>(null);
   const [modalAsociar, setModalAsociar] = useState<ModalState>(null);
