@@ -123,7 +123,13 @@ const ProveedorDetalle = () => {
           {activeTab === "resumen" && (
             <TabResumen data={data} onVerTodasOCs={() => setActiveTab("ocs")} />
           )}
-          {activeTab === "productos" && <TabProductos proveedorId={data.proveedor.id} />}
+          {activeTab === "productos" && (
+            <TabProductos
+              proveedorId={data.proveedor.id}
+              autoAsociar={autoAsociar}
+              onAutoAsociarConsumido={() => setAutoAsociar(false)}
+            />
+          )}
           {activeTab === "ocs" && <TabHistoricoOCs proveedorId={data.proveedor.id} />}
           {activeTab === "faltantes" && <TabFaltantes proveedorId={data.proveedor.id} />}
           {activeTab === "cuenta" && <TabCuentaCorriente proveedorId={data.proveedor.id} />}
