@@ -161,7 +161,8 @@ export interface ProductoMultiProveedor {
 async function fetchProductosMultiV2(): Promise<ProductoMultiProveedor[]> {
   const { data, error } = await supabase
     .from("proveedor_productos")
-    .select("producto_id, proveedor_id, productos:producto_id(id, nombre, precio_por_kilo, activo)");
+    .select("producto_id, proveedor_id, productos:producto_id(id, nombre, precio_por_kilo, activo)")
+    .eq("activo", true);
   if (error) throw error;
 
   const map = new Map<string, { provs: Set<string>; nombre: string; ppk: boolean; activo: boolean }>();
