@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+
 import { Pencil, Trash2 } from "lucide-react";
 import { formatDistanceToNowStrict } from "date-fns";
 import { es } from "date-fns/locale";
