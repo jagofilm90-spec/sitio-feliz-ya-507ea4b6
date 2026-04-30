@@ -25,9 +25,10 @@ export const SeccionDatosBasicos = ({ form, errors, onChange }: Props) => {
           </Label>
           <Input
             value={form.nombre}
-            onChange={(e) => onChange({ nombre: e.target.value })}
+            onChange={(e) => onChange({ nombre: e.target.value.toUpperCase() })}
             maxLength={200}
-            placeholder="Ej. Abarrotes Centrales SA de CV"
+            placeholder="EJ. ABARROTES CENTRALES SA DE CV"
+            style={{ textTransform: 'uppercase' }}
             className={errors.nombre ? "border-red-500" : ""}
           />
           {errors.nombre && (
@@ -41,9 +42,10 @@ export const SeccionDatosBasicos = ({ form, errors, onChange }: Props) => {
           </Label>
           <Input
             value={form.nombre_comercial}
-            onChange={(e) => onChange({ nombre_comercial: e.target.value })}
+            onChange={(e) => onChange({ nombre_comercial: e.target.value.toUpperCase() })}
             maxLength={100}
-            placeholder="Ej. Distribuidora Central"
+            placeholder="EJ. DISTRIBUIDORA CENTRAL"
+            style={{ textTransform: 'uppercase' }}
           />
         </div>
 
@@ -68,8 +70,9 @@ export const SeccionDatosBasicos = ({ form, errors, onChange }: Props) => {
             <Input
               className="mt-2"
               value={form.categoria}
-              onChange={(e) => onChange({ categoria: e.target.value })}
-              placeholder="Especifica la categoría"
+              onChange={(e) => onChange({ categoria: e.target.value.toUpperCase() })}
+              placeholder="ESPECIFICA LA CATEGORÍA"
+              style={{ textTransform: 'uppercase' }}
             />
           )}
           {errors.categoria && (

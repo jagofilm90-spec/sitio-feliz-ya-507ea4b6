@@ -58,9 +58,10 @@ export const SeccionFiscal = ({ form, errors, onChange }: Props) => {
           <Label className="text-xs uppercase tracking-wider text-ink-500">Dirección</Label>
           <Input
             value={form.direccion}
-            onChange={(e) => onChange({ direccion: e.target.value })}
+            onChange={(e) => onChange({ direccion: e.target.value.toUpperCase() })}
             maxLength={200}
-            placeholder="Calle, número, colonia, CP"
+            placeholder="CALLE, NÚMERO, COLONIA, CP"
+            style={{ textTransform: 'uppercase' }}
           />
         </div>
 
@@ -69,18 +70,20 @@ export const SeccionFiscal = ({ form, errors, onChange }: Props) => {
             <Label className="text-xs uppercase tracking-wider text-ink-500">Municipio</Label>
             <Input
               value={form.municipio}
-              onChange={(e) => onChange({ municipio: e.target.value })}
+              onChange={(e) => onChange({ municipio: e.target.value.toUpperCase() })}
               maxLength={100}
-              placeholder="Ej. Ecatepec"
+              placeholder="EJ. ECATEPEC"
+              style={{ textTransform: 'uppercase' }}
             />
           </div>
           <div>
             <Label className="text-xs uppercase tracking-wider text-ink-500">Estado</Label>
             <Input
               value={form.estado}
-              onChange={(e) => onChange({ estado: e.target.value })}
+              onChange={(e) => onChange({ estado: e.target.value.toUpperCase() })}
               maxLength={100}
-              placeholder="Ej. Edo. México"
+              placeholder="EJ. EDO. MÉXICO"
+              style={{ textTransform: 'uppercase' }}
             />
           </div>
         </div>

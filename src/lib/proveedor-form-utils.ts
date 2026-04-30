@@ -1,3 +1,8 @@
+export const toUpperCaseSafe = (value: string | null | undefined): string => {
+  if (!value) return '';
+  return value.toUpperCase();
+};
+
 export const validateRFC = (rfc: string): boolean => {
   if (!rfc) return false;
   const pattern = /^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/;

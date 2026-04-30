@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import type { ProveedorForm, ContactoForm } from "@/lib/proveedor-form-utils";
+import { toUpperCaseSafe, type ProveedorForm, type ContactoForm } from "@/lib/proveedor-form-utils";
 
 export const useProveedorParaEditar = (id?: string) => {
   return useQuery({
@@ -29,8 +29,8 @@ export const useProveedorParaEditar = (id?: string) => {
         (contactos || []).length > 0
           ? contactos!.map((c) => ({
               id: c.id,
-              nombre: c.nombre || "",
-              puesto: c.puesto || "",
+              nombre: toUpperCaseSafe(c.nombre),
+              puesto: toUpperCaseSafe(c.puesto),
               telefono: c.telefono || "",
               email: c.email || "",
               es_principal: !!c.es_principal,
@@ -47,14 +47,14 @@ export const useProveedorParaEditar = (id?: string) => {
             ];
 
       return {
-        nombre: prov.nombre || "",
-        nombre_comercial: prov.nombre_comercial || "",
-        categoria: prov.categoria || "",
-        rfc: prov.rfc || "",
+        nombre: toUpperCaseSafe(prov.nombre),
+        nombre_comercial: toUpperCaseSafe(prov.nombre_comercial),
+        categoria: toUpperCaseSafe(prov.categoria),
+        rfc: toUpperCaseSafe(prov.rfc),
         regimen_fiscal: prov.regimen_fiscal || "",
-        direccion: prov.direccion || "",
-        municipio: prov.municipio || "",
-        estado: prov.estado || "",
+        direccion: toUpperCaseSafe(prov.direccion),
+        municipio: toUpperCaseSafe(prov.municipio),
+        estado: toUpperCaseSafe(prov.estado),
         termino_pago: prov.termino_pago || "15_dias",
         metodos_pago_aceptados: prov.metodos_pago_aceptados || [],
         notas_operativas: prov.notas_operativas || "",

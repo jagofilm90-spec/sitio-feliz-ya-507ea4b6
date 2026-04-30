@@ -48,16 +48,18 @@ export const ContactoRow = ({
             </Label>
             <Input
               value={contacto.nombre}
-              onChange={(e) => onChange({ nombre: e.target.value })}
+              onChange={(e) => onChange({ nombre: e.target.value.toUpperCase() })}
               maxLength={100}
-              placeholder="Ej. Roberto Gutiérrez"
+              placeholder="EJ. ROBERTO GUTIÉRREZ"
+              style={{ textTransform: 'uppercase' }}
               className={`h-9 ${eN ? "border-red-500" : ""}`}
             />
             <Input
               value={contacto.puesto}
-              onChange={(e) => onChange({ puesto: e.target.value })}
+              onChange={(e) => onChange({ puesto: e.target.value.toUpperCase() })}
               maxLength={50}
-              placeholder="Rol (opcional): Dueño, Hijo, Encargado…"
+              placeholder="ROL (OPCIONAL): DUEÑO, HIJO, ENCARGADO…"
+              style={{ textTransform: 'uppercase' }}
               className="h-8 mt-1.5 text-xs"
             />
             {eN && <p className="text-xs text-red-600 mt-1">{eN}</p>}
