@@ -35,7 +35,8 @@ async function fetchComparador(productoId: string): Promise<ComparadorRow[]> {
     .select(
       "proveedor_id, costo_proveedor, proveedores:proveedor_id(id, nombre, termino_pago, activo), productos:producto_id(nombre, precio_por_kilo, aplica_iva, aplica_ieps)"
     )
-    .eq("producto_id", productoId);
+    .eq("producto_id", productoId)
+    .eq("activo", true);
 
   if (error) throw error;
   const valid = (pps || []).filter((r: any) => r.proveedores?.activo);
