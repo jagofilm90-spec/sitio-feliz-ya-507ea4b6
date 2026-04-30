@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -21,11 +21,24 @@ const ProveedorDetalle = () => {
 
   const activeTab = (searchParams.get("tab") as TabKey) || "resumen";
   const [editandoProveedor, setEditandoProveedor] = useState(false);
+  const [autoAsociar, setAutoAsociar] = useState(false);
+
   const setActiveTab = (k: TabKey) => {
     const next = new URLSearchParams(searchParams);
     next.set("tab", k);
     setSearchParams(next, { replace: true });
   };
+
+  // Detect ?accion=asociar -> open modal once and clean param
+  useEffect(() => {
+    if (searchParams.get("accion") === "asociar") {
+      setAutoAsociar(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete("accion");
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { data, isLoading, error } = useProveedorDetalle(id);
 
