@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import type { ProveedorForm, ContactoForm } from "@/lib/proveedor-form-utils";
+import { toUpperCaseSafe, type ProveedorForm, type ContactoForm } from "@/lib/proveedor-form-utils";
 
 export const useProveedorParaEditar = (id?: string) => {
   return useQuery({
