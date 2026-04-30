@@ -18,6 +18,8 @@ export interface ProductoLite {
   peso_kg: number | null;
 }
 
+export type PrecioOrigen = 'oc' | 'cotizacion' | 'manual' | 'fallback_catalogo' | 'primera_vez';
+
 export interface LineaOC {
   uid: string; // local id
   producto_id: string;
@@ -26,6 +28,12 @@ export interface LineaOC {
   cantidadStr: string;
   precio_unitario: number;
   precioStr: string;
+
+  // M02.5 Pilar I — metadata de pre-fill temporal
+  precio_origen: PrecioOrigen;
+  precio_sugerido_inicial: number;
+  precio_vigente_desde: string | null;
+  precio_oc_folio: string | null;
 }
 
 export type TipoPlazo = "contado" | "8" | "15" | "30" | "anticipado" | "otro";

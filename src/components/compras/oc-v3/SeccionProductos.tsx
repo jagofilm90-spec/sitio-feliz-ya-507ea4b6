@@ -11,6 +11,7 @@ import {
   calcularPesoLinea,
   calcularSubtotalLinea,
 } from "./types";
+import { PrecioHint } from "./PrecioHint";
 
 interface Props {
   proveedorId: string | null;
@@ -21,30 +22,45 @@ interface Props {
 const fmt2 = (n: number) =>
   n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-async function obtenerPrecioDefault(
+type PrecioSugeridoResult = {
+  precio: number;
+  origen: 'oc' | 'cotizacion' | 'manual' | 'fallback_catalogo' | 'primera_vez';
+  vigente_desde: string | null;
+  oc_folio: string | null;
+};
+
+async function obtenerPrecioSugerido(
   productoId: string,
   proveedorId: string,
-  fallbackProveedor: number | null,
   fallbackProducto: number | null,
-): Promise<number> {
-  // 1) Último precio comprado a este proveedor
-  const { data, error } = await supabase
-    .from("ordenes_compra_detalles")
-    .select("precio_unitario_compra, ordenes_compra!inner(proveedor_id, created_at)")
-    .eq("producto_id", productoId)
-    .eq("ordenes_compra.proveedor_id", proveedorId)
-    .order("created_at", { foreignTable: "ordenes_compra", ascending: false })
-    .limit(1);
-  if (!error && data && data.length > 0) {
-    const v = Number((data[0] as any).precio_unitario_compra);
-    if (v > 0) return v;
+): Promise<PrecioSugeridoResult> {
+  // 1) M02.5 Pilar I: vigente trackeado o fallback a proveedor_productos
+  const { data, error } = await supabase.rpc('fn_obtener_precio_sugerido' as any, {
+    p_proveedor_id: proveedorId,
+    p_producto_id: productoId,
+  });
+
+  if (!error && data && Array.isArray(data) && data.length > 0) {
+    const r = data[0] as any;
+    return {
+      precio: Number(r.precio),
+      origen: r.origen,
+      vigente_desde: r.vigente_desde,
+      oc_folio: r.oc_folio,
+    };
   }
-  // 2) costo_proveedor
-  if (fallbackProveedor != null && Number(fallbackProveedor) > 0) return Number(fallbackProveedor);
-  // 3) precio_compra
-  if (fallbackProducto != null && Number(fallbackProducto) > 0) return Number(fallbackProducto);
-  // 4)
-  return 0;
+
+  // 2) Último recurso: precio_compra del catálogo de productos
+  if (fallbackProducto != null && Number(fallbackProducto) > 0) {
+    return {
+      precio: Number(fallbackProducto),
+      origen: 'primera_vez',
+      vigente_desde: null,
+      oc_folio: null,
+    };
+  }
+
+  return { precio: 0, origen: 'primera_vez', vigente_desde: null, oc_folio: null };
 }
 
 export default function SeccionProductos({ proveedorId, lineas, setLineas }: Props) {
@@ -94,9 +110,15 @@ export default function SeccionProductos({ proveedorId, lineas, setLineas }: Pro
 
   const agregarProducto = async (p: ProductoLite) => {
     setOpen(false);
-    const precio = proveedorId
-      ? await obtenerPrecioDefault(p.id, proveedorId, p.costo_proveedor, p.precio_compra)
-      : Number(p.costo_proveedor ?? p.precio_compra ?? 0);
+    const sugerido = proveedorId
+      ? await obtenerPrecioSugerido(p.id, proveedorId, p.precio_compra)
+      : {
+          precio: Number(p.costo_proveedor ?? p.precio_compra ?? 0),
+          origen: 'primera_vez' as const,
+          vigente_desde: null,
+          oc_folio: null,
+        };
+
     setLineas((prev) => [
       ...prev,
       {
@@ -105,8 +127,12 @@ export default function SeccionProductos({ proveedorId, lineas, setLineas }: Pro
         producto: p,
         cantidad: 1,
         cantidadStr: "1",
-        precio_unitario: precio,
-        precioStr: precio.toFixed(2),
+        precio_unitario: sugerido.precio,
+        precioStr: sugerido.precio.toFixed(2),
+        precio_origen: sugerido.origen,
+        precio_sugerido_inicial: sugerido.precio,
+        precio_vigente_desde: sugerido.vigente_desde,
+        precio_oc_folio: sugerido.oc_folio,
       },
     ]);
   };
@@ -184,7 +210,6 @@ export default function SeccionProductos({ proveedorId, lineas, setLineas }: Pro
                               if (l.cantidadStr === "" || l.cantidadStr === "0") {
                                 updateLinea(l.uid, { cantidadStr: "1", cantidad: 1 });
                               } else {
-                                // strip leading zeros
                                 const clean = String(parseInt(l.cantidadStr, 10) || 1);
                                 updateLinea(l.uid, { cantidadStr: clean, cantidad: parseInt(clean, 10) });
                               }
@@ -206,7 +231,6 @@ export default function SeccionProductos({ proveedorId, lineas, setLineas }: Pro
                               value={l.precioStr}
                               onChange={(e) => {
                                 let val = e.target.value.replace(/[^0-9.]/g, "");
-                                // solo un punto
                                 const parts = val.split(".");
                                 if (parts.length > 2) val = parts[0] + "." + parts.slice(1).join("");
                                 updateLinea(l.uid, {
@@ -227,6 +251,7 @@ export default function SeccionProductos({ proveedorId, lineas, setLineas }: Pro
                               {porKilo ? "/ kg" : "/ bulto"}
                             </span>
                           </div>
+                          <PrecioHint linea={l} />
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-ink-900">
                           ${fmt2(subtotal)}
