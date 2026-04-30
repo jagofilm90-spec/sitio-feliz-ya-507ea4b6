@@ -250,7 +250,14 @@ export const SupplierCard = ({ proveedor: p, onEdit }: SupplierCardProps) => {
             </Button>
           )}
           {p.activo && p.saldo_vencido === 0 && showAsociar && (
-            <Button size="sm" variant="outline" className="text-xs">
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs"
+              onClick={() =>
+                navigate(`/compras/proveedores-v3/${p.id}?tab=productos&accion=asociar`)
+              }
+            >
               Asociar productos
             </Button>
           )}

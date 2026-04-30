@@ -5437,6 +5437,7 @@ export type Database = {
       }
       proveedor_productos: {
         Row: {
+          activo: boolean | null
           cantidad_lotes_default: number | null
           capacidad_vehiculo_bultos: number | null
           capacidad_vehiculo_kg: number | null
@@ -5456,6 +5457,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          activo?: boolean | null
           cantidad_lotes_default?: number | null
           capacidad_vehiculo_bultos?: number | null
           capacidad_vehiculo_kg?: number | null
@@ -5475,6 +5477,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          activo?: boolean | null
           cantidad_lotes_default?: number | null
           capacidad_vehiculo_bultos?: number | null
           capacidad_vehiculo_kg?: number | null

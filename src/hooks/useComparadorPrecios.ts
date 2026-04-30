@@ -35,7 +35,8 @@ async function fetchComparador(productoId: string): Promise<ComparadorRow[]> {
     .select(
       "proveedor_id, costo_proveedor, proveedores:proveedor_id(id, nombre, termino_pago, activo), productos:producto_id(nombre, precio_por_kilo, aplica_iva, aplica_ieps)"
     )
-    .eq("producto_id", productoId);
+    .eq("producto_id", productoId)
+    .eq("activo", true);
 
   if (error) throw error;
   const valid = (pps || []).filter((r: any) => r.proveedores?.activo);
@@ -160,7 +161,8 @@ export interface ProductoMultiProveedor {
 async function fetchProductosMultiV2(): Promise<ProductoMultiProveedor[]> {
   const { data, error } = await supabase
     .from("proveedor_productos")
-    .select("producto_id, proveedor_id, productos:producto_id(id, nombre, precio_por_kilo, activo)");
+    .select("producto_id, proveedor_id, productos:producto_id(id, nombre, precio_por_kilo, activo)")
+    .eq("activo", true);
   if (error) throw error;
 
   const map = new Map<string, { provs: Set<string>; nombre: string; ppk: boolean; activo: boolean }>();

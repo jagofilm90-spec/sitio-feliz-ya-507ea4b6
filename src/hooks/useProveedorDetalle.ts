@@ -119,7 +119,8 @@ async function fetchDetalle(proveedorId: string): Promise<ProveedorDetalleData> 
     supabase
       .from("proveedor_productos")
       .select("*", { count: "exact", head: true })
-      .eq("proveedor_id", proveedorId),
+      .eq("proveedor_id", proveedorId)
+      .eq("activo", true),
     supabase
       .from("ordenes_compra")
       .select("*", { count: "exact", head: true })
