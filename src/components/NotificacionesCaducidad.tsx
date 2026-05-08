@@ -27,63 +27,39 @@ export const NotificacionesCaducidad = () => {
 
   const cargarAlertasCaducidad = async () => {
     try {
-      // Obtener productos que manejan caducidad y tienen stock
-      const { data: productos, error: productosError } = await supabase
-        .from("productos")
-        .select("id, nombre, codigo, stock_actual")
-        .eq("maneja_caducidad", true)
-        .gt("stock_actual", 0);
-
-      if (productosError) throw productosError;
-      if (!productos || productos.length === 0) {
-        setAlertas([]);
-        setLoading(false);
-        return;
-      }
-
-      const productosIds = productos.map(p => p.id);
-
-      // Obtener movimientos de entrada con fechas de caducidad próximas
       const fechaActual = new Date();
       const fecha30Dias = new Date();
       fecha30Dias.setDate(fecha30Dias.getDate() + 30);
 
-      const { data: movimientos, error: movimientosError } = await supabase
-        .from("inventario_movimientos")
-        .select("producto_id, fecha_caducidad, lote")
-        .in("producto_id", productosIds)
-        .eq("tipo_movimiento", "entrada")
+      // Query directa a inventario_lotes con inner join a productos
+      // Mismo patrón validado en ReporteCaducidadTab.tsx
+      const { data: lotes, error } = await supabase
+        .from("inventario_lotes")
+        .select(`
+          id, producto_id, lote_referencia, cantidad_disponible, fecha_caducidad,
+          productos!inner(codigo, nombre, maneja_caducidad)
+        `)
+        .eq("productos.maneja_caducidad", true)
+        .gt("cantidad_disponible", 0)
         .not("fecha_caducidad", "is", null)
         .lte("fecha_caducidad", fecha30Dias.toISOString().split("T")[0])
-        .gte("fecha_caducidad", fechaActual.toISOString().split("T")[0])
         .order("fecha_caducidad", { ascending: true });
 
-      if (movimientosError) throw movimientosError;
+      if (error) throw error;
 
-      // Combinar datos y calcular días restantes
-      const alertasFormateadas: ProductoCaducidad[] = [];
-      const lotesUnicos = new Set<string>();
-
-      movimientos?.forEach(mov => {
-        const producto = productos.find(p => p.id === mov.producto_id);
-        if (!producto) return;
-
-        // Evitar duplicados por lote
-        const loteKey = `${mov.producto_id}-${mov.lote || "sin-lote"}-${mov.fecha_caducidad}`;
-        if (lotesUnicos.has(loteKey)) return;
-        lotesUnicos.add(loteKey);
-
-        const fechaCad = new Date(mov.fecha_caducidad!);
-        const diasRestantes = Math.ceil((fechaCad.getTime() - fechaActual.getTime()) / (1000 * 60 * 60 * 24));
-
-        alertasFormateadas.push({
-          id: loteKey,
-          producto_nombre: producto.nombre,
-          producto_codigo: producto.codigo,
-          fecha_caducidad: mov.fecha_caducidad!,
-          lote: mov.lote,
+      const alertasFormateadas: ProductoCaducidad[] = (lotes || []).map((lote: any) => {
+        const fechaCad = new Date(lote.fecha_caducidad);
+        const diasRestantes = Math.ceil(
+          (fechaCad.getTime() - fechaActual.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        return {
+          id: lote.id,
+          producto_nombre: lote.productos?.nombre || "",
+          producto_codigo: lote.productos?.codigo || "",
+          fecha_caducidad: lote.fecha_caducidad,
+          lote: lote.lote_referencia,
           dias_restantes: diasRestantes,
-        });
+        };
       });
 
       setAlertas(alertasFormateadas);
