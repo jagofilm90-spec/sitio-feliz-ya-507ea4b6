@@ -7332,6 +7332,19 @@ export type Database = {
         }
         Returns: string
       }
+      registrar_devolucion_proveedor: {
+        Args: {
+          p_cantidad: number
+          p_firma_chofer?: string
+          p_lote_id: string
+          p_motivo: string
+          p_notas?: string
+          p_orden_compra_entrega_id: string
+          p_orden_compra_id: string
+          p_producto_id: string
+        }
+        Returns: string
+      }
       unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
