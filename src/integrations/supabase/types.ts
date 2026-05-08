@@ -4597,6 +4597,86 @@ export type Database = {
           },
         ]
       }
+      precios_proveedor_producto: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          es_por_kilo: boolean
+          id: string
+          notas: string | null
+          oc_detalle_id: string | null
+          oc_id: string | null
+          origen: Database["public"]["Enums"]["origen_precio"]
+          precio: number
+          producto_id: string
+          proveedor_id: string
+          vigencia_dias: number | null
+          vigente_desde: string
+          vigente_hasta: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          es_por_kilo?: boolean
+          id?: string
+          notas?: string | null
+          oc_detalle_id?: string | null
+          oc_id?: string | null
+          origen: Database["public"]["Enums"]["origen_precio"]
+          precio: number
+          producto_id: string
+          proveedor_id: string
+          vigencia_dias?: number | null
+          vigente_desde?: string
+          vigente_hasta?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          es_por_kilo?: boolean
+          id?: string
+          notas?: string | null
+          oc_detalle_id?: string | null
+          oc_id?: string | null
+          origen?: Database["public"]["Enums"]["origen_precio"]
+          precio?: number
+          producto_id?: string
+          proveedor_id?: string
+          vigencia_dias?: number | null
+          vigente_desde?: string
+          vigente_hasta?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "precios_proveedor_producto_oc_id_fkey"
+            columns: ["oc_id"]
+            isOneToOne: false
+            referencedRelation: "ordenes_compra"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "precios_proveedor_producto_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "precios_proveedor_producto_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos_stock_bajo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "precios_proveedor_producto_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       productos: {
         Row: {
           activo: boolean | null
@@ -7189,6 +7269,16 @@ export type Database = {
         Args: { _cliente_id: string }
         Returns: boolean
       }
+      fn_obtener_precio_sugerido: {
+        Args: { p_producto_id: string; p_proveedor_id: string }
+        Returns: {
+          es_por_kilo: boolean
+          oc_folio: string
+          origen: string
+          precio: number
+          vigente_desde: string
+        }[]
+      }
       generar_codigo_cliente: { Args: never; Returns: string }
       generar_folio_cotizacion: { Args: never; Returns: string }
       generar_folio_orden_compra: { Args: never; Returns: string }
@@ -7276,6 +7366,7 @@ export type Database = {
         | "entregado"
         | "cancelado"
         | "por_cobrar"
+      origen_precio: "cotizacion" | "oc" | "manual"
       preferencia_facturacion:
         | "siempre_factura"
         | "siempre_remision"
@@ -7467,6 +7558,7 @@ export const Constants = {
         "cancelado",
         "por_cobrar",
       ],
+      origen_precio: ["cotizacion", "oc", "manual"],
       preferencia_facturacion: [
         "siempre_factura",
         "siempre_remision",
