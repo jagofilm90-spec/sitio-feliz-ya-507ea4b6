@@ -111,25 +111,65 @@ export const DevolucionProveedorDialog = ({
 
       let montoTotalDevoluciones = 0;
 
-      // Crear registros de devolución para cada producto
+      // Crear registros de devolución para cada producto (RPC atómica)
       for (const producto of productosDevolucion) {
-        const { data: devolucion, error: devError } = await supabase
-          .from("devoluciones_proveedor")
-          .insert({
-            orden_compra_id: ordenCompraId,
-            orden_compra_entrega_id: entregaId,
-            producto_id: producto.productoId,
-            cantidad_devuelta: producto.cantidadDevuelta,
-            motivo: producto.razon,
-            notas: notasDevolucion || null,
-            registrado_por: user.id,
-            firma_chofer: firma,
-            status: "pendiente"
-          })
-          .select()
-          .single();
+        // Buscar lote: misma OC + mismo producto, más reciente
+        const { data: loteTarget } = await supabase
+          .from("inventario_lotes")
+          .select("id")
+          .eq("producto_id", producto.productoId)
+          .eq("orden_compra_id", ordenCompraId)
+          .order("fecha_entrada", { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-        if (devError) throw devError;
+        // Fallback FIFO si no hay lote de esta OC
+        let loteId = loteTarget?.id;
+        if (!loteId) {
+          const { data: loteFifo } = await supabase
+            .from("inventario_lotes")
+            .select("id")
+            .eq("producto_id", producto.productoId)
+            .gt("cantidad_disponible", 0)
+            .order("fecha_entrada", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          loteId = loteFifo?.id;
+        }
+
+        // Sin lote = error visible, detener todo
+        if (!loteId) {
+          toast({
+            title: "Error: sin lote identificado",
+            description: `No se pudo identificar lote para ${producto.productoNombre}. Devolución NO registrada. Verifica que la mercancía haya sido recibida.`,
+            variant: "destructive",
+          });
+          setSaving(false);
+          return;
+        }
+
+        // RPC atómica: INSERT devolución + decremento lote + movimiento auditoría
+        const { data: devolucionId, error: rpcError } = await supabase
+          .rpc("registrar_devolucion_proveedor", {
+            p_orden_compra_id: ordenCompraId,
+            p_orden_compra_entrega_id: entregaId,
+            p_producto_id: producto.productoId,
+            p_lote_id: loteId,
+            p_cantidad: producto.cantidadDevuelta,
+            p_motivo: producto.razon,
+            p_notas: notasDevolucion || null,
+            p_firma_chofer: firma || null,
+          });
+
+        if (rpcError) {
+          toast({
+            title: "Error al registrar devolución",
+            description: rpcError.message,
+            variant: "destructive",
+          });
+          setSaving(false);
+          return;
+        }
 
         // Obtener precio unitario de compra para calcular monto de devolución
         const { data: detalleOC } = await supabase
@@ -144,11 +184,11 @@ export const DevolucionProveedorDialog = ({
           montoTotalDevoluciones += montoDevolucion;
         }
 
-        // Subir fotos de este producto
+        // Subir fotos de este producto (no-crítico, fuera de la transacción)
         const fotosProducto = fotosDevolucion.filter(f => f.productoId === producto.productoId);
         for (const foto of fotosProducto) {
-          const fileName = `${ordenCompraId}/${devolucion.id}/${Date.now()}-danado.jpg`;
-          
+          const fileName = `${ordenCompraId}/${devolucionId}/${Date.now()}-danado.jpg`;
+
           const { error: uploadError } = await supabase.storage
             .from("devoluciones-evidencias")
             .upload(fileName, foto.file);
@@ -157,7 +197,7 @@ export const DevolucionProveedorDialog = ({
             await supabase
               .from("devoluciones_proveedor_evidencias")
               .insert({
-                devolucion_id: devolucion.id,
+                devolucion_id: devolucionId,
                 tipo_evidencia: "producto_danado",
                 ruta_storage: fileName,
                 nombre_archivo: foto.file.name,
