@@ -239,13 +239,10 @@ export const useEstadoOperaciones = () => {
 
   const cargarAlertas = useCallback(async () => {
     try {
-      // Stock bajo
+      // Stock bajo (usa VIEW que compara columna vs columna server-side)
       const { count: stockBajo } = await supabase
-        .from("productos")
-        .select("*", { count: "exact", head: true })
-        .eq("activo", true)
-        .gt("stock_minimo", 0)
-        .filter("stock_actual", "lt", "stock_minimo");
+        .from("productos_stock_bajo" as any)
+        .select("id", { count: "exact", head: true });
 
       // Productos próximos a caducar (lotes)
       const fechaLimite = new Date();
