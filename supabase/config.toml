@@ -131,4 +131,4 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.resumen-diario]
-verify_jwt = false
+verify_jwt = true
