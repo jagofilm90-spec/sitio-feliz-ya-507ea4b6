@@ -42,7 +42,8 @@ async function fetchFacturasVencidas(hoy: string): Promise<FacturaVencida[]> {
     .from("facturas")
     .select("total, fecha_vencimiento, cliente_id")
     .lt("fecha_vencimiento", hoy)
-    .eq("status", "vigente");
+    .eq("cfdi_estado", "timbrada")
+    .eq("pagada", false);
   return (result.data || []) as FacturaVencida[];
 }
 

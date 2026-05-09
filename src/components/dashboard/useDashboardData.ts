@@ -131,20 +131,20 @@ export function useDashboardData(periodo: Periodo = 'mes') {
         supabase.from("pedidos").select("total").gte("created_at", inicioMesAnterior).lte("created_at", finMesAnterior).in("status", ["entregado", "en_ruta"]),
         // Clientes con saldo
         supabase.from("clientes").select("id, saldo_pendiente, limite_credito").gt("saldo_pendiente", 0),
-        // Facturas vencidas
-        (supabase as any).from("facturas").select("total, fecha_vencimiento").lt("fecha_vencimiento", hoy).eq("status", "vigente"),
+        // Facturas vencidas (timbradas + no pagadas)
+        (supabase as any).from("facturas").select("total, fecha_vencimiento").lt("fecha_vencimiento", hoy).eq("cfdi_estado", "timbrada").eq("pagada", false),
         // Pedidos en calle
         supabase.from("pedidos").select("id", { count: "exact", head: true }).eq("status", "en_ruta"),
         // Pedidos por surtir
         supabase.from("pedidos").select("id", { count: "exact", head: true }).eq("status", "pendiente"),
         // Pedidos sin autorizar > 24h
         supabase.from("pedidos").select("id", { count: "exact", head: true }).eq("status", "por_autorizar").lt("created_at", hace24h),
-        // Stock bajo
-        supabase.from("productos").select("id", { count: "exact", head: true }).filter("stock_actual", "lte", "stock_minimo").eq("activo", true),
+        // Stock bajo (usa VIEW que compara columna vs columna server-side)
+        supabase.from("productos_stock_bajo" as any).select("id", { count: "exact", head: true }),
         // Stock = 0
         supabase.from("productos").select("id", { count: "exact", head: true }).eq("stock_actual", 0).eq("activo", true),
-        // Facturas que vencen esta semana
-        (supabase as any).from("facturas").select("id", { count: "exact", head: true }).gte("fecha_vencimiento", hoy).lte("fecha_vencimiento", finSemana).eq("status", "vigente"),
+        // Facturas que vencen esta semana (timbradas + no pagadas)
+        (supabase as any).from("facturas").select("id", { count: "exact", head: true }).gte("fecha_vencimiento", hoy).lte("fecha_vencimiento", finSemana).eq("cfdi_estado", "timbrada").eq("pagada", false),
         // Clientes nuevos del mes
         supabase.from("clientes").select("id", { count: "exact", head: true }).gte("created_at", inicioMes),
         // Top 10 productos del mes - get details from pedidos_detalles
