@@ -104,7 +104,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.send-checkup-report]
-verify_jwt = false
+verify_jwt = true
 
 [functions.notificar-faltante-oc]
 verify_jwt = true
@@ -125,10 +125,10 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.send-delivery-confirmation]
-verify_jwt = false
+verify_jwt = true
 
 [functions.send-chofer-route-email]
-verify_jwt = false
+verify_jwt = true
 
 [functions.resumen-diario]
 verify_jwt = true
