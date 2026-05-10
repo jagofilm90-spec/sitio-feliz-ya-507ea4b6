@@ -13,6 +13,7 @@ import {
   CreditCard,
   Bell,
   Database,
+  Stamp,
 } from "lucide-react";
 
 // Tab components
@@ -23,6 +24,7 @@ import { ConfigUsuariosTab } from "@/components/configuracion/ConfigUsuariosTab"
 import { ConfigCreditosTab } from "@/components/configuracion/ConfigCreditosTab";
 import { ConfigAlertasTab } from "@/components/configuracion/ConfigAlertasTab";
 import { ConfigSistemaTab } from "@/components/configuracion/ConfigSistemaTab";
+import PACSettings from "@/components/carta-porte/PACSettings";
 
 interface Section {
   id: string;
@@ -76,6 +78,13 @@ const sections: Section[] = [
     roles: ["admin"],
   },
   {
+    id: "pac",
+    label: "PAC (Timbrado)",
+    icon: Stamp,
+    description: "Configuración de proveedor PAC para facturación",
+    roles: ["admin"],
+  },
+  {
     id: "sistema",
     label: "Sistema",
     icon: Database,
@@ -112,6 +121,8 @@ function ConfiguracionContent() {
         return <ConfigCreditosTab />;
       case "alertas":
         return <ConfigAlertasTab />;
+      case "pac":
+        return <PACSettings />;
       case "sistema":
         return <ConfigSistemaTab />;
       default:

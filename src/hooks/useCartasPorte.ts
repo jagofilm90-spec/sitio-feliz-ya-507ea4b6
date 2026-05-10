@@ -156,3 +156,174 @@ export function useSatCatalogos(catalogo: string) {
     },
   });
 }
+
+// ─── PAC Timbrado ─────────────────────────────────────────────────────────────
+
+export function useTimbrarCartaPorte() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (cartaPorteId: string) => {
+      const { data, error } = await supabase.functions.invoke("carta-porte-timbrar", {
+        body: { carta_porte_id: cartaPorteId },
+      });
+      if (error) throw error;
+      if (!data.exitoso) throw new Error(data.error || "Error de timbrado");
+      return data as { exitoso: boolean; uuid: string; xmlUrl: string | null; pdfUrl: string | null };
+    },
+    onSuccess: (data, cartaPorteId) => {
+      queryClient.invalidateQueries({ queryKey: ["carta-porte", cartaPorteId] });
+      queryClient.invalidateQueries({ queryKey: ["cartas-porte"] });
+      toast({
+        title: "Timbrado exitoso",
+        description: `UUID SAT: ${data.uuid}`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error de timbrado",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+// ─── PAC Configuration ────────────────────────────────────────────────────────
+
+export interface PACProviderInfo {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  url_sandbox: string | null;
+  precio_promedio_timbre: number | null;
+}
+
+export interface PACConfigData {
+  id: string;
+  pac_provider_id: string;
+  modo: string;
+  rfc_emisor: string;
+  razon_social_emisor: string;
+  regimen_fiscal_emisor: string;
+  username: string | null;
+  activo: boolean;
+  ultimo_test_exitoso: boolean | null;
+  ultimo_test_mensaje: string | null;
+  ultimo_test_conexion: string | null;
+}
+
+export function usePACProviders() {
+  return useQuery({
+    queryKey: ["pac-providers"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("pac_providers")
+        .select("id, nombre, descripcion, url_sandbox, precio_promedio_timbre")
+        .eq("status", "disponible");
+      if (error) throw error;
+      return data as PACProviderInfo[];
+    },
+  });
+}
+
+export function usePACConfig() {
+  return useQuery({
+    queryKey: ["pac-config"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("pac_configurations")
+        .select("*")
+        .eq("activo", true)
+        .maybeSingle();
+      if (error) throw error;
+      return data as PACConfigData | null;
+    },
+  });
+}
+
+export function useSavePACConfig() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (config: {
+      pac_provider_id: string;
+      modo: string;
+      rfc_emisor: string;
+      razon_social_emisor: string;
+      regimen_fiscal_emisor: string;
+      username: string;
+      password_encrypted: string;
+      api_key?: string;
+    }) => {
+      // Deactivate existing
+      await (supabase as any)
+        .from("pac_configurations")
+        .update({ activo: false })
+        .eq("activo", true);
+
+      const user = (await supabase.auth.getUser()).data.user;
+      const { data, error } = await (supabase as any)
+        .from("pac_configurations")
+        .insert({
+          ...config,
+          activo: true,
+          created_by: user?.id,
+          updated_by: user?.id,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pac-config"] });
+      toast({ title: "PAC configurado", description: "Configuración guardada correctamente." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+}
+
+export function useProbarConexionPAC() {
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("pac-probar-conexion", {});
+      if (error) throw error;
+      return data as { exitoso: boolean; mensaje: string };
+    },
+    onSuccess: (data) => {
+      toast({
+        title: data.exitoso ? "Conexión exitosa" : "Conexión fallida",
+        description: data.mensaje,
+        variant: data.exitoso ? "default" : "destructive",
+      });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+}
+
+export function usePACTransacciones(cartaPorteId?: string) {
+  return useQuery({
+    queryKey: ["pac-transacciones", cartaPorteId],
+    queryFn: async () => {
+      let query = (supabase as any)
+        .from("pac_transacciones_log")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (cartaPorteId) query = query.eq("carta_porte_id", cartaPorteId);
+      const { data, error } = await query;
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: true,
+  });
+}

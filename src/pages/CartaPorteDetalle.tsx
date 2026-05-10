@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, FileText, Truck, User, MapPin, Package, AlertTriangle, CheckCircle, Clock, History } from "lucide-react";
-import { useCartaPorte } from "@/hooks/useCartasPorte";
+import { ArrowLeft, FileText, Truck, User, MapPin, Package, AlertTriangle, CheckCircle, Clock, History, Stamp, Download } from "lucide-react";
+import { useCartaPorte, useTimbrarCartaPorte } from "@/hooks/useCartasPorte";
 import { useCartaPorteSubDocs } from "@/hooks/useCartaPorteWizard";
 import CartaPorteWizard from "@/components/carta-porte/CartaPorteWizard";
 
@@ -23,6 +23,7 @@ const CartaPorteDetalle = () => {
   const navigate = useNavigate();
   const { data: cp, isLoading } = useCartaPorte(id);
   const { data: subDocs } = useCartaPorteSubDocs(id);
+  const timbrarMutation = useTimbrarCartaPorte();
 
   if (isLoading) {
     return (
@@ -78,8 +79,59 @@ const CartaPorteDetalle = () => {
             <div>
               <p className="text-sm font-medium text-amber-900">Modo borrador</p>
               <p className="text-xs text-amber-700">
-                Completa los 4 pasos del wizard y valida. El timbrado con PAC estará disponible en SEMANA 3.
+                Completa los 4 pasos del wizard y valida para poder timbrar.
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* Timbrar button for validado */}
+        {cp.estado === "validado" && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="h-5 w-5 text-blue-600" />
+              <div>
+                <p className="text-sm font-medium text-blue-900">Carta Porte validada</p>
+                <p className="text-xs text-blue-700">Lista para timbrar con PAC.</p>
+              </div>
+            </div>
+            <Button
+              onClick={() => timbrarMutation.mutate(cp.id)}
+              disabled={timbrarMutation.isPending}
+              className="bg-[#c41e3a] hover:bg-[#a01830] text-white"
+            >
+              <Stamp className="h-4 w-4 mr-2" />
+              {timbrarMutation.isPending ? "Timbrando..." : "Timbrar con PAC"}
+            </Button>
+          </div>
+        )}
+
+        {/* Timbrado banner */}
+        {cp.estado === "timbrado" && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              <p className="text-sm font-medium text-green-900">Timbrado exitosamente</p>
+            </div>
+            <p className="text-xs text-green-800">UUID SAT: <span className="font-mono">{cp.uuid_sat}</span></p>
+            {cp.fecha_timbrado && (
+              <p className="text-xs text-green-700">Fecha: {new Date(cp.fecha_timbrado).toLocaleString("es-MX")}</p>
+            )}
+            <div className="flex gap-2 pt-1">
+              {cp.xml_url && (
+                <a href={cp.xml_url} target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" size="sm">
+                    <Download className="h-3 w-3 mr-1" /> XML
+                  </Button>
+                </a>
+              )}
+              {cp.pdf_url && (
+                <a href={cp.pdf_url} target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" size="sm">
+                    <Download className="h-3 w-3 mr-1" /> PDF
+                  </Button>
+                </a>
+              )}
             </div>
           </div>
         )}
