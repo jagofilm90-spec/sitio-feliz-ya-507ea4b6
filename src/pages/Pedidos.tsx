@@ -389,15 +389,13 @@ const PedidosContent = () => {
     }
 
     try {
-      // Paso 1: Marcar como facturado
-      const { error: facturarError } = await supabase
-        .from("pedidos")
-        .update({ facturado: true })
-        .eq("id", pedido.id);
+      // NOTA: Ya NO marcamos facturado=true manualmente.
+      // El trigger trg_sync_pedido_facturado lo hará automáticamente
+      // cuando se cree un CFDI timbrado real en tabla facturas.
+      // Esto evita "pre-facturas fantasma" (facturado=true sin CFDI).
+      // Ver: audit/07-REDISENO-FACTURACION.md, audit/42-FIX-BOOLEAN-FACTURADO.md
 
-      if (facturarError) throw facturarError;
-
-      // Paso 2: Enviar email (la edge function también marca factura_enviada_al_cliente)
+      // Enviar email (la edge function también marca factura_enviada_al_cliente)
       const { data, error } = await supabase.functions.invoke('send-invoice-email', {
         body: {
           pedidoId: pedido.id,
