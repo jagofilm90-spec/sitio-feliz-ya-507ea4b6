@@ -62,6 +62,7 @@ import EditarCliente from "./pages/clientes/EditarCliente";
 
 import PushNotificationsGate from "./components/PushNotificationsGate";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ClienteProtectedRoute from "./components/ClienteProtectedRoute";
 import { isNativePlatform } from "./services/pushNotifications";
 
 const queryClient = new QueryClient();
@@ -200,7 +201,11 @@ const App = () => (
                   <Facturas />
                 </ProtectedRoute>
               } />
-              <Route path="/portal-cliente" element={<PortalCliente />} />
+              <Route path="/portal-cliente" element={
+                <ClienteProtectedRoute>
+                  <PortalCliente />
+                </ClienteProtectedRoute>
+              } />
               <Route path="/empleados" element={
                 <ProtectedRoute allowedRoles={['admin', 'secretaria', 'contadora']} redirectTo="/auth">
                   <Empleados />
