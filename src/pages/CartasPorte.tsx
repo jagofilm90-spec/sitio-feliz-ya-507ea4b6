@@ -6,9 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, FileText, Truck, AlertTriangle, CheckCircle, Clock, XCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Plus, FileText, Truck, AlertTriangle, CheckCircle, Clock, XCircle, Route } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCartasPorteList, useCreateCartaPorte } from "@/hooks/useCartasPorte";
+import { useRutasDisponibles } from "@/hooks/useCartaPorteWizard";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -32,14 +34,21 @@ const getEstadoBadge = (estado: string) => {
 const CartasPorte = () => {
   const navigate = useNavigate();
   const [filtroEstado, setFiltroEstado] = useState<string>("todos");
+  const [showRutaDialog, setShowRutaDialog] = useState(false);
   const { data: cartas, isLoading } = useCartasPorteList(
     filtroEstado !== "todos" ? { estado: filtroEstado } : undefined
   );
   const createMutation = useCreateCartaPorte();
+  const { data: rutas } = useRutasDisponibles();
 
-  const handleNueva = async () => {
-    const cp = await createMutation.mutateAsync({});
+  const handleNueva = async (rutaId?: string, vehiculoId?: string, choferId?: string) => {
+    const cp = await createMutation.mutateAsync({
+      ruta_id: rutaId,
+      vehiculo_id: vehiculoId,
+      chofer_id: choferId,
+    });
     if (cp?.id) {
+      setShowRutaDialog(false);
       navigate(`/cartas-porte/${cp.id}`);
     }
   };
@@ -66,10 +75,42 @@ const CartasPorte = () => {
             </SelectContent>
           </Select>
 
-          <Button onClick={handleNueva} disabled={createMutation.isPending}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nueva Carta Porte
-          </Button>
+          <div className="flex items-center gap-2">
+            <Dialog open={showRutaDialog} onOpenChange={setShowRutaDialog}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Route className="h-4 w-4 mr-2" />
+                  Desde Ruta
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Crear desde Ruta existente</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                  {rutas?.length ? rutas.map((r) => (
+                    <button
+                      key={r.id}
+                      onClick={() => handleNueva(r.id, r.vehiculo_id || undefined, r.chofer_id || undefined)}
+                      className="w-full text-left p-3 border rounded-lg hover:bg-accent/50 transition-colors"
+                      disabled={createMutation.isPending}
+                    >
+                      <span className="font-mono text-sm font-medium">{r.folio}</span>
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {format(new Date(r.fecha_ruta), "d MMM yyyy", { locale: es })} · {r.status}
+                      </span>
+                    </button>
+                  )) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">No hay rutas disponibles</p>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Button onClick={() => handleNueva()} disabled={createMutation.isPending}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nueva Carta Porte
+            </Button>
+          </div>
         </div>
 
         {isLoading ? (
