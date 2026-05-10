@@ -59,6 +59,8 @@ import LecarozBandeja from "./pages/LecarozBandeja";
 import NuevoCliente from "./pages/clientes/NuevoCliente";
 import DetalleCliente from "./pages/clientes/DetalleCliente";
 import EditarCliente from "./pages/clientes/EditarCliente";
+import CartasPorte from "./pages/CartasPorte";
+import CartaPorteDetalle from "./pages/CartaPorteDetalle";
 
 import PushNotificationsGate from "./components/PushNotificationsGate";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -194,6 +196,16 @@ const App = () => (
               <Route path="/rutas" element={
                 <ProtectedRoute allowedRoles={['admin', 'secretaria']} redirectTo="/auth">
                   <Rutas />
+                </ProtectedRoute>
+              } />
+              <Route path="/cartas-porte" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria']} redirectTo="/auth">
+                  <CartasPorte />
+                </ProtectedRoute>
+              } />
+              <Route path="/cartas-porte/:id" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria']} redirectTo="/auth">
+                  <CartaPorteDetalle />
                 </ProtectedRoute>
               } />
               <Route path="/facturas" element={

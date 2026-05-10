@@ -242,6 +242,7 @@ const Layout = ({ children }: LayoutProps) => {
       label: "Logística",
       items: [
         { icon: Truck, label: "Rutas y Entregas", path: "/rutas" },
+        { icon: FileText, label: "Cartas Porte", path: "/cartas-porte" },
       ]
     },
     {
