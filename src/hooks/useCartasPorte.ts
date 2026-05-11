@@ -327,3 +327,75 @@ export function usePACTransacciones(cartaPorteId?: string) {
     enabled: true,
   });
 }
+
+// ─── Cancelar Carta Porte ─────────────────────────────────────────────────────
+
+export function useCancelarCartaPorte() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (params: {
+      cartaPorteId: string;
+      motivo: "01" | "02" | "03" | "04";
+      uuidSustituto?: string;
+    }) => {
+      const { data, error } = await supabase.functions.invoke("carta-porte-cancelar", {
+        body: {
+          carta_porte_id: params.cartaPorteId,
+          motivo: params.motivo,
+          uuid_sustituto: params.uuidSustituto,
+        },
+      });
+      if (error) throw error;
+      if (!data.exitoso) throw new Error(data.error || "Error de cancelación");
+      return data;
+    },
+    onSuccess: (_, params) => {
+      queryClient.invalidateQueries({ queryKey: ["carta-porte", params.cartaPorteId] });
+      queryClient.invalidateQueries({ queryKey: ["cartas-porte"] });
+      toast({ title: "Cancelado", description: "Carta Porte cancelada exitosamente ante SAT." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error de cancelación", description: error.message, variant: "destructive" });
+    },
+  });
+}
+
+// ─── Descargar PDF Borrador ───────────────────────────────────────────────────
+
+export function useDescargarBorradorPDF() {
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (cartaPorteId: string) => {
+      const { data, error } = await supabase.functions.invoke("carta-porte-pdf-borrador", {
+        body: { carta_porte_id: cartaPorteId },
+      });
+      if (error) throw error;
+      if (!data.exitoso) throw new Error(data.error || "Error generando PDF");
+      return data.html as string;
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+}
+
+// ─── Eventos Auditoría (LA CORONA) ────────────────────────────────────────────
+
+export function useCartaPorteEventos(cartaPorteId: string | undefined) {
+  return useQuery({
+    queryKey: ["carta-porte-eventos", cartaPorteId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("cp_eventos")
+        .select("*")
+        .eq("carta_porte_id", cartaPorteId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: !!cartaPorteId,
+  });
+}

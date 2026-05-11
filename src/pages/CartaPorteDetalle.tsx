@@ -6,10 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, FileText, Truck, User, MapPin, Package, AlertTriangle, CheckCircle, Clock, History, Stamp, Download } from "lucide-react";
-import { useCartaPorte, useTimbrarCartaPorte } from "@/hooks/useCartasPorte";
+import { ArrowLeft, FileText, Truck, User, MapPin, Package, AlertTriangle, CheckCircle, Clock, History, Stamp, Download, Eye } from "lucide-react";
+import { useCartaPorte, useTimbrarCartaPorte, useDescargarBorradorPDF } from "@/hooks/useCartasPorte";
 import { useCartaPorteSubDocs } from "@/hooks/useCartaPorteWizard";
 import CartaPorteWizard from "@/components/carta-porte/CartaPorteWizard";
+import CancelarDialog from "@/components/carta-porte/CancelarDialog";
+import AuditoriaTab from "@/components/carta-porte/AuditoriaTab";
 
 const estadoBadge: Record<string, { color: string; label: string }> = {
   borrador: { color: "bg-amber-100 text-amber-800 border-amber-200", label: "Borrador" },
@@ -24,6 +26,14 @@ const CartaPorteDetalle = () => {
   const { data: cp, isLoading } = useCartaPorte(id);
   const { data: subDocs } = useCartaPorteSubDocs(id);
   const timbrarMutation = useTimbrarCartaPorte();
+  const borradorPDF = useDescargarBorradorPDF();
+
+  const handleBorradorPDF = async () => {
+    if (!id) return;
+    const html = await borradorPDF.mutateAsync(id);
+    const win = window.open("", "_blank");
+    if (win) { win.document.write(html); win.document.close(); }
+  };
 
   if (isLoading) {
     return (
@@ -132,11 +142,41 @@ const CartaPorteDetalle = () => {
                   </Button>
                 </a>
               )}
+              <CancelarDialog cartaPorteId={cp.id} folio={cp.folio} />
             </div>
           </div>
         )}
 
-        {/* Tabs: Wizard vs Resumen */}
+        {/* Cancelado banner */}
+        {cp.estado === "cancelado" && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-1">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+              <p className="text-sm font-medium text-red-900">Carta Porte cancelada</p>
+            </div>
+            {cp.uuid_cancelacion && (
+              <p className="text-xs text-red-700">UUID cancelación: <span className="font-mono">{cp.uuid_cancelacion}</span></p>
+            )}
+            {cp.motivo_cancelacion && (
+              <p className="text-xs text-red-700">Motivo: {cp.motivo_cancelacion}</p>
+            )}
+            {cp.fecha_cancelacion && (
+              <p className="text-xs text-red-600">Fecha: {new Date(cp.fecha_cancelacion).toLocaleString("es-MX")}</p>
+            )}
+          </div>
+        )}
+
+        {/* PDF Borrador button */}
+        {["borrador", "validado"].includes(cp.estado) && (
+          <div className="flex justify-end">
+            <Button variant="outline" size="sm" onClick={handleBorradorPDF} disabled={borradorPDF.isPending}>
+              <Eye className="h-3 w-3 mr-1" />
+              {borradorPDF.isPending ? "Generando..." : "Preview PDF Borrador"}
+            </Button>
+          </div>
+        )}
+
+        {/* Tabs: Wizard vs Resumen vs Auditoría */}
         <Tabs defaultValue={cp.estado === "borrador" ? "wizard" : "resumen"}>
           <TabsList>
             <TabsTrigger value="wizard" className="text-xs">
@@ -144,6 +184,9 @@ const CartaPorteDetalle = () => {
             </TabsTrigger>
             <TabsTrigger value="resumen" className="text-xs">
               <CheckCircle className="h-3 w-3 mr-1" /> Resumen
+            </TabsTrigger>
+            <TabsTrigger value="auditoria" className="text-xs">
+              <History className="h-3 w-3 mr-1" /> Auditoría
             </TabsTrigger>
           </TabsList>
 
@@ -282,6 +325,10 @@ const CartaPorteDetalle = () => {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          <TabsContent value="auditoria" className="mt-4">
+            <AuditoriaTab cartaPorteId={cp.id} />
           </TabsContent>
         </Tabs>
       </div>
