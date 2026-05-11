@@ -69,6 +69,8 @@ import NotasCredito from "./pages/NotasCredito";
 import ComplementosPago from "./pages/ComplementosPago";
 import Cobranza from "./pages/Cobranza";
 import DashboardEjecutivo from "./pages/DashboardEjecutivo";
+import MiRutaHoy from "./pages/chofer/MiRutaHoy";
+import EntregaDetalle from "./pages/chofer/EntregaDetalle";
 
 import PushNotificationsGate from "./components/PushNotificationsGate";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -359,6 +361,16 @@ const App = () => (
               <Route path="/chofer" element={
                 <ProtectedRoute allowedRoles={['admin', 'chofer']} redirectTo="/auth">
                   <ChoferPanel />
+                </ProtectedRoute>
+              } />
+              <Route path="/chofer/mi-ruta" element={
+                <ProtectedRoute allowedRoles={['admin', 'chofer']} redirectTo="/auth">
+                  <MiRutaHoy />
+                </ProtectedRoute>
+              } />
+              <Route path="/chofer/entrega/:hojaId" element={
+                <ProtectedRoute allowedRoles={['admin', 'chofer']} redirectTo="/auth">
+                  <EntregaDetalle />
                 </ProtectedRoute>
               } />
               <Route path="/vendedor" element={

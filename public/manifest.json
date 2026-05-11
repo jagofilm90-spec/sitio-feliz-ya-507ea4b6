@@ -1,0 +1,16 @@
+{
+  "name": "ALMASA-OS",
+  "short_name": "ALMASA",
+  "description": "ERP ALMASA - Abarrotes La Manita",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "theme_color": "#c41e3a",
+  "background_color": "#fefdfb",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    }
+  ]
+}
