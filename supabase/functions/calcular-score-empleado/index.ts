@@ -3,120 +3,100 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { empleado_id, periodo } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const { empleado_id } = body;
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Default periodo: current month YYYY-MM
-    const periodoActual = periodo || new Date().toISOString().slice(0, 7);
+    const d30 = new Date(Date.now() - 30 * 86400000).toISOString();
 
-    // If specific employee, calc for that one; otherwise all active
-    const empleados: string[] = [];
-
+    // Get employees to process
+    const empIds: string[] = [];
     if (empleado_id) {
-      empleados.push(empleado_id);
+      empIds.push(empleado_id);
     } else {
-      const { data: todos } = await supabase
-        .from("empleados")
-        .select("id")
-        .eq("activo", true);
-      (todos || []).forEach((e: any) => empleados.push(e.id));
+      const { data } = await supabase.from("empleados").select("id").eq("activo", true);
+      (data || []).forEach((e: any) => empIds.push(e.id));
     }
 
     const results: any[] = [];
 
-    for (const empId of empleados) {
-      // Count entregas assigned to this employee (as chofer via rutas)
-      const { count: totalEntregas } = await supabase
-        .from("eventos_conciliacion")
+    for (const eid of empIds) {
+      // Count successful deliveries (cuadrilla entries in last 30 days)
+      const { count: entregas } = await supabase
+        .from("cuadrilla_hoja_salida")
         .select("id", { count: "exact", head: true })
-        .eq("empleado_id", empId)
-        .gte("created_at", `${periodoActual}-01`)
-        .lt("created_at", nextMonth(periodoActual));
+        .eq("empleado_id", eid)
+        .gte("created_at", d30);
 
-      // Count discrepancies linked via entregas where employee was involved
-      const { data: discrepancias } = await supabase
-        .from("anomalias_la_corona")
-        .select("severidad")
-        .eq("empleado_id", empId)
-        .gte("created_at", `${periodoActual}-01`)
-        .lt("created_at", nextMonth(periodoActual));
+      // Count discrepancies
+      const { data: discs } = await supabase
+        .from("discrepancias_la_corona")
+        .select("severidad, es_robo_sospechado")
+        .eq("empleado_responsable_id", eid)
+        .gte("created_at", d30);
 
-      const leves = (discrepancias || []).filter((d: any) => d.severidad === "baja").length;
-      const medias = (discrepancias || []).filter((d: any) => d.severidad === "media").length;
-      const graves = (discrepancias || []).filter((d: any) =>
-        d.severidad === "alta" || d.severidad === "critica"
-      ).length;
+      const discCount = discs?.length || 0;
+      const robos = discs?.filter((d: any) => d.es_robo_sospechado).length || 0;
 
-      const total = totalEntregas || 0;
-      const sinDisc = Math.max(0, total - leves - medias - graves);
+      // Calculate score
+      const totalEntregas = entregas || 0;
+      const exitosas = Math.max(0, totalEntregas - discCount);
+      const factorExitosas = totalEntregas > 0 ? (exitosas / totalEntregas) * 100 : 100;
+      const penaltyDisc = discCount * 5;
+      const penaltyRobos = robos * 20;
+      const score = Math.max(0, Math.min(100, factorExitosas - penaltyDisc - penaltyRobos));
 
-      // Score: 100 base, -2 per leve, -5 per media, -15 per grave
-      const score = Math.max(0, Math.min(100, 100 - leves * 2 - medias * 5 - graves * 15));
-
-      // Determine tendency
-      const { data: prevScore } = await supabase
-        .from("score_confianza")
-        .select("score")
-        .eq("empleado_id", empId)
-        .lt("periodo", periodoActual)
-        .order("periodo", { ascending: false })
-        .limit(1)
+      // Get previous score for tendency
+      const { data: prev } = await supabase
+        .from("score_confianza_empleado")
+        .select("score_actual")
+        .eq("empleado_id", eid)
         .maybeSingle();
 
-      let tendencia = "estable";
-      if (prevScore) {
-        const diff = score - (prevScore.score || 100);
-        if (diff > 5) tendencia = "mejorando";
-        else if (diff < -5) tendencia = "empeorando";
+      const prevScore = prev?.score_actual || 100;
+      const diff = score - prevScore;
+      const tendencia = diff > 5 ? "mejorando" : diff < -5 ? "empeorando" : "estable";
+
+      // Upsert
+      await supabase.from("score_confianza_empleado").upsert({
+        empleado_id: eid,
+        score_actual: score,
+        factor_entregas_exitosas: factorExitosas,
+        factor_discrepancias_30d: discCount,
+        factor_robos_sospechados: robos,
+        score_anterior: prevScore,
+        tendencia,
+        bandera_amarilla: score < 70,
+        bandera_roja: score < 40,
+        ultimo_calculo: new Date().toISOString(),
+      }, { onConflict: "empleado_id" });
+
+      // Auto-anomaly if score dropped sharply
+      if (diff < -20) {
+        await supabase.from("anomalias_la_corona").insert({
+          tipo_anomalia: "score_baja_brusca",
+          empleado_id: eid,
+          severidad: "alta",
+          detalle: { score_anterior: prevScore, score_nuevo: score, diferencia: diff },
+        });
       }
 
-      // Upsert score
-      const { error } = await supabase
-        .from("score_confianza")
-        .upsert(
-          {
-            empleado_id: empId,
-            periodo: periodoActual,
-            entregas_totales: total,
-            entregas_sin_discrepancia: sinDisc,
-            discrepancias_leves: leves,
-            discrepancias_medias: medias,
-            discrepancias_graves: graves,
-            score,
-            tendencia,
-            calculado_at: new Date().toISOString(),
-          },
-          { onConflict: "empleado_id,periodo" }
-        );
-
-      if (!error) {
-        results.push({ empleado_id: empId, score, tendencia, entregas: total, discrepancias: leves + medias + graves });
-      }
+      results.push({ empleado_id: eid, score, tendencia, entregas: totalEntregas, discrepancias: discCount });
     }
 
-    return new Response(
-      JSON.stringify({ exitoso: true, periodo: periodoActual, resultados: results }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ exitoso: true, resultados: results }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error) {
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
-
-function nextMonth(periodo: string): string {
-  const [y, m] = periodo.split("-").map(Number);
-  const d = new Date(y, m, 1); // month is 0-indexed, so m (1-indexed) = next month
-  return d.toISOString().slice(0, 7) + "-01";
-}
