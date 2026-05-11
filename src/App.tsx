@@ -61,6 +61,7 @@ import DetalleCliente from "./pages/clientes/DetalleCliente";
 import EditarCliente from "./pages/clientes/EditarCliente";
 import CartasPorte from "./pages/CartasPorte";
 import CartaPorteDetalle from "./pages/CartaPorteDetalle";
+import LaCorona from "./pages/LaCorona";
 
 import PushNotificationsGate from "./components/PushNotificationsGate";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -206,6 +207,11 @@ const App = () => (
               <Route path="/cartas-porte/:id" element={
                 <ProtectedRoute allowedRoles={['admin', 'secretaria']} redirectTo="/auth">
                   <CartaPorteDetalle />
+                </ProtectedRoute>
+              } />
+              <Route path="/la-corona" element={
+                <ProtectedRoute allowedRoles={['admin']} redirectTo="/auth">
+                  <LaCorona />
                 </ProtectedRoute>
               } />
               <Route path="/facturas" element={

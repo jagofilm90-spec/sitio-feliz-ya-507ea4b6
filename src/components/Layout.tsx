@@ -48,6 +48,7 @@ import {
   Store,
   Scale,
   History,
+  Shield,
 } from "lucide-react";
 
 interface LayoutProps {
@@ -243,6 +244,7 @@ const Layout = ({ children }: LayoutProps) => {
       items: [
         { icon: Truck, label: "Rutas y Entregas", path: "/rutas" },
         { icon: FileText, label: "Cartas Porte", path: "/cartas-porte" },
+        { icon: Shield, label: "LA CORONA", path: "/la-corona" },
       ]
     },
     {
