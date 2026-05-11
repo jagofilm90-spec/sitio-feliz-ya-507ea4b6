@@ -49,6 +49,7 @@ import {
   Scale,
   History,
   Shield,
+  ClipboardCheck,
 } from "lucide-react";
 
 interface LayoutProps {
@@ -245,6 +246,7 @@ const Layout = ({ children }: LayoutProps) => {
         { icon: Truck, label: "Rutas y Entregas", path: "/rutas" },
         { icon: FileText, label: "Cartas Porte", path: "/cartas-porte" },
         { icon: Shield, label: "LA CORONA", path: "/la-corona" },
+        { icon: ClipboardCheck, label: "Conteos Ciegos", path: "/conteos-ciegos" },
       ]
     },
     {

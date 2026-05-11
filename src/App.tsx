@@ -63,6 +63,8 @@ import CartasPorte from "./pages/CartasPorte";
 import CartaPorteDetalle from "./pages/CartaPorteDetalle";
 import LaCorona from "./pages/LaCorona";
 import SurtirPedido from "./pages/almacen/SurtirPedido";
+import ConteosCiegos from "./pages/ConteosCiegos";
+import RealizarConteo from "./pages/RealizarConteo";
 
 import PushNotificationsGate from "./components/PushNotificationsGate";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -213,6 +215,16 @@ const App = () => (
               <Route path="/la-corona" element={
                 <ProtectedRoute allowedRoles={['admin']} redirectTo="/auth">
                   <LaCorona />
+                </ProtectedRoute>
+              } />
+              <Route path="/conteos-ciegos" element={
+                <ProtectedRoute allowedRoles={['admin', 'almacen', 'gerente_almacen']} redirectTo="/auth">
+                  <ConteosCiegos />
+                </ProtectedRoute>
+              } />
+              <Route path="/conteos-ciegos/:conteoId" element={
+                <ProtectedRoute allowedRoles={['admin', 'almacen', 'gerente_almacen']} redirectTo="/auth">
+                  <RealizarConteo />
                 </ProtectedRoute>
               } />
               <Route path="/facturas" element={
