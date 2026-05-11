@@ -65,6 +65,8 @@ import LaCorona from "./pages/LaCorona";
 import SurtirPedido from "./pages/almacen/SurtirPedido";
 import ConteosCiegos from "./pages/ConteosCiegos";
 import RealizarConteo from "./pages/RealizarConteo";
+import NotasCredito from "./pages/NotasCredito";
+import ComplementosPago from "./pages/ComplementosPago";
 
 import PushNotificationsGate from "./components/PushNotificationsGate";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -230,6 +232,16 @@ const App = () => (
               <Route path="/facturas" element={
                 <ProtectedRoute allowedRoles={['admin', 'secretaria', 'contadora']} redirectTo="/auth">
                   <Facturas />
+                </ProtectedRoute>
+              } />
+              <Route path="/notas-credito" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'contadora']} redirectTo="/auth">
+                  <NotasCredito />
+                </ProtectedRoute>
+              } />
+              <Route path="/complementos-pago" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'contadora']} redirectTo="/auth">
+                  <ComplementosPago />
                 </ProtectedRoute>
               } />
               <Route path="/portal-cliente" element={

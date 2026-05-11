@@ -51,6 +51,8 @@ import {
   History,
   Shield,
   ClipboardCheck,
+  FileMinus,
+  Receipt,
 } from "lucide-react";
 
 interface LayoutProps {
@@ -253,7 +255,9 @@ const Layout = ({ children }: LayoutProps) => {
     {
       label: "Finanzas",
       items: [
-        { icon: FileText, label: "Facturación", path: "/facturas" },
+        { icon: FileText, label: "Facturas", path: "/facturas" },
+        { icon: FileMinus, label: "Notas de Crédito", path: "/notas-credito" },
+        { icon: Receipt, label: "Complementos Pago", path: "/complementos-pago" },
         { icon: PieChart, label: "Rentabilidad", path: "/rentabilidad" },
       ]
     },
