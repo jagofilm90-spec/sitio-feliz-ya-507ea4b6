@@ -92,6 +92,7 @@ export const useUserRoles = (): UseUserRolesReturn => {
 // Se redirigen automáticamente a sus interfaces dedicadas
 export const MODULE_PERMISSIONS: Record<string, AppRole[]> = {
   '/dashboard': ['admin', 'secretaria', 'vendedor', 'contadora'],
+  '/dashboard-ejecutivo': ['admin', 'contadora'],
   '/productos': ['admin', 'secretaria', 'contadora'],
   '/productos/modo-cobro': ['admin'],
   '/productos/historial-precios': ['admin'],

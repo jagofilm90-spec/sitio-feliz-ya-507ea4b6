@@ -54,6 +54,7 @@ import {
   FileMinus,
   Receipt,
   HandCoins,
+  BarChart3,
 } from "lucide-react";
 
 interface LayoutProps {
@@ -216,6 +217,7 @@ const Layout = ({ children }: LayoutProps) => {
       label: "Principal",
       items: [
         { icon: Home, label: "Dashboard", path: "/dashboard" },
+        { icon: BarChart3, label: "Ejecutivo", path: "/dashboard-ejecutivo" },
       ]
     },
     {

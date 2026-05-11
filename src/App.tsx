@@ -68,6 +68,7 @@ import RealizarConteo from "./pages/RealizarConteo";
 import NotasCredito from "./pages/NotasCredito";
 import ComplementosPago from "./pages/ComplementosPago";
 import Cobranza from "./pages/Cobranza";
+import DashboardEjecutivo from "./pages/DashboardEjecutivo";
 
 import PushNotificationsGate from "./components/PushNotificationsGate";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -152,6 +153,11 @@ const App = () => (
               <Route path="/dashboard" element={
                 <ProtectedRoute allowedRoles={['admin', 'secretaria', 'vendedor', 'contadora']} redirectTo="/auth">
                   <Dashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/dashboard-ejecutivo" element={
+                <ProtectedRoute allowedRoles={['admin', 'contadora']} redirectTo="/auth">
+                  <DashboardEjecutivo />
                 </ProtectedRoute>
               } />
               
