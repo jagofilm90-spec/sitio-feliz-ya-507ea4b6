@@ -62,6 +62,7 @@ import EditarCliente from "./pages/clientes/EditarCliente";
 import CartasPorte from "./pages/CartasPorte";
 import CartaPorteDetalle from "./pages/CartaPorteDetalle";
 import LaCorona from "./pages/LaCorona";
+import SurtirPedido from "./pages/almacen/SurtirPedido";
 
 import PushNotificationsGate from "./components/PushNotificationsGate";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -312,6 +313,11 @@ const App = () => (
               <Route path="/almacen-tablet/carga-scan/:pedidoId?" element={
                 <ProtectedRoute allowedRoles={['admin', 'almacen', 'gerente_almacen']} redirectTo="/auth">
                   <AlmacenCargaScan />
+                </ProtectedRoute>
+              } />
+              <Route path="/almacen-tablet/surtir/:pedidoId" element={
+                <ProtectedRoute allowedRoles={['admin', 'almacen', 'gerente_almacen']} redirectTo="/auth">
+                  <SurtirPedido />
                 </ProtectedRoute>
               } />
               <Route path="/chofer" element={
