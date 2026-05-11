@@ -8,9 +8,9 @@ serve(async (req) => {
   }
 
   try {
-    const { hoja_fisica_id, foto_url } = await req.json();
-    if (!hoja_fisica_id || !foto_url) {
-      return respond(400, { error: "hoja_fisica_id y foto_url requeridos" });
+    const { hoja_salida_id, foto_url } = await req.json();
+    if (!hoja_salida_id || !foto_url) {
+      return respond(400, { error: "hoja_salida_id y foto_url requeridos" });
     }
 
     const supabase = createClient(
@@ -20,34 +20,86 @@ serve(async (req) => {
 
     const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
     if (!anthropicKey) {
-      return respond(400, { error: "ANTHROPIC_API_KEY no configurada. Configura en Supabase → Edge Functions → Secrets." });
+      return respond(400, { error: "ANTHROPIC_API_KEY no configurada" });
     }
 
-    // Load hoja_fisica
+    // Cargar hoja_salida + líneas para contexto IA
     const { data: hoja } = await supabase
-      .from("hojas_fisicas")
-      .select("*, entregas:entrega_id(id, pedido_id)")
-      .eq("id", hoja_fisica_id)
+      .from("hojas_salida")
+      .select(`
+        id, folio, entrega_id, pedido_id,
+        cliente_razon_social,
+        hojas_salida_lineas(
+          codigo_producto,
+          descripcion_producto,
+          cantidad_surtida,
+          unidad
+        )
+      `)
+      .eq("id", hoja_salida_id)
       .single();
 
-    if (!hoja) return respond(404, { error: "Hoja física no encontrada" });
+    if (!hoja) return respond(404, { error: "Hoja de Salida no encontrada" });
 
-    // Download image for Claude Vision
+    // Lista de productos esperados (contexto para IA)
+    const productosEsperados = (hoja.hojas_salida_lineas || [])
+      .map((l: any) => `${l.cantidad_surtida} ${l.unidad || ""} de ${l.descripcion_producto}`)
+      .join("\n");
+
+    // Descargar imagen
     const imageResponse = await fetch(foto_url);
     if (!imageResponse.ok) {
       return respond(400, { error: "No se pudo descargar la imagen" });
     }
 
     const imageBuffer = await imageResponse.arrayBuffer();
-    const base64Image = btoa(
-      String.fromCharCode(...new Uint8Array(imageBuffer))
-    );
+    const base64Image = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
 
-    // Determine media type
     const contentType = imageResponse.headers.get("content-type") || "image/jpeg";
     const mediaType = contentType.startsWith("image/") ? contentType : "image/jpeg";
 
-    // Call Claude Vision API
+    // Prompt mejorado con contexto productos
+    const prompt = `Esta es una fotografía de una HOJA DE SALIDA de ALMASA (distribuidor abarrotes mayoreo).
+
+La hoja tiene espacios para:
+- Sello del cliente (recuadro)
+- Firma del cliente (recuadro)
+- Observaciones manuscritas (líneas)
+- Firmas internas almacenista/chofer
+
+PRODUCTOS QUE DEBÍA RECIBIR EL CLIENTE (Hoja ${hoja.folio}):
+${productosEsperados || "(sin productos especificados)"}
+
+CLIENTE: ${hoja.cliente_razon_social || "No especificado"}
+
+Analiza la imagen y responde en JSON exacto (sin markdown, sin texto adicional):
+{
+  "sello_detectado": true/false,
+  "sello_confianza": 0-100,
+  "firma_detectada": true/false,
+  "firma_confianza": 0-100,
+  "observaciones_texto": "transcripción exacta del texto manuscrito en sección observaciones, o vacío si no hay",
+  "clasificacion": "completo" | "faltante" | "no_llego" | "rechazado" | "otro",
+  "items_faltantes": [
+    {"descripcion": "nombre producto", "cantidad": "cantidad faltante", "razon": "motivo si está escrito"}
+  ],
+  "items_dañados": [
+    {"descripcion": "nombre producto", "detalle": "qué pasó"}
+  ],
+  "notas_adicionales": "cualquier observación relevante"
+}
+
+REGLAS DE CLASIFICACIÓN:
+- Si observaciones vacías + sello y firma presentes → "completo"
+- Si dice "recibí completo", "todo bien", "ok" → "completo"
+- Si menciona "faltó", "no llegó X", "menos Y" → "faltante" + items_faltantes
+- Si dice "no llegó nada", "no se entregó" → "no_llego"
+- Si dice "rechazado", "no acepto", "regreso" → "rechazado"
+- Confianza 0-100 (100 = muy seguro)
+- Si la foto está borrosa: confianza baja (<50)
+- Si no se ve la hoja: clasificacion="otro" + notas_adicionales explicando`;
+
+    // Claude Vision API
     const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -57,43 +109,16 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 1024,
+        max_tokens: 2048,
         messages: [
           {
             role: "user",
             content: [
               {
                 type: "image",
-                source: {
-                  type: "base64",
-                  media_type: mediaType,
-                  data: base64Image,
-                },
+                source: { type: "base64", media_type: mediaType, data: base64Image },
               },
-              {
-                type: "text",
-                text: `Esta es una fotografía de una hoja de entrega de mercancías (abarrotes mayoreo).
-La hoja tiene espacios para: sello del cliente, firma del cliente, firma del chofer, y observaciones manuscritas.
-
-Analiza la imagen y responde en JSON exacto (sin markdown):
-{
-  "sello_detectado": true/false,
-  "sello_confianza": 0-100,
-  "firma_detectada": true/false,
-  "firma_confianza": 0-100,
-  "observaciones_texto": "transcripción de texto manuscrito en observaciones, o vacío",
-  "clasificacion": "completo" | "faltante" | "no_llego" | "otro",
-  "items_faltantes": ["lista de items faltantes mencionados"] o [],
-  "notas_adicionales": "cualquier detalle relevante"
-}
-
-Reglas:
-- Si no hay escritura en observaciones, observaciones_texto = ""
-- Si observaciones dice "recibí completo" o similar → clasificacion = "completo"
-- Si menciona faltantes ("faltó X", "no llegó Y") → clasificacion = "faltante" + lista items
-- Si dice "no llegó nada", "no se entregó" → clasificacion = "no_llego"
-- Confianza 0-100 (100 = muy seguro)`,
-              },
+              { type: "text", text: prompt },
             ],
           },
         ],
@@ -102,16 +127,15 @@ Reglas:
 
     if (!claudeResponse.ok) {
       const errText = await claudeResponse.text();
-      return respond(500, { error: `Claude API error: ${claudeResponse.status} ${errText}` });
+      return respond(500, { error: `Claude API: ${claudeResponse.status} ${errText}` });
     }
 
     const claudeData = await claudeResponse.json();
     const rawText = claudeData.content?.[0]?.text || "{}";
 
-    // Parse Claude's JSON response
+    // Parse JSON
     let iaResult: any;
     try {
-      // Extract JSON from response (handle possible markdown wrapping)
       const jsonMatch = rawText.match(/\{[\s\S]*\}/);
       iaResult = JSON.parse(jsonMatch ? jsonMatch[0] : rawText);
     } catch {
@@ -123,64 +147,76 @@ Reglas:
         observaciones_texto: rawText,
         clasificacion: "otro",
         items_faltantes: [],
+        items_dañados: [],
+        notas_adicionales: "Error parsing IA response",
       };
     }
 
-    // Update hoja_fisica with IA results
+    // Update hoja_salida con resultados IA
     await supabase
-      .from("hojas_fisicas")
+      .from("hojas_salida")
       .update({
         foto_sellada_url: foto_url,
-        foto_capturada_at: new Date().toISOString(),
         ia_procesada_at: new Date().toISOString(),
         ia_sello_detectado: iaResult.sello_detectado ?? false,
-        ia_sello_confianza: iaResult.sello_confianza ?? 0,
         ia_firma_detectada: iaResult.firma_detectada ?? false,
-        ia_firma_confianza: iaResult.firma_confianza ?? 0,
         ia_observaciones_texto: iaResult.observaciones_texto || null,
         ia_clasificacion: iaResult.clasificacion || "otro",
-        ia_items_faltantes: iaResult.items_faltantes || [],
-        ia_raw_response: claudeData,
+        ia_raw_response: {
+          ...claudeData,
+          sello_confianza: iaResult.sello_confianza,
+          firma_confianza: iaResult.firma_confianza,
+          items_faltantes: iaResult.items_faltantes,
+          items_dañados: iaResult.items_dañados,
+          notas_adicionales: iaResult.notas_adicionales,
+        },
       })
-      .eq("id", hoja_fisica_id);
+      .eq("id", hoja_salida_id);
 
-    // Register conciliation events
+    // Registrar eventos LA CORONA V4
+    const isAnomalia =
+      iaResult.clasificacion === "faltante" ||
+      iaResult.clasificacion === "no_llego" ||
+      iaResult.clasificacion === "rechazado";
+
     await supabase.from("eventos_conciliacion").insert([
       {
+        hoja_salida_id,
         entrega_id: hoja.entrega_id,
-        momento_id: "cliente_recibe_fisico",
-        notas: `Foto hoja sellada subida`,
+        momento_id: "cliente_sella_firma",
+        estado: "completado",
         foto_url,
-        metadata: { hoja_fisica_id },
+        completado_at: new Date().toISOString(),
       },
       {
+        hoja_salida_id,
         entrega_id: hoja.entrega_id,
-        momento_id: "ia_procesa_hoja",
-        notas: `IA clasificó: ${iaResult.clasificacion}. Sello: ${iaResult.sello_detectado ? "sí" : "no"}. Firma: ${iaResult.firma_detectada ? "sí" : "no"}.`,
-        metadata: {
-          hoja_fisica_id,
-          clasificacion: iaResult.clasificacion,
-          sello: iaResult.sello_detectado,
-          firma: iaResult.firma_detectada,
-          items_faltantes: iaResult.items_faltantes,
-        },
+        momento_id: "ia_procesa",
+        estado: "completado",
+        completado_at: new Date().toISOString(),
+        tiene_anomalia: isAnomalia,
+        anomalia_tipo: isAnomalia ? `clasificacion_${iaResult.clasificacion}` : null,
+        anomalia_detalle: iaResult.observaciones_texto || null,
+        notas: `IA: ${iaResult.clasificacion}. Sello: ${iaResult.sello_detectado ? "sí" : "no"}. Firma: ${iaResult.firma_detectada ? "sí" : "no"}.`,
       },
     ]);
 
-    // If discrepancy detected, create one
-    if (iaResult.clasificacion === "faltante" || iaResult.clasificacion === "no_llego") {
+    // Auto-crear discrepancia si IA detecta problema
+    if (isAnomalia) {
+      const tipoMap: Record<string, string> = {
+        faltante: "faltante_mercancia",
+        no_llego: "entrega_no_realizada",
+        rechazado: "entrega_rechazada",
+      };
+
       await supabase.from("discrepancias_la_corona").insert({
+        hoja_salida_id,
         entrega_id: hoja.entrega_id,
-        tipo: iaResult.clasificacion === "no_llego" ? "entrega_no_realizada" : "faltante_mercancia",
-        severidad: iaResult.clasificacion === "no_llego" ? "critica" : "alta",
-        descripcion: iaResult.observaciones_texto || `IA detectó: ${iaResult.clasificacion}`,
-        evidencia_digital: { pedido_id: (hoja.entregas as any)?.pedido_id },
-        evidencia_fisica: {
-          hoja_fisica_id,
-          foto_url,
-          items_faltantes: iaResult.items_faltantes,
-          clasificacion: iaResult.clasificacion,
-        },
+        tipo_discrepancia: tipoMap[iaResult.clasificacion] || "otro",
+        severidad: iaResult.clasificacion === "no_llego" ? "critica" : iaResult.clasificacion === "rechazado" ? "alta" : "media",
+        detectado_por: "ia_claude_vision",
+        estado_investigacion: "pendiente",
+        es_robo_sospechado: iaResult.clasificacion === "no_llego",
       });
     }
 
@@ -188,9 +224,13 @@ Reglas:
       exitoso: true,
       clasificacion: iaResult.clasificacion,
       sello_detectado: iaResult.sello_detectado,
+      sello_confianza: iaResult.sello_confianza,
       firma_detectada: iaResult.firma_detectada,
+      firma_confianza: iaResult.firma_confianza,
       observaciones_texto: iaResult.observaciones_texto,
       items_faltantes: iaResult.items_faltantes,
+      items_dañados: iaResult.items_dañados,
+      notas_adicionales: iaResult.notas_adicionales,
     });
   } catch (error) {
     return respond(500, { error: error.message });

@@ -215,6 +215,51 @@ export function useReconciliarHoja() {
   });
 }
 
+// ─── Procesar con IA (Claude Vision) ─────────────────────────────────────────
+
+export function useProcesarHojaConIA() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (params: { hoja_salida_id: string; foto_url: string }) => {
+      const { data, error } = await supabase.functions.invoke("procesar-hoja-fisica", {
+        body: params,
+      });
+      if (error) throw error;
+      if (!data.exitoso) throw new Error(data.error || "Error procesando IA");
+      return data as {
+        exitoso: boolean;
+        clasificacion: string;
+        sello_detectado: boolean;
+        sello_confianza: number;
+        firma_detectada: boolean;
+        firma_confianza: number;
+        observaciones_texto: string;
+        items_faltantes: any[];
+        items_dañados: any[];
+        notas_adicionales: string;
+      };
+    },
+    onSuccess: (data, params) => {
+      qc.invalidateQueries({ queryKey: ["hoja-salida", params.hoja_salida_id] });
+      qc.invalidateQueries({ queryKey: ["hojas-salida"] });
+      qc.invalidateQueries({ queryKey: ["eventos-conciliacion", params.hoja_salida_id] });
+      qc.invalidateQueries({ queryKey: ["discrepancias"] });
+      qc.invalidateQueries({ queryKey: ["la-corona-dashboard"] });
+
+      toast({
+        title: `IA procesó la hoja`,
+        description: `${data.clasificacion}. Sello: ${data.sello_detectado ? "detectado" : "no"}. Firma: ${data.firma_detectada ? "detectada" : "no"}.`,
+        variant: data.clasificacion === "completo" ? "default" : "destructive",
+      });
+    },
+    onError: (e: any) => {
+      toast({ title: "Error procesando con IA", description: e.message, variant: "destructive" });
+    },
+  });
+}
+
 // ─── Eventos timeline ────────────────────────────────────────────────────────
 
 export function useEventosConciliacion(hojaId: string | undefined) {

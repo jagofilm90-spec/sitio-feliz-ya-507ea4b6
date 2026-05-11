@@ -222,6 +222,7 @@ const LaCorona = () => {
             hojaId={reconciliarHoja.id}
             folio={reconciliarHoja.folio}
             fotoUrl={reconciliarHoja.foto_sellada_url}
+            iaData={reconciliarHoja}
           />
         )}
       </div>

@@ -3,11 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Shield, Plus, Trash2 } from "lucide-react";
-import { useReconciliarHoja } from "@/hooks/useHojaSalida";
+import { Shield, Plus, Trash2, Sparkles, Loader2, CheckCircle, XCircle } from "lucide-react";
+import { useReconciliarHoja, useProcesarHojaConIA } from "@/hooks/useHojaSalida";
 
 interface Props {
   open: boolean;
@@ -15,6 +17,14 @@ interface Props {
   hojaId: string;
   folio: string;
   fotoUrl?: string | null;
+  iaData?: {
+    ia_procesada_at?: string | null;
+    ia_clasificacion?: string | null;
+    ia_sello_detectado?: boolean | null;
+    ia_firma_detectada?: boolean | null;
+    ia_observaciones_texto?: string | null;
+    ia_raw_response?: any;
+  } | null;
 }
 
 interface ItemFaltante {
@@ -23,13 +33,14 @@ interface ItemFaltante {
   cantidad_real: number;
 }
 
-export default function ReconciliarHojaDialog({ open, onClose, hojaId, folio, fotoUrl }: Props) {
-  const [sello, setSello] = useState<string>("si");
-  const [firma, setFirma] = useState<string>("si");
-  const [clasificacion, setClasificacion] = useState("completo");
-  const [observaciones, setObservaciones] = useState("");
+export default function ReconciliarHojaDialog({ open, onClose, hojaId, folio, fotoUrl, iaData }: Props) {
+  const [sello, setSello] = useState<string>(iaData?.ia_sello_detectado ? "si" : "no");
+  const [firma, setFirma] = useState<string>(iaData?.ia_firma_detectada ? "si" : "no");
+  const [clasificacion, setClasificacion] = useState(iaData?.ia_clasificacion || "completo");
+  const [observaciones, setObservaciones] = useState(iaData?.ia_observaciones_texto || "");
   const [faltantes, setFaltantes] = useState<ItemFaltante[]>([]);
   const reconciliar = useReconciliarHoja();
+  const procesarIA = useProcesarHojaConIA();
 
   const addFaltante = () => setFaltantes([...faltantes, { descripcion: "", cantidad_esperada: 0, cantidad_real: 0 }]);
   const removeFaltante = (i: number) => setFaltantes(faltantes.filter((_, idx) => idx !== i));
@@ -51,9 +62,27 @@ export default function ReconciliarHojaDialog({ open, onClose, hojaId, folio, fo
     );
   };
 
+  const handleReprocesar = () => {
+    if (!fotoUrl) return;
+    procesarIA.mutate({ hoja_salida_id: hojaId, foto_url: fotoUrl });
+  };
+
+  // Use fresh IA data from mutation if available
+  const currentIA = procesarIA.data
+    ? {
+        ia_procesada_at: new Date().toISOString(),
+        ia_clasificacion: procesarIA.data.clasificacion,
+        ia_sello_detectado: procesarIA.data.sello_detectado,
+        ia_firma_detectada: procesarIA.data.firma_detectada,
+        ia_observaciones_texto: procesarIA.data.observaciones_texto,
+        sello_confianza: procesarIA.data.sello_confianza,
+        firma_confianza: procesarIA.data.firma_confianza,
+      }
+    : iaData;
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Shield className="h-4 w-4 text-[#c41e3a]" /> Reconciliar {folio}
@@ -61,18 +90,82 @@ export default function ReconciliarHojaDialog({ open, onClose, hojaId, folio, fo
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Left: photo */}
-          <div>
+          {/* Left column: photo + IA panel */}
+          <div className="space-y-3">
             {fotoUrl ? (
-              <img src={fotoUrl} alt="Hoja sellada" className="w-full rounded border object-contain max-h-[400px] bg-gray-50" />
+              <img src={fotoUrl} alt="Hoja sellada" className="w-full rounded border object-contain max-h-[300px] bg-gray-50" />
             ) : (
               <div className="h-48 bg-gray-100 rounded flex items-center justify-center text-sm text-muted-foreground">
                 Sin foto capturada
               </div>
             )}
+
+            {/* IA Results Panel */}
+            {currentIA?.ia_procesada_at && (
+              <Card className="border-[#c41e3a]/20">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs flex items-center gap-1">
+                    <Sparkles className="h-3 w-3 text-[#c41e3a]" /> Análisis IA
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Sello</span>
+                    <div className="flex items-center gap-1">
+                      {currentIA.ia_sello_detectado ? <CheckCircle className="h-3 w-3 text-green-600" /> : <XCircle className="h-3 w-3 text-red-500" />}
+                      <span>{currentIA.ia_sello_detectado ? "Detectado" : "No detectado"}</span>
+                      {(currentIA as any).sello_confianza != null && (
+                        <span className="text-muted-foreground">({(currentIA as any).sello_confianza}%)</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Firma</span>
+                    <div className="flex items-center gap-1">
+                      {currentIA.ia_firma_detectada ? <CheckCircle className="h-3 w-3 text-green-600" /> : <XCircle className="h-3 w-3 text-red-500" />}
+                      <span>{currentIA.ia_firma_detectada ? "Detectada" : "No detectada"}</span>
+                      {(currentIA as any).firma_confianza != null && (
+                        <span className="text-muted-foreground">({(currentIA as any).firma_confianza}%)</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Clasificación</span>
+                    <Badge className={
+                      currentIA.ia_clasificacion === "completo" ? "bg-green-100 text-green-800" :
+                      "bg-red-100 text-red-800"
+                    }>{currentIA.ia_clasificacion}</Badge>
+                  </div>
+                  {currentIA.ia_observaciones_texto && (
+                    <div className="bg-gray-50 rounded p-2 mt-1">
+                      <p className="text-[9px] text-muted-foreground mb-0.5">Observaciones leídas:</p>
+                      <p className="text-xs italic">"{currentIA.ia_observaciones_texto}"</p>
+                    </div>
+                  )}
+                  <p className="text-[9px] text-muted-foreground">
+                    Procesado: {new Date(currentIA.ia_procesada_at).toLocaleString("es-MX")}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Re-process button */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={handleReprocesar}
+              disabled={!fotoUrl || procesarIA.isPending}
+            >
+              {procesarIA.isPending ? (
+                <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Procesando...</>
+              ) : (
+                <><Sparkles className="h-3 w-3 mr-1" /> {currentIA?.ia_procesada_at ? "Re-procesar con IA" : "Procesar con IA"}</>
+              )}
+            </Button>
           </div>
 
-          {/* Right: form */}
+          {/* Right column: form */}
           <div className="space-y-4">
             <div>
               <Label className="text-xs">Sello presente</Label>
