@@ -67,6 +67,7 @@ import ConteosCiegos from "./pages/ConteosCiegos";
 import RealizarConteo from "./pages/RealizarConteo";
 import NotasCredito from "./pages/NotasCredito";
 import ComplementosPago from "./pages/ComplementosPago";
+import Cobranza from "./pages/Cobranza";
 
 import PushNotificationsGate from "./components/PushNotificationsGate";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -242,6 +243,11 @@ const App = () => (
               <Route path="/complementos-pago" element={
                 <ProtectedRoute allowedRoles={['admin', 'secretaria', 'contadora']} redirectTo="/auth">
                   <ComplementosPago />
+                </ProtectedRoute>
+              } />
+              <Route path="/cobranza" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'contadora']} redirectTo="/auth">
+                  <Cobranza />
                 </ProtectedRoute>
               } />
               <Route path="/portal-cliente" element={

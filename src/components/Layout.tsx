@@ -53,6 +53,7 @@ import {
   ClipboardCheck,
   FileMinus,
   Receipt,
+  HandCoins,
 } from "lucide-react";
 
 interface LayoutProps {
@@ -258,6 +259,7 @@ const Layout = ({ children }: LayoutProps) => {
         { icon: FileText, label: "Facturas", path: "/facturas" },
         { icon: FileMinus, label: "Notas de Crédito", path: "/notas-credito" },
         { icon: Receipt, label: "Complementos Pago", path: "/complementos-pago" },
+        { icon: HandCoins, label: "Cobranza", path: "/cobranza" },
         { icon: PieChart, label: "Rentabilidad", path: "/rentabilidad" },
       ]
     },
