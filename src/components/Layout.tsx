@@ -10,6 +10,7 @@ import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useUnreadEmails } from "@/hooks/useUnreadEmails";
 import { useUserRoles, useUserModulePermissions } from "@/hooks/useUserRoles";
 import { CentroNotificaciones } from "@/components/CentroNotificaciones";
+import AlertasBell from "@/components/la-corona/AlertasBell";
 
 import { UserPreferencesPopover } from "@/components/UserPreferencesPopover";
 import { AlmasaLogo } from "@/components/brand/AlmasaLogo";
@@ -486,6 +487,7 @@ const Layout = ({ children }: LayoutProps) => {
           </div>
           <div className="flex items-center gap-2">
             <UserPreferencesPopover />
+            {(isAdmin || hasRole('secretaria' as any)) && <AlertasBell />}
             <CentroNotificaciones />
             <Link to="/mi-perfil" className="hidden lg:flex items-center gap-2 rounded-full bg-bg-soft border border-ink-100 py-1 pl-1 pr-3 hover:opacity-80" style={{ borderWidth: '0.5px' }}>
               {userFoto ? (

@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Shield, AlertTriangle, FileText, Users, Eye, CheckCircle, XCircle, Clock, TrendingUp, TrendingDown, Activity } from "lucide-react";
+import { Shield, AlertTriangle, FileText, Users, Eye, CheckCircle, XCircle, Clock, TrendingUp, TrendingDown, Activity, MapPin, Bell, Navigation } from "lucide-react";
 import {
   useDashboardLaCorona,
   useDiscrepancias,
@@ -18,6 +18,7 @@ import {
 } from "@/hooks/useLaCorona";
 import { useHojasSalida } from "@/hooks/useHojaSalida";
 import ReconciliarHojaDialog from "@/components/la-corona/ReconciliarHojaDialog";
+import { useAlertasActivas, useResolverAlerta, useDesviaciones, useGeofences, useLaCoronaAnalytics } from "@/hooks/useGPSGeofence";
 
 const ESTADO_COLORS: Record<string, string> = {
   generada: "bg-gray-100 text-gray-700",
@@ -43,6 +44,11 @@ const LaCorona = () => {
   const { data: feed } = useFeedEventos();
   const cerrarAnomalia = useCerrarAnomalia();
   const resolverDisc = useResolverDiscrepancia();
+  const { data: alertas } = useAlertasActivas();
+  const resolverAlerta = useResolverAlerta();
+  const { data: desviaciones } = useDesviaciones({ estado: "detectada" });
+  const { data: geofences } = useGeofences();
+  const { data: analytics } = useLaCoronaAnalytics();
 
   return (
     <Layout>
@@ -79,6 +85,9 @@ const LaCorona = () => {
             <TabsTrigger value="discrepancias" className="text-xs"><Shield className="h-3 w-3 mr-1" /> Discrepancias</TabsTrigger>
             <TabsTrigger value="scores" className="text-xs"><Users className="h-3 w-3 mr-1" /> Empleados</TabsTrigger>
             <TabsTrigger value="anomalias" className="text-xs"><AlertTriangle className="h-3 w-3 mr-1" /> Anomalías</TabsTrigger>
+            <TabsTrigger value="alertas" className="text-xs"><Bell className="h-3 w-3 mr-1" /> Alertas ({alertas?.length || 0})</TabsTrigger>
+            <TabsTrigger value="desviaciones" className="text-xs"><Navigation className="h-3 w-3 mr-1" /> Desviaciones</TabsTrigger>
+            <TabsTrigger value="geofences" className="text-xs"><MapPin className="h-3 w-3 mr-1" /> Geo-fences</TabsTrigger>
           </TabsList>
 
           {/* Feed */}
@@ -212,6 +221,71 @@ const LaCorona = () => {
                 </CardContent>
               </Card>
             )) : <p className="text-center py-8 text-sm text-muted-foreground">Sin anomalías abiertas</p>}
+          </TabsContent>
+
+          {/* Alertas */}
+          <TabsContent value="alertas" className="mt-4 space-y-2">
+            {alertas?.length ? alertas.map((a: any) => (
+              <Card key={a.id}>
+                <CardContent className="py-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge className={a.severidad === "critica" ? "bg-red-600 text-white" : a.severidad === "alta" ? "bg-orange-500 text-white" : "bg-amber-100 text-amber-800"}>{a.severidad}</Badge>
+                        <span className="text-xs font-mono">{a.tipo_alerta}</span>
+                      </div>
+                      <p className="text-sm font-medium">{a.titulo}</p>
+                      <p className="text-xs text-muted-foreground">{a.mensaje}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">{new Date(a.created_at).toLocaleString("es-MX")}</p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => resolverAlerta.mutate({ id: a.id })}>
+                      <CheckCircle className="h-3 w-3 mr-1" /> Resolver
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )) : <p className="text-center py-8 text-sm text-muted-foreground">Sin alertas activas</p>}
+          </TabsContent>
+
+          {/* Desviaciones */}
+          <TabsContent value="desviaciones" className="mt-4 space-y-2">
+            {desviaciones?.length ? desviaciones.map((d: any) => (
+              <Card key={d.id}>
+                <CardContent className="py-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Badge className={d.severidad === "critica" ? "bg-red-600 text-white" : "bg-orange-100 text-orange-800"}>{d.severidad}</Badge>
+                    <span className="text-xs font-mono">{d.tipo_desviacion}</span>
+                    <Badge variant="outline" className="text-[10px]">{d.estado}</Badge>
+                  </div>
+                  <p className="text-xs">
+                    {d.distancia_del_waypoint_km && `${d.distancia_del_waypoint_km.toFixed(1)}km del waypoint · `}
+                    {d.velocidad_kmh && `${d.velocidad_kmh.toFixed(0)} km/h · `}
+                    {new Date(d.iniciada_at).toLocaleString("es-MX")}
+                  </p>
+                </CardContent>
+              </Card>
+            )) : <p className="text-center py-8 text-sm text-muted-foreground">Sin desviaciones detectadas</p>}
+          </TabsContent>
+
+          {/* Geo-fences */}
+          <TabsContent value="geofences" className="mt-4 space-y-2">
+            <p className="text-xs text-muted-foreground mb-2">{geofences?.length || 0} geo-fences activos</p>
+            {geofences?.length ? geofences.map((gf: any) => (
+              <Card key={gf.id}>
+                <CardContent className="py-3">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-[#c41e3a]" />
+                    <span className="text-sm font-medium">{gf.nombre || gf.tipo}</span>
+                    <Badge variant="outline" className="text-[10px]">{gf.tipo}</Badge>
+                    <span className="text-[10px] text-muted-foreground">Radio: {gf.radio_metros}m</span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    {parseFloat(gf.centro_lat).toFixed(4)}, {parseFloat(gf.centro_lng).toFixed(4)}
+                    {gf.horario_inicio && ` · ${gf.horario_inicio}-${gf.horario_fin}`}
+                  </p>
+                </CardContent>
+              </Card>
+            )) : <p className="text-center py-8 text-sm text-muted-foreground">Sin geo-fences. Crea uno desde el botón.</p>}
           </TabsContent>
         </Tabs>
 
