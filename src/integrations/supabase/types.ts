@@ -9665,100 +9665,49 @@ export type Database = {
       empleados_vista_segura: {
         Row: {
           activo: boolean | null
-          clabe_interbancaria: string | null
-          contacto_emergencia_nombre: string | null
-          contacto_emergencia_telefono: string | null
           created_at: string | null
-          cuenta_bancaria: string | null
-          curp: string | null
-          direccion: string | null
           email: string | null
-          estado_civil: string | null
           fecha_baja: string | null
           fecha_ingreso: string | null
-          fecha_nacimiento: string | null
           id: string | null
-          motivo_baja: string | null
-          nivel_estudios: string | null
           nombre: string | null
           nombre_completo: string | null
-          notas: string | null
-          numero_dependientes: number | null
-          numero_seguro_social: string | null
-          periodo_pago: string | null
           primer_apellido: string | null
           puesto: string | null
-          rfc: string | null
           segundo_apellido: string | null
-          sueldo_bruto: number | null
           telefono: string | null
-          tipo_sangre: string | null
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
           activo?: boolean | null
-          clabe_interbancaria?: string | null
-          contacto_emergencia_nombre?: string | null
-          contacto_emergencia_telefono?: string | null
           created_at?: string | null
-          cuenta_bancaria?: string | null
-          curp?: string | null
-          direccion?: string | null
           email?: string | null
-          estado_civil?: string | null
           fecha_baja?: string | null
           fecha_ingreso?: string | null
-          fecha_nacimiento?: string | null
           id?: string | null
-          motivo_baja?: string | null
-          nivel_estudios?: string | null
           nombre?: string | null
           nombre_completo?: string | null
-          notas?: string | null
-          numero_dependientes?: number | null
-          numero_seguro_social?: string | null
-          periodo_pago?: string | null
           primer_apellido?: string | null
           puesto?: string | null
-          rfc?: string | null
           segundo_apellido?: string | null
-          sueldo_bruto?: number | null
           telefono?: string | null
-          tipo_sangre?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
           activo?: boolean | null
-          clabe_interbancaria?: string | null
-          contacto_emergencia_nombre?: string | null
-          contacto_emergencia_telefono?: string | null
           created_at?: string | null
-          cuenta_bancaria?: string | null
-          curp?: string | null
-          direccion?: string | null
           email?: string | null
-          estado_civil?: string | null
           fecha_baja?: string | null
           fecha_ingreso?: string | null
-          fecha_nacimiento?: string | null
           id?: string | null
-          motivo_baja?: string | null
-          nivel_estudios?: string | null
           nombre?: string | null
           nombre_completo?: string | null
-          notas?: string | null
-          numero_dependientes?: number | null
-          numero_seguro_social?: string | null
-          periodo_pago?: string | null
           primer_apellido?: string | null
           puesto?: string | null
-          rfc?: string | null
           segundo_apellido?: string | null
-          sueldo_bruto?: number | null
           telefono?: string | null
-          tipo_sangre?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
