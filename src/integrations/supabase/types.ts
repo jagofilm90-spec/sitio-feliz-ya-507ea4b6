@@ -10126,6 +10126,16 @@ export type Database = {
         }
         Returns: Json
       }
+      crear_sucursal_cliente: {
+        Args: {
+          p_codigo?: string
+          p_hereda_credito?: boolean
+          p_matriz_id: string
+          p_nombre_comercial: string
+          p_rfc?: string
+        }
+        Returns: string
+      }
       decrementar_lote: {
         Args: { p_cantidad: number; p_lote_id: string }
         Returns: undefined
