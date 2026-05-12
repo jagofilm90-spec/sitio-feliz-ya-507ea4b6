@@ -18,6 +18,8 @@ import {
 
 const PAGES = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
+  { name: "Dashboard Ejecutivo", path: "/dashboard-ejecutivo", icon: LayoutDashboard },
+  { name: "JOSAN IA", path: "/josan", icon: Search },
   { name: "Productos", path: "/productos", icon: Package },
   { name: "Lista de Precios", path: "/precios", icon: DollarSign },
   { name: "Clientes", path: "/clientes", icon: Users },
@@ -25,11 +27,19 @@ const PAGES = [
   { name: "Compras", path: "/compras", icon: ClipboardList },
   { name: "Inventario", path: "/inventario", icon: Warehouse },
   { name: "Rutas y Entregas", path: "/rutas", icon: Truck },
-  { name: "Facturación", path: "/facturas", icon: FileText },
+  { name: "Cartas Porte", path: "/cartas-porte", icon: FileText },
+  { name: "LA CORONA", path: "/la-corona", icon: Search },
+  { name: "Conteos Ciegos", path: "/conteos-ciegos", icon: ClipboardList },
+  { name: "Facturas", path: "/facturas", icon: FileText },
+  { name: "Notas de Crédito", path: "/notas-credito", icon: FileText },
+  { name: "Complementos Pago", path: "/complementos-pago", icon: Receipt },
+  { name: "Cobranza", path: "/cobranza", icon: DollarSign },
   { name: "Rentabilidad", path: "/rentabilidad", icon: Receipt },
   { name: "Empleados", path: "/empleados", icon: UserCircle },
+  { name: "Asistencia", path: "/asistencia", icon: UserCircle },
   { name: "Vehículos", path: "/vehiculos", icon: Car },
   { name: "Chat", path: "/chat", icon: MessageSquare },
+  { name: "Correos", path: "/correos", icon: MessageSquare },
   { name: "Configuración", path: "/configuracion", icon: Settings },
 ];
 
@@ -39,6 +49,7 @@ export function GlobalSearch() {
   const [clientes, setClientes] = useState<Array<{ id: string; nombre: string; codigo: string }>>([]);
   const [productos, setProductos] = useState<Array<{ id: string; nombre: string; codigo: string }>>([]);
   const [pedidos, setPedidos] = useState<Array<{ id: string; folio: string; cliente_nombre: string }>>([]);
+  const [facturas, setFacturas] = useState<Array<{ id: string; folio: string; cliente_nombre: string }>>([]);
   const navigate = useNavigate();
 
   // Cmd+K / Ctrl+K to open
@@ -59,6 +70,7 @@ export function GlobalSearch() {
       setClientes([]);
       setProductos([]);
       setPedidos([]);
+      setFacturas([]);
       return;
     }
 
@@ -92,6 +104,20 @@ export function GlobalSearch() {
           id: p.id,
           folio: p.folio,
           cliente_nombre: p.clientes?.nombre || "",
+        }))
+      );
+
+      // Search invoices by folio
+      const { data: facturasData } = await supabase
+        .from("facturas")
+        .select("id, folio, clientes:cliente_id(nombre)")
+        .ilike("folio", `%${query}%`)
+        .limit(5);
+      setFacturas(
+        (facturasData ?? []).map((f: any) => ({
+          id: f.id,
+          folio: f.folio,
+          cliente_nombre: (f.clientes as any)?.nombre || "",
         }))
       );
     }, 300);
@@ -158,7 +184,7 @@ export function GlobalSearch() {
                 {clientes.map((c) => (
                   <CommandItem
                     key={c.id}
-                    onSelect={() => runCommand(() => navigate("/clientes"))}
+                    onSelect={() => runCommand(() => navigate(`/clientes/${c.id}`))}
                     className="cursor-pointer"
                   >
                     <Users className="mr-2 h-4 w-4 text-muted-foreground" />
@@ -210,6 +236,27 @@ export function GlobalSearch() {
                       {p.folio}
                     </span>
                     {p.cliente_nombre}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </>
+          )}
+          {/* Invoices */}
+          {facturas.length > 0 && (
+            <>
+              <CommandSeparator />
+              <CommandGroup heading="Facturas">
+                {facturas.map((f) => (
+                  <CommandItem
+                    key={f.id}
+                    onSelect={() => runCommand(() => navigate("/facturas"))}
+                    className="cursor-pointer"
+                  >
+                    <FileText className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <span className="font-mono text-xs font-semibold mr-2">
+                      {f.folio}
+                    </span>
+                    {f.cliente_nombre}
                   </CommandItem>
                 ))}
               </CommandGroup>
