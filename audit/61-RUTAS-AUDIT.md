@@ -156,4 +156,29 @@ El resto del sistema es correcto: cada ruta tiene propósito distinto, roles ade
 
 ---
 
-*68 rutas auditadas. 4 candidatas KILL, 3 RENAME, 1 MERGE candidato.*
+---
+
+## FASE 3.2 — Ejecutada 11 mayo 2026
+
+### 3.2A — INVESTIGAR /chofer
+**Decision: KEEP ambos.** ChoferPanel (282 LoC) es la app chofer production-tested con GPS, entregas, firma. MiRutaHoy (82 LoC) es la versión LA CORONA nueva. Merge cuando LA CORONA se valide en campo.
+
+### 3.2B — KILL 4 rutas debug (604 LoC eliminados)
+- /test-firma (198 LoC)
+- /push-diagnostics (87 LoC)
+- /generate-assets (57 LoC)
+- /disenos-camioneta (262 LoC)
++ Limpieza: App.tsx, Layout sidebar, useUserRoles, VehiculosTab link
+
+### 3.2C — RENAME -v3: DIFERIDO
+40+ refs en 15 archivos incluyendo carpeta `components/proveedores-v3/`, hooks, query keys. Riesgo alto vs beneficio cosmético. Queda para fase futura.
+
+### Resumen
+- Rutas antes: 68
+- Rutas después: **64**
+- LoC eliminado: ~604
+- Builds: pasan
+- /chofer: KEEP (decisión informada)
+- -v3: DIFERIDO (riesgo > beneficio)
+
+*64 rutas limpias. 0 debug. 0 huérfanas.*
