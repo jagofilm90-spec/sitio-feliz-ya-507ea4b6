@@ -173,4 +173,32 @@
 
 ---
 
-*Inventario limpio: 0 huérfanas, 30 componentes candidatos, 0 errores TS*
+---
+
+## FASE 1 — Ejecutada 11 mayo 2026
+
+### Eliminados (10 archivos, ~2,258 LoC)
+
+| Archivo | LoC | Categoría |
+|---------|-----|-----------|
+| almacen/BusquedaLlegadaAnticipada.tsx | 426 | V1 reemplazada por AlmacenCargaScan |
+| almacen/CargaProductosChecklist.tsx | 351 | V1 reemplazada por SurtirPedido V2 |
+| almacen/CargaResumenFinal.tsx | 145 | Par del anterior |
+| compras/EntregasDetallePopover.tsx | 283 | Reemplazado |
+| pedidos/HojaCargaUnificadaTemplate.tsx | 257 | Reemplazada por Hoja Salida V4 |
+| NavLink.tsx | 28 | Wrapper innecesario |
+| QuickActions.tsx | 77 | Nunca montado |
+| admin/SolicitudesDescuentoPanel.tsx | 571 | Feature no integrada |
+| dashboard/DocumentosPendientesAlert.tsx | 70 | Nunca montado |
+| hooks/useRemision.ts | 50 | Sin UI consumidora |
+
+### Verificaciones
+- Verificación pre-eliminación: 10/10 con 0 referencias
+- TypeScript: 0 errores
+- Build producción: pasa (25.64s)
+- 0 referencias rotas
+
+### Bitácora
+Todos los 10 archivos se eliminaron sin incidentes.
+
+*Cleanup FASE 1 completa: -2,258 LoC código muerto*

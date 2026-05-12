@@ -211,7 +211,8 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
     try {
       const { error } = await supabase
         .from("ordenes_compra_entregas")
-        .update({ fecha_programada: editingFecha, status: "pendiente" })
+        // Status flow: pendiente_fecha → programada → en_descarga → recibida (o cancelada)
+        .update({ fecha_programada: editingFecha, status: "programada" })
         .eq("id", entregaId);
 
       if (error) throw error;
@@ -233,7 +234,7 @@ const EntregasPopover = ({ orden, entregas, entregasStatus }: EntregasPopoverPro
           .select("*")
           .eq("orden_compra_id", orden.id)
           .not("fecha_programada", "is", null)
-          .eq("status", "pendiente");
+          .eq("status", "programada");
 
         if (updatedEntregas && updatedEntregas.length > 0) {
           await sendDeliveryNotificationEmail(updatedEntregas, false);

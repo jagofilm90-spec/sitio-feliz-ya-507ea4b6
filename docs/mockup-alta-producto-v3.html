@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup v3 — Alta Básica Simplificada — ALMASA-OS</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,400&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        crimson: { 500: '#B8252F', 600: '#9E1F28' },
+        ink: { 50: '#F0EEE8', 100: '#E5E2DA', 300: '#B8B8B5', 500: '#8A8478', 700: '#2A2A2A', 900: '#1A1815' },
+        soft: '#FAFAF7',
+        warm: '#F7F5EF',
+      },
+      fontFamily: {
+        serif: ['Cormorant Garamond', 'Georgia', 'serif'],
+        sans: ['Inter Tight', '-apple-system', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
+      }
+    }
+  }
+}
+</script>
+<style>
+  body { font-family: 'Inter Tight', sans-serif; background: #FAFAF7; }
+  input, select {
+    font-family: 'Inter Tight', sans-serif;
+    border: 1px solid #E5E2DA; border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem; font-size: 0.875rem;
+    width: 100%; background: #fff; color: #1A1815;
+    transition: border-color 0.15s, box-shadow 0.15s; outline: none;
+  }
+  input:focus, select:focus { border-color: #B8252F; box-shadow: 0 0 0 2px rgba(184,37,47,0.12); }
+  input::placeholder { color: #B8B8B5; }
+  .switch { position: relative; width: 36px; height: 20px; display: inline-block; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch .slider {
+    position: absolute; inset: 0; background: #E5E2DA; border-radius: 999px;
+    transition: background 0.2s; cursor: pointer;
+  }
+  .switch .slider::before {
+    content: ''; position: absolute; width: 16px; height: 16px;
+    left: 2px; bottom: 2px; background: white; border-radius: 50%;
+    transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  }
+  .switch input:checked + .slider { background: #B8252F; }
+  .switch input:checked + .slider::before { transform: translateX(16px); }
+  .btn-primary {
+    background: #B8252F; color: white; padding: 0.5rem 1.25rem;
+    border-radius: 0.5rem; font-weight: 500; font-size: 0.875rem;
+    border: none; cursor: pointer; transition: all 0.15s;
+  }
+  .btn-primary:hover { background: #9E1F28; }
+  .btn-primary:disabled { background: #E5E2DA; color: #B8B8B5; cursor: not-allowed; }
+  .btn-outline {
+    background: transparent; color: #1A1815; padding: 0.5rem 1.25rem;
+    border-radius: 0.5rem; font-weight: 500; font-size: 0.875rem;
+    border: 1px solid #E5E2DA; cursor: pointer; transition: all 0.15s;
+  }
+  .btn-outline:hover { background: #F0EEE8; }
+  .dollar-input { position: relative; }
+  .dollar-input span.prefix {
+    position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%);
+    color: #B8B8B5; font-size: 0.875rem; pointer-events: none;
+  }
+  .dollar-input input { padding-left: 1.75rem; }
+  details summary { cursor: pointer; list-style: none; }
+  details summary::-webkit-details-marker { display: none; }
+  details[open] .chevron { transform: rotate(180deg); }
+  .chevron { transition: transform 0.2s; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .fade-in { animation: fadeIn 0.3s ease-out; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body class="min-h-screen flex items-start justify-center p-6">
+
+<div style="width: 560px; max-width: calc(100vw - 2rem);" class="bg-white rounded-xl shadow-lg border border-ink-100 overflow-hidden">
+
+  <!-- HEADER -->
+  <div class="px-6 pt-6 pb-4 border-b border-ink-100">
+    <h2 class="font-serif text-2xl font-light text-ink-900">
+      Nuevo <em class="italic text-crimson-500 font-normal">producto</em>.
+    </h2>
+    <p class="font-serif italic text-sm text-ink-500 mt-1">Solo necesitas el precio de venta para empezar. Lo demás se completa cuando uses el producto.</p>
+  </div>
+
+  <div class="px-6 py-5 space-y-4 max-h-[75vh] overflow-y-auto">
+
+    <!-- ═══════════════════════════════════════
+         ALTA BÁSICA — 6 campos
+         ═══════════════════════════════════════ -->
+
+    <!-- Nombre -->
+    <div>
+      <label class="text-sm font-medium text-ink-900 block mb-1.5">Nombre del producto *</label>
+      <input id="nombre" type="text" placeholder="Ej: Azúcar Estándar, Frijol Bayo" class="text-base" oninput="update()">
+      <p class="text-[11px] text-ink-500 mt-1">Solo el nombre. Sin tamaños ni marca.</p>
+    </div>
+
+    <!-- Marca + Categoría -->
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="text-xs font-medium text-ink-900 block mb-1">Marca</label>
+        <input id="marca" type="text" placeholder="Ej: Nestlé, La Costeña" oninput="update()">
+      </div>
+      <div>
+        <label class="text-xs font-medium text-ink-900 block mb-1">Categoría *</label>
+        <select id="categoria" onchange="update(); suggestCode()">
+          <option value="">Seleccionar</option>
+          <option value="Azúcares">Azúcares</option>
+          <option value="Granos y semillas">Granos y semillas</option>
+          <option value="Abarrotes secos">Abarrotes secos</option>
+          <option value="Lácteos">Lácteos</option>
+          <option value="Aceites">Aceites</option>
+          <option value="Botanas">Botanas</option>
+          <option value="Bebidas">Bebidas</option>
+          <option value="Limpieza">Limpieza</option>
+          <option value="Mascotas">Mascotas</option>
+          <option value="Otros">Otros</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Unidad + Precio + Código -->
+    <div class="grid grid-cols-3 gap-3">
+      <div>
+        <label class="text-xs font-medium text-ink-900 block mb-1">Unidad *</label>
+        <select id="unidad" onchange="update()">
+          <option value="Bulto" selected>Bulto</option>
+          <option value="Caja">Caja</option>
+          <option value="Costal">Costal</option>
+          <option value="Cubeta">Cubeta</option>
+          <option value="Paquete">Paquete</option>
+          <option value="Pieza">Pieza</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs font-medium text-ink-900 block mb-1">Precio de venta *</label>
+        <div class="dollar-input">
+          <span class="prefix">$</span>
+          <input id="precio" type="number" step="0.01" placeholder="0.00" oninput="update()">
+        </div>
+        <p class="text-[11px] text-ink-500 mt-0.5">Al que lo vendes a clientes</p>
+      </div>
+      <div>
+        <label class="text-xs font-medium text-ink-900 block mb-1">Código</label>
+        <input id="codigo" type="text" placeholder="Auto" class="font-mono text-sm">
+        <p class="text-[11px] text-ink-500 mt-0.5">Se sugiere solo</p>
+      </div>
+    </div>
+
+    <!-- VISTA PREVIA -->
+    <div id="previewCard" class="px-3 py-2.5 rounded-lg border border-ink-100 bg-warm">
+      <span class="text-[10px] uppercase tracking-widest text-ink-300 font-medium">Vista previa</span>
+      <p id="previewText" class="font-medium text-ink-900 mt-0.5 text-sm">Producto — Bulto</p>
+      <p id="previewPrice" class="text-xs text-ink-500 mt-0.5 hidden"></p>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         PANEL DE ESTADO (aparece al llenar precio)
+         ═══════════════════════════════════════ -->
+    <div id="statusPanel" class="hidden fade-in rounded-lg border border-ink-100 bg-soft p-4 space-y-2">
+      <p class="text-xs font-medium text-ink-700 uppercase tracking-wide">Estado del producto</p>
+
+      <div class="flex items-center gap-2.5">
+        <div class="status-dot bg-green-500"></div>
+        <span class="text-sm text-ink-700">Listo para vender</span>
+      </div>
+
+      <div class="flex items-center gap-2.5">
+        <div class="status-dot bg-red-400"></div>
+        <span class="text-sm text-ink-500">Necesita IVA configurado para CFDI</span>
+        <span class="text-[10px] text-ink-300 ml-auto">se activa al facturar</span>
+      </div>
+
+      <div class="flex items-center gap-2.5">
+        <div class="status-dot bg-red-400"></div>
+        <span class="text-sm text-ink-500">Necesita código SAT para facturas</span>
+        <span class="text-[10px] text-ink-300 ml-auto">se pide al facturar</span>
+      </div>
+
+      <div class="flex items-center gap-2.5">
+        <div class="status-dot bg-amber-400"></div>
+        <span class="text-sm text-ink-500">Sin costo de compra registrado</span>
+        <span class="text-[10px] text-ink-300 ml-auto">se llena con primera OC</span>
+      </div>
+
+      <div class="flex items-center gap-2.5">
+        <div class="status-dot bg-amber-400"></div>
+        <span class="text-sm text-ink-500">Sin proveedor preferido</span>
+        <span class="text-[10px] text-ink-300 ml-auto">se llena con primera OC</span>
+      </div>
+
+      <p class="text-[11px] text-ink-300 pt-1 border-t border-ink-100 mt-1">Cada campo se va completando cuando uses el producto por primera vez en OC, factura o recepción.</p>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         LINK AVANZADO (discreto)
+         ═══════════════════════════════════════ -->
+    <div class="text-center">
+      <button id="advancedToggle" onclick="toggleAdvanced()" class="text-xs text-ink-500 hover:text-crimson-500 transition-colors cursor-pointer bg-transparent border-none">
+        ¿Quieres configurar todos los datos ahora?
+      </button>
+    </div>
+
+    <!-- ═══════════════════════════════════════
+         SECCIONES AVANZADAS (ocultas por default)
+         ═══════════════════════════════════════ -->
+    <div id="advancedSections" class="hidden space-y-3 fade-in">
+
+      <div class="h-px bg-ink-100"></div>
+
+      <!-- Más detalles -->
+      <details open>
+        <summary class="flex items-center gap-2 text-xs font-medium text-ink-500 py-1">
+          <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          Más detalles
+        </summary>
+        <div class="space-y-3 pt-3">
+          <div class="grid grid-cols-3 gap-3">
+            <div>
+              <label class="text-xs font-medium text-ink-900 block mb-1">Presentación</label>
+              <input type="text" placeholder="Ej: 50 kg, 24×800g" oninput="update()" id="presentacion">
+              <p class="text-[11px] text-ink-500 mt-0.5">Cómo viene empacado</p>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-ink-900 block mb-1">Peso (kg)</label>
+              <div style="position:relative">
+                <input type="number" step="0.01" placeholder="Ej: 50">
+                <span style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);color:#B8B8B5;font-size:0.7rem;pointer-events:none">kg</span>
+              </div>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-ink-900 block mb-1">Contenido</label>
+              <input type="text" placeholder="Ej: 24 piezas">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs font-medium text-ink-900 block mb-1">Costo de compra</label>
+              <div class="dollar-input">
+                <span class="prefix">$</span>
+                <input type="number" step="0.01" placeholder="0.00">
+              </div>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-ink-900 block mb-1">Proveedor preferido</label>
+              <select>
+                <option value="" disabled selected>Seleccionar</option>
+                <option>Ingenio El Mante</option>
+                <option>Nestlé México</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-3 gap-3">
+            <div class="flex items-center gap-2 p-2 rounded border border-ink-100 bg-white">
+              <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+              <label class="text-xs text-ink-900 cursor-pointer">IVA 16%</label>
+            </div>
+            <div class="flex items-center gap-2 p-2 rounded border border-ink-100 bg-white">
+              <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+              <label class="text-xs text-ink-900 cursor-pointer">IEPS 8%</label>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-ink-900 block mb-1">Stock mínimo</label>
+              <input type="number" placeholder="0">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="flex items-center gap-2 p-2 rounded border border-ink-100 bg-white">
+              <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+              <div>
+                <label class="text-xs text-ink-900 cursor-pointer">Se vende por kilo</label>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 p-2 rounded border border-ink-100 bg-white">
+              <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+              <div>
+                <label class="text-xs text-ink-900 cursor-pointer">Maneja caducidad</label>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-ink-900 block mb-1">Descuento máximo</label>
+            <div class="dollar-input" style="max-width:180px">
+              <span class="prefix">$</span>
+              <input type="number" step="0.01" placeholder="0.00">
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- Configuración avanzada -->
+      <details>
+        <summary class="flex items-center gap-2 text-xs font-medium text-ink-500 py-1">
+          <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          Configuración avanzada
+          <span class="text-[10px] text-ink-300 bg-ink-50 px-1.5 py-0.5 rounded-full">(rara vez se usa)</span>
+        </summary>
+        <div class="space-y-2 pt-3">
+          <div class="flex items-center gap-3 p-2.5 rounded border border-ink-100 bg-white">
+            <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+            <div><span class="text-sm text-ink-900">Requiere fumigación</span><p class="text-[11px] text-ink-500">Alerta cada 6 meses</p></div>
+          </div>
+          <div class="flex items-center gap-3 p-2.5 rounded border border-ink-100 bg-white">
+            <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+            <div><span class="text-sm text-ink-900">Solo uso interno</span><p class="text-[11px] text-ink-500">No aparece en pedidos</p></div>
+          </div>
+          <div class="flex items-center gap-3 p-2.5 rounded border border-red-200 bg-red-50/50">
+            <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+            <div><span class="text-sm text-ink-900">Ventas bloqueadas</span><p class="text-[11px] text-ink-500">Nadie puede venderlo</p></div>
+          </div>
+          <div class="flex items-center gap-3 p-2.5 rounded border border-ink-100 bg-white">
+            <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+            <div><span class="text-sm text-ink-900">Puede tener variantes promo</span><p class="text-[11px] text-ink-500">Permite crear versiones promo en OC</p></div>
+          </div>
+          <div class="flex items-center gap-3 p-2.5 rounded border border-ink-100 bg-white">
+            <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+            <span class="text-sm text-ink-900">En promoción</span>
+          </div>
+        </div>
+      </details>
+
+      <!-- Datos fiscales -->
+      <details>
+        <summary class="flex items-center gap-2 text-xs font-medium text-ink-500 py-1">
+          <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Datos fiscales (CFDI)
+        </summary>
+        <div class="space-y-3 pt-3">
+          <div class="grid grid-cols-3 gap-3">
+            <div>
+              <label class="text-xs font-medium text-ink-900 block mb-1">Clave SAT</label>
+              <input type="text" placeholder="Ej: 50201502" class="font-mono text-sm">
+            </div>
+            <div>
+              <label class="text-xs font-medium text-ink-900 block mb-1">Unidad SAT</label>
+              <select>
+                <option value="" disabled selected>Seleccionar</option>
+                <option>KGM — Kilogramo</option>
+                <option>H87 — Pieza</option>
+                <option>XBX — Caja</option>
+                <option>XSA — Saco</option>
+                <option>LTR — Litro</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-ink-900 block mb-1">Piezas por unidad</label>
+              <input type="number" value="1" placeholder="24">
+            </div>
+          </div>
+        </div>
+      </details>
+
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="px-6 py-4 border-t border-ink-100 bg-soft">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+        <span class="text-xs text-ink-500">Producto activo</span>
+      </div>
+      <div class="flex gap-2">
+        <button class="btn-outline">Cancelar</button>
+        <button id="btnCrear" class="btn-primary" disabled>Crear producto</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- COMPARACIÓN (para Jose) -->
+<div style="position:fixed;bottom:0;left:0;right:0;background:#1A1815;color:#E5E2DA;padding:1rem 1.5rem;font-family:'Inter Tight',sans-serif;font-size:0.75rem;line-height:1.6;z-index:50;">
+  <div style="max-width:600px;margin:0 auto;">
+    <strong style="color:#B8252F;">DIFERENCIA vs FORM ACTUAL</strong><br>
+    <span style="color:#8A8478;">Form actual:</span> 26 campos, abrumador &nbsp;|&nbsp;
+    <span style="color:#B8252F;">Form v3:</span> 6 campos + enriquecimiento progresivo<br>
+    <span style="color:#8A8478;">Tiempo estimado:</span> ~15 segundos vs ~3 minutos &nbsp;|&nbsp;
+    <span style="color:#8A8478;">Filosofía:</span> "Ponlo en la lista de precios y vende. Lo demás se completa solo."
+  </div>
+</div>
+
+<script>
+const PREFIXES = {
+  'Azúcares': 'AZU', 'Granos y semillas': 'GRA', 'Abarrotes secos': 'ABA',
+  'Lácteos': 'LAC', 'Aceites': 'ACE', 'Botanas': 'BOT',
+  'Bebidas': 'BEB', 'Limpieza': 'LIM', 'Mascotas': 'MAS', 'Otros': 'OTR'
+};
+
+function suggestCode() {
+  const cat = document.getElementById('categoria').value;
+  const codigoInput = document.getElementById('codigo');
+  if (cat && !codigoInput.value) {
+    const prefix = PREFIXES[cat] || 'PRD';
+    codigoInput.value = prefix + '-001';
+    codigoInput.style.color = '#B8B8B5';
+    codigoInput.onfocus = function() { this.style.color = '#1A1815'; };
+  }
+}
+
+function update() {
+  // Preview
+  const nombre = document.getElementById('nombre').value || 'Producto';
+  const marca = document.getElementById('marca').value;
+  const unidad = document.getElementById('unidad').value;
+  const presentacion = document.getElementById('presentacion')?.value;
+  let text = nombre;
+  if (marca) text += ' ' + marca;
+  text += ' — ' + unidad;
+  if (presentacion) text += ' ' + presentacion;
+  document.getElementById('previewText').textContent = text;
+
+  // Price in preview
+  const precio = parseFloat(document.getElementById('precio').value);
+  const priceEl = document.getElementById('previewPrice');
+  if (precio > 0) {
+    priceEl.textContent = '$' + precio.toLocaleString('es-MX', { minimumFractionDigits: 2 }) + ' por ' + unidad.toLowerCase();
+    priceEl.classList.remove('hidden');
+  } else {
+    priceEl.classList.add('hidden');
+  }
+
+  // Status panel
+  const panel = document.getElementById('statusPanel');
+  if (precio > 0 && document.getElementById('nombre').value.trim()) {
+    panel.classList.remove('hidden');
+  } else {
+    panel.classList.add('hidden');
+  }
+
+  // Button state
+  const hasName = document.getElementById('nombre').value.trim().length > 0;
+  const hasCat = document.getElementById('categoria').value !== '';
+  const hasPrice = precio > 0;
+  document.getElementById('btnCrear').disabled = !(hasName && hasCat && hasPrice);
+}
+
+function toggleAdvanced() {
+  const sections = document.getElementById('advancedSections');
+  const btn = document.getElementById('advancedToggle');
+  if (sections.classList.contains('hidden')) {
+    sections.classList.remove('hidden');
+    btn.textContent = 'Ocultar configuración avanzada';
+  } else {
+    sections.classList.add('hidden');
+    btn.textContent = '¿Quieres configurar todos los datos ahora?';
+  }
+}
+</script>
+
+</body>
+</html>

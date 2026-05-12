@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — Alta de Producto v2 — ALMASA-OS</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,400&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        crimson: { 500: '#B8252F', 600: '#9E1F28' },
+        ink: { 50: '#F0EEE8', 100: '#E5E2DA', 300: '#B8B8B5', 500: '#8A8478', 700: '#2A2A2A', 900: '#1A1815' },
+        soft: '#FAFAF7',
+        warm: '#F7F5EF',
+      },
+      fontFamily: {
+        serif: ['Cormorant Garamond', 'Georgia', 'serif'],
+        sans: ['Inter Tight', '-apple-system', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
+      }
+    }
+  }
+}
+</script>
+<style>
+  body { font-family: 'Inter Tight', sans-serif; background: #FAFAF7; }
+  input, select, textarea {
+    font-family: 'Inter Tight', sans-serif;
+    border: 1px solid #E5E2DA;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    width: 100%;
+    background: #fff;
+    color: #1A1815;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    outline: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: #B8252F;
+    box-shadow: 0 0 0 2px rgba(184,37,47,0.12);
+  }
+  input::placeholder { color: #B8B8B5; }
+  .switch { position: relative; width: 36px; height: 20px; display: inline-block; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch .slider {
+    position: absolute; inset: 0; background: #E5E2DA; border-radius: 999px;
+    transition: background 0.2s; cursor: pointer;
+  }
+  .switch .slider::before {
+    content: ''; position: absolute; width: 16px; height: 16px;
+    left: 2px; bottom: 2px; background: white; border-radius: 50%;
+    transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  }
+  .switch input:checked + .slider { background: #B8252F; }
+  .switch input:checked + .slider::before { transform: translateX(16px); }
+  details summary { cursor: pointer; list-style: none; }
+  details summary::-webkit-details-marker { display: none; }
+  details[open] .chevron { transform: rotate(180deg); }
+  .btn-primary {
+    background: #B8252F; color: white; padding: 0.5rem 1.25rem;
+    border-radius: 0.5rem; font-weight: 500; font-size: 0.875rem;
+    border: none; cursor: pointer; transition: background 0.15s;
+  }
+  .btn-primary:hover { background: #9E1F28; }
+  .btn-outline {
+    background: transparent; color: #1A1815; padding: 0.5rem 1.25rem;
+    border-radius: 0.5rem; font-weight: 500; font-size: 0.875rem;
+    border: 1px solid #E5E2DA; cursor: pointer; transition: all 0.15s;
+  }
+  .btn-outline:hover { background: #F0EEE8; }
+  .section-header {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.5rem 0; width: 100%; font-size: 0.8125rem;
+    font-weight: 500; color: #8A8478;
+  }
+  .section-header .chevron { transition: transform 0.2s; font-size: 0.75rem; }
+  .dollar-input { position: relative; }
+  .dollar-input span {
+    position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%);
+    color: #B8B8B5; font-size: 0.875rem; pointer-events: none;
+  }
+  .dollar-input input { padding-left: 1.75rem; }
+  .margen-positive { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+  .margen-warning { background: #fefce8; color: #854d0e; border: 1px solid #fef08a; }
+  .margen-negative { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+</style>
+</head>
+<body class="min-h-screen flex items-start justify-center p-6">
+
+<!-- DIALOG CONTAINER -->
+<div style="width: 640px; max-width: calc(100vw - 2rem);" class="bg-white rounded-xl shadow-lg border border-ink-100 overflow-hidden">
+
+  <!-- HEADER -->
+  <div class="px-6 pt-6 pb-4 border-b border-ink-100">
+    <h2 class="font-serif text-2xl font-light text-ink-900">
+      Nuevo <em class="italic text-crimson-500 font-normal">producto</em>.
+    </h2>
+    <p class="font-serif italic text-sm text-ink-500 mt-1">Solo necesitas lo esencial para empezar a vender.</p>
+  </div>
+
+  <div class="px-6 py-5 space-y-5 max-h-[70vh] overflow-y-auto">
+
+    <!-- ═══════════════════════════════════════════
+         SECCIÓN 1: INFORMACIÓN ESENCIAL
+         ═══════════════════════════════════════════ -->
+
+    <!-- Nombre -->
+    <div>
+      <label class="text-sm font-medium text-ink-900 block mb-1.5">Nombre del producto *</label>
+      <input id="nombre" type="text" placeholder="Ej: Azúcar Estándar, Frijol Bayo, Aceite 1-2-3" class="text-base" oninput="updatePreview()">
+      <p class="text-xs text-ink-500 mt-1">Solo el nombre del producto, sin tamaños ni marca</p>
+    </div>
+
+    <!-- Código + Marca + Categoría -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div>
+        <label class="text-xs font-medium text-ink-900 block mb-1">Código *</label>
+        <input id="codigo" type="text" placeholder="Ej: AZU-001" class="font-mono text-sm">
+      </div>
+      <div>
+        <label class="text-xs font-medium text-ink-900 block mb-1">Marca</label>
+        <input id="marca" type="text" placeholder="Ej: Nestlé, La Costeña" oninput="updatePreview()">
+      </div>
+      <div>
+        <label class="text-xs font-medium text-ink-900 block mb-1">Categoría</label>
+        <select>
+          <option value="" disabled selected>Seleccionar</option>
+          <option>Azúcares</option><option>Granos y semillas</option>
+          <option>Abarrotes secos</option><option>Lácteos</option>
+          <option>Aceites</option><option>Botanas</option>
+          <option>Bebidas</option><option>Limpieza</option>
+          <option>Mascotas</option><option>Otros</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Unidad + Precio venta -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div>
+        <label class="text-xs font-medium text-ink-900 block mb-1">Unidad *</label>
+        <select id="unidad" onchange="updatePreview()">
+          <option value="Bulto" selected>Bulto</option>
+          <option value="Caja">Caja</option>
+          <option value="Costal">Costal</option>
+          <option value="Cubeta">Cubeta</option>
+          <option value="Paquete">Paquete</option>
+          <option value="Pieza">Pieza</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs font-medium text-ink-900 block mb-1">Precio de venta *</label>
+        <div class="dollar-input">
+          <span>$</span>
+          <input id="precioVenta" type="number" step="0.01" placeholder="0.00" oninput="updateMargen()">
+        </div>
+      </div>
+      <div>
+        <label class="text-xs font-medium text-ink-900 block mb-1">Costo de compra</label>
+        <div class="dollar-input">
+          <span>$</span>
+          <input id="costoCompra" type="number" step="0.01" placeholder="0.00" oninput="updateMargen()">
+        </div>
+      </div>
+    </div>
+
+    <!-- IVA switch -->
+    <div class="flex items-center gap-3 p-2.5 rounded-lg border border-ink-100 bg-soft">
+      <label class="switch">
+        <input type="checkbox" checked id="switchIva">
+        <span class="slider"></span>
+      </label>
+      <label for="switchIva" class="text-sm text-ink-900 cursor-pointer select-none">IVA 16%</label>
+      <span class="text-xs text-ink-500 ml-auto">Activado por default</span>
+    </div>
+
+    <!-- VISTA PREVIA -->
+    <div id="preview" class="px-3 py-2.5 rounded-lg border border-ink-100 bg-warm text-sm">
+      <span class="text-xs uppercase tracking-widest text-ink-500 font-medium">Vista previa</span>
+      <p id="previewText" class="font-medium text-ink-900 mt-0.5">Producto — Bulto</p>
+    </div>
+
+    <!-- MARGEN (condicional) -->
+    <div id="margenCard" class="hidden px-3 py-2 rounded-lg text-xs flex items-center justify-between">
+      <span id="margenPct"></span>
+      <span id="margenAbs"></span>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         SECCIÓN 2: MÁS DETALLES
+         ═══════════════════════════════════════════ -->
+    <details>
+      <summary class="section-header">
+        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        Más detalles
+        <span class="text-xs text-ink-300 font-normal">(opcional)</span>
+      </summary>
+      <div class="space-y-3 pt-3 pb-1">
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="text-xs font-medium text-ink-900 block mb-1">Presentación</label>
+            <input id="presentacion" type="text" placeholder="Ej: 50 kg, 24×800g, 6×3L" oninput="updatePreview()">
+            <p class="text-[11px] text-ink-500 mt-0.5">Cómo viene presentado</p>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-ink-900 block mb-1">Peso (kg)</label>
+            <div style="position:relative">
+              <input type="number" step="0.01" placeholder="Ej: 50">
+              <span style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);color:#B8B8B5;font-size:0.75rem;pointer-events:none">kg</span>
+            </div>
+            <p class="text-[11px] text-ink-500 mt-0.5">Peso del bulto/caja completo</p>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-ink-900 block mb-1">Contenido</label>
+            <input type="text" placeholder="Ej: 24 piezas">
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 p-2.5 rounded-lg border border-ink-100 bg-white">
+          <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+          <div>
+            <label class="text-sm text-ink-900 cursor-pointer">IEPS 8%</label>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 p-2.5 rounded-lg border border-ink-100 bg-white">
+          <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+          <div>
+            <label class="text-sm text-ink-900 cursor-pointer">Se vende por kilo</label>
+            <p class="text-[11px] text-ink-500">Activar si el cliente compra por kilo</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="text-xs font-medium text-ink-900 block mb-1">Descuento máximo</label>
+            <div class="dollar-input">
+              <span>$</span>
+              <input type="number" step="0.01" placeholder="0.00">
+            </div>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-ink-900 block mb-1">Stock mínimo</label>
+            <input type="number" placeholder="0">
+          </div>
+          <div>
+            <label class="text-xs font-medium text-ink-900 block mb-1">Proveedor preferido</label>
+            <select>
+              <option value="" disabled selected>Seleccionar</option>
+              <option>Ingenio El Mante</option>
+              <option>Nestlé México</option>
+              <option>La Costeña</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 p-2.5 rounded-lg border border-ink-100 bg-white">
+          <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+          <div>
+            <label class="text-sm text-ink-900 cursor-pointer">Maneja caducidad</label>
+            <p class="text-[11px] text-ink-500">El almacén registrará fecha al recibir cada lote</p>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <!-- ═══════════════════════════════════════════
+         SECCIÓN 3: CONFIGURACIÓN AVANZADA
+         ═══════════════════════════════════════════ -->
+    <details>
+      <summary class="section-header">
+        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        Configuración avanzada
+        <span class="text-[10px] text-ink-300 font-normal bg-ink-50 px-1.5 py-0.5 rounded-full">(rara vez se usa)</span>
+      </summary>
+      <div class="space-y-2 pt-3 pb-1">
+
+        <div class="flex items-center gap-3 p-2.5 rounded-lg border border-ink-100 bg-white">
+          <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+          <div>
+            <label class="text-sm text-ink-900 cursor-pointer">Requiere fumigación</label>
+            <p class="text-[11px] text-ink-500">El sistema alertará cada 6 meses</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 p-2.5 rounded-lg border border-ink-100 bg-white">
+          <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+          <div>
+            <label class="text-sm text-ink-900 cursor-pointer">Solo uso interno</label>
+            <p class="text-[11px] text-ink-500">No aparece en pedidos de clientes</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 p-2.5 rounded-lg border border-red-200 bg-red-50/50">
+          <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+          <div>
+            <label class="text-sm text-ink-900 cursor-pointer">Ventas bloqueadas</label>
+            <p class="text-[11px] text-ink-500">Nadie puede venderlo temporalmente</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 p-2.5 rounded-lg border border-ink-100 bg-white">
+          <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+          <div>
+            <label class="text-sm text-ink-900 cursor-pointer">Puede tener variantes promocionales</label>
+            <p class="text-[11px] text-ink-500">Permite crear versiones promo al hacer una OC</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 p-2.5 rounded-lg border border-ink-100 bg-white">
+          <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+          <label class="text-sm text-ink-900 cursor-pointer">En promoción</label>
+        </div>
+
+      </div>
+    </details>
+
+    <!-- ═══════════════════════════════════════════
+         SECCIÓN 4: DATOS FISCALES CFDI
+         ═══════════════════════════════════════════ -->
+    <details>
+      <summary class="section-header">
+        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Datos fiscales (CFDI)
+      </summary>
+      <div class="space-y-3 pt-3 pb-1">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="text-xs font-medium text-ink-900 block mb-1">Clave SAT</label>
+            <input type="text" placeholder="Ej: 50201502" class="font-mono text-sm">
+          </div>
+          <div>
+            <label class="text-xs font-medium text-ink-900 block mb-1">Unidad SAT</label>
+            <select>
+              <option value="" disabled selected>Seleccionar</option>
+              <option>KGM — Kilogramo</option>
+              <option>H87 — Pieza</option>
+              <option>XBX — Caja</option>
+              <option>XSA — Saco</option>
+              <option>XBG — Bolsa</option>
+              <option>LTR — Litro</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-ink-900 block mb-1">Piezas por unidad</label>
+            <input type="number" value="1" placeholder="Ej: 24">
+          </div>
+        </div>
+      </div>
+    </details>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="px-6 py-4 border-t border-ink-100 bg-soft">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+        <span class="text-xs text-ink-500">Producto activo</span>
+      </div>
+      <div class="flex gap-2">
+        <button class="btn-outline">Cancelar</button>
+        <button class="btn-primary">Crear producto</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ANNOTATION -->
+<div style="position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);background:#1A1815;color:white;padding:0.5rem 1rem;border-radius:999px;font-size:0.75rem;font-family:'Inter Tight',sans-serif;opacity:0.9;">
+  MOCKUP v2 — Solo para review visual. No es funcional.
+</div>
+
+<script>
+function updatePreview() {
+  const nombre = document.getElementById('nombre').value || 'Producto';
+  const marca = document.getElementById('marca').value;
+  const unidad = document.getElementById('unidad').value;
+  const presentacion = document.getElementById('presentacion')?.value;
+
+  let text = nombre;
+  if (marca) text += ' ' + marca;
+  text += ' — ' + unidad;
+  if (presentacion) text += ' ' + presentacion;
+
+  document.getElementById('previewText').textContent = text;
+}
+
+function updateMargen() {
+  const venta = parseFloat(document.getElementById('precioVenta').value) || 0;
+  const costo = parseFloat(document.getElementById('costoCompra').value) || 0;
+  const card = document.getElementById('margenCard');
+
+  if (venta > 0 && costo > 0) {
+    const margen = ((venta - costo) / venta * 100);
+    const ganancia = venta - costo;
+    card.classList.remove('hidden');
+    card.className = card.className.replace(/margen-\w+/g, '');
+
+    if (margen >= 10) card.classList.add('margen-positive');
+    else if (margen >= 0) card.classList.add('margen-warning');
+    else card.classList.add('margen-negative');
+
+    document.getElementById('margenPct').textContent = 'Margen: ' + margen.toFixed(1) + '%';
+    document.getElementById('margenAbs').textContent = 'Ganancia: $' + ganancia.toFixed(2);
+  } else {
+    card.classList.add('hidden');
+  }
+}
+</script>
+
+</body>
+</html>

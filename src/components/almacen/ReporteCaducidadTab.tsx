@@ -200,16 +200,13 @@ export const ReporteCaducidadTab = ({ onStatsUpdate }: ReporteCaducidadTabProps)
 
     setGuardandoBaja(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      await supabase.from("inventario_lotes").update({ cantidad_disponible: loteBaja.cantidad_disponible - cant }).eq("id", loteBaja.id);
-      await supabase.from("inventario_movimientos").insert({
-        producto_id: loteBaja.producto_id,
-        cantidad: cant,
-        tipo_movimiento: tipoBaja,
-        referencia: "BAJA-CADUCIDAD",
-        notas: notasBaja.trim(),
-        usuario_id: user?.id || "",
+      const { error: rpcError } = await supabase.rpc("registrar_baja_caducidad", {
+        p_lote_id: loteBaja.id,
+        p_cantidad: cant,
+        p_tipo: tipoBaja,
+        p_notas: notasBaja.trim(),
       });
+      if (rpcError) throw rpcError;
       toast({ title: "Lote dado de baja", description: `${cant} ${loteBaja.producto_unidad} de ${loteBaja.producto_nombre}` });
       setBajaDialogOpen(false);
       cargarDatos();
@@ -224,17 +221,16 @@ export const ReporteCaducidadTab = ({ onStatsUpdate }: ReporteCaducidadTabProps)
   const handleRemoverTodos = async () => {
     setRemoviendoTodos(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       for (const lote of lotesVencidos) {
-        await supabase.from("inventario_lotes").update({ cantidad_disponible: 0 }).eq("id", lote.id);
-        await supabase.from("inventario_movimientos").insert({
-          producto_id: lote.producto_id,
-          cantidad: lote.cantidad_disponible,
-          tipo_movimiento: "merma",
-          referencia: "BAJA-CADUCIDAD",
-          notas: "Baja masiva — caducidad vencida",
-          usuario_id: user?.id || "",
+        const { error: rpcError } = await supabase.rpc("registrar_baja_caducidad", {
+          p_lote_id: lote.id,
+          p_cantidad: lote.cantidad_disponible,
+          p_tipo: "merma",
+          p_notas: "Baja masiva — caducidad vencida",
         });
+        if (rpcError) {
+          toast({ title: `Error en lote`, description: rpcError.message, variant: "destructive" });
+        }
       }
       toast({ title: `${lotesVencidos.length} lotes dados de baja` });
       setRemoverTodosOpen(false);

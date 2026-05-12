@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALMASA·OS — Audit Visual de Divergencias</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--crimson:#c41e3a;--ink-900:#1a1a1f;--ink-700:#3a3a3f;--ink-500:#78787e;--ink-300:#a8a8ae;--ink-100:#eae8e4;--ink-50:#f8f8f8;--warm-50:#faf8f5;--warm-100:#f5f1ea;--admin:#c41e3a;--secretaria:#3a3a3f;--vendedor:#059669;--almacen:#2563eb;--chofer:#d97706;--cliente:#7c3aed}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter Tight',system-ui,sans-serif;color:var(--ink-900);background:var(--warm-50);line-height:1.5}
+.serif{font-family:'Cormorant Garamond',Georgia,serif}
+
+.header{position:fixed;top:0;left:0;right:0;z-index:50;background:white;border-bottom:1px solid var(--ink-100);padding:12px 24px;display:flex;align-items:center;justify-content:space-between}
+.header h1{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--crimson)}
+.header h1 span{color:var(--ink-300);font-weight:400;font-size:15px}
+.toc{position:fixed;top:52px;left:0;width:200px;height:calc(100vh - 52px);background:white;border-right:1px solid var(--ink-100);padding:16px 0;overflow-y:auto;z-index:40;font-size:11px}
+.toc a{display:block;padding:7px 16px;color:var(--ink-500);text-decoration:none;transition:all 0.15s}
+.toc a:hover{color:var(--crimson);background:rgba(196,30,58,0.04)}
+.toc .section{font-weight:600;color:var(--ink-700);padding:12px 16px 4px;font-size:10px;text-transform:uppercase;letter-spacing:0.1em}
+.main{margin-left:200px;margin-top:52px;padding:28px 32px 80px}
+
+h2{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:var(--ink-900);margin:40px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--ink-100)}
+h2 .accent{color:var(--crimson)}
+h3{font-size:14px;font-weight:600;margin:24px 0 8px}
+p{font-size:13px;color:var(--ink-700);margin:0 0 10px}
+.lead{font-size:13px;color:var(--ink-500);margin:0 0 20px}
+
+.cols{display:grid;gap:0;margin:16px 0}
+.cols-2{grid-template-columns:1fr 1fr}
+.cols-3{grid-template-columns:1fr 1fr 1fr}
+.cols-4{grid-template-columns:1fr 1fr 1fr 1fr}
+.col{border-right:1px solid var(--ink-100);padding:16px}
+.col:last-child{border-right:none}
+.col-header{padding:8px 12px;border-radius:8px 8px 0 0;font-size:11px;font-weight:600;color:white;text-align:center;letter-spacing:0.05em}
+.col-body{padding:12px;background:white;border:1px solid var(--ink-100);border-top:none;border-radius:0 0 8px 8px;min-height:200px}
+
+.role-admin{background:var(--admin)}
+.role-secretaria{background:var(--secretaria)}
+.role-vendedor{background:var(--vendedor)}
+.role-almacen{background:var(--almacen)}
+.role-chofer{background:var(--chofer)}
+.role-cliente{background:var(--cliente)}
+
+.mock-header{border-bottom:1px solid var(--ink-100);padding-bottom:8px;margin-bottom:10px}
+.mock-header .title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;line-height:1.2}
+.mock-header .sub{font-size:10px;color:var(--ink-500);margin-top:2px}
+.mock-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;font-size:10px;font-weight:600;border:1px solid var(--ink-100);background:white;color:var(--ink-700);cursor:default}
+.mock-btn.primary{background:var(--crimson);color:white;border-color:var(--crimson)}
+.mock-btn.green{background:#059669;color:white;border-color:#059669}
+.mock-input{width:100%;border:1px solid var(--ink-100);border-radius:6px;padding:5px 8px;font-size:10px;color:var(--ink-500);background:var(--ink-50);margin:3px 0}
+.mock-select{width:100%;border:1px solid var(--ink-100);border-radius:6px;padding:5px 8px;font-size:10px;color:var(--ink-500);background:white;margin:3px 0}
+.mock-field{margin:6px 0}
+.mock-field label{font-size:9px;font-weight:600;color:var(--ink-500);text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:2px}
+.mock-table{width:100%;border-collapse:collapse;font-size:9px;margin:8px 0}
+.mock-table th{text-align:left;padding:4px 3px;font-size:8px;font-weight:600;color:var(--ink-500);text-transform:uppercase;letter-spacing:0.04em;border-bottom:1px solid var(--ink-100);background:var(--ink-50)}
+.mock-table td{padding:3px;border-bottom:1px solid rgba(0,0,0,0.04);font-size:9px}
+.mock-card{background:white;border:1px solid var(--ink-100);border-radius:8px;padding:8px;margin:6px 0}
+.mock-stat{text-align:center;padding:6px;border:1px solid var(--ink-100);border-radius:8px;background:white}
+.mock-stat .num{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;line-height:1}
+.mock-stat .lbl{font-size:8px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-500);margin-top:2px}
+.badge{display:inline-flex;align-items:center;padding:1px 6px;border-radius:9999px;font-size:8px;font-weight:600;border:1px solid}
+.badge-green{background:#e8f5ee;color:#1a7a4c;border-color:#e8f5ee}
+.badge-yellow{background:#fef3c7;color:#92400e;border-color:#fef3c7}
+.badge-red{background:#fde8ec;color:#c41e3a;border-color:#fde8ec}
+.badge-blue{background:#dbeafe;color:#1e40af;border-color:#dbeafe}
+.badge-gray{background:#f3f4f6;color:#6b7280;border-color:#f3f4f6}
+
+.findings{background:var(--warm-50);border:1px solid var(--ink-100);border-radius:8px;padding:14px;margin:16px 0;font-size:11px}
+.findings h4{font-size:12px;font-weight:600;margin:0 0 8px}
+.findings li{margin:4px 0;color:var(--ink-700)}
+.tag-legit{color:#059669;font-weight:600}
+.tag-quest{color:#d97706;font-weight:600}
+.tag-problem{color:#c41e3a;font-weight:600}
+
+.summary-table{width:100%;border-collapse:collapse;font-size:12px;margin:16px 0}
+.summary-table th{padding:8px 10px;text-align:left;font-size:10px;font-weight:600;color:var(--ink-500);text-transform:uppercase;border-bottom:2px solid var(--ink-100);background:var(--ink-50)}
+.summary-table td{padding:7px 10px;border-bottom:1px solid var(--ink-100)}
+.count{font-family:'Cormorant Garamond',serif;font-size:42px;font-weight:700;color:var(--crimson);text-align:center;margin:8px 0}
+.count-label{text-align:center;font-size:11px;color:var(--ink-500);text-transform:uppercase;letter-spacing:0.1em}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1 class="serif">ALMASA<span>·OS</span> — Audit Visual de Divergencias</h1>
+  <div style="font-size:11px;color:var(--ink-500)">24 abril 2026 · 10 funciones · 27 implementaciones</div>
+</div>
+
+<nav class="toc">
+  <div class="section">Resumen</div>
+  <a href="#intro">Introducción</a>
+  <div class="section">Creación</div>
+  <a href="#f1">1. Nuevo Pedido (3)</a>
+  <a href="#f2">2. Nuevo Cliente (2)</a>
+  <a href="#f3">3. Nuevo Producto (2)</a>
+  <div class="section">Listas</div>
+  <a href="#f4">4. Listar Pedidos (3)</a>
+  <a href="#f5">5. Listar Clientes (3)</a>
+  <a href="#f6">6. Lista Precios (3)</a>
+  <a href="#f7">7. Ver Inventario (3)</a>
+  <div class="section">Detalle</div>
+  <a href="#f8">8. Detalle Pedido (2)</a>
+  <a href="#f9">9. Detalle Cliente (2)</a>
+  <div class="section">Workflow</div>
+  <a href="#f10">10. Cobranza (2)</a>
+  <div class="section">Cierre</div>
+  <a href="#diag">Diagnóstico</a>
+</nav>
+
+<div class="main">
+
+<!-- INTRO -->
+<h2 id="intro"><span class="accent">Resumen</span></h2>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:20px 0">
+  <div><div class="count">10</div><div class="count-label">Funciones duplicadas</div></div>
+  <div><div class="count">27</div><div class="count-label">Implementaciones totales</div></div>
+  <div><div class="count">6</div><div class="count-label">Divergencias legítimas</div></div>
+  <div><div class="count">4</div><div class="count-label">Cuestionables</div></div>
+</div>
+<p class="lead">Este documento muestra lado a lado TODAS las funciones de ALMASA-OS que tienen implementación distinta para diferentes roles. El objetivo es ver las diferencias con los ojos — no juzgarlas todavía.</p>
+<p style="font-size:11px;color:var(--ink-500)"><strong>Divergencia legítima</strong> = el rol tiene necesidades genuinamente distintas (ej: vendedor en campo vs admin en oficina). <strong>Divergencia cuestionable</strong> = mismo propósito, distinto look sin razón clara.</p>
+
+<!-- ═══ FUNCIÓN 1: NUEVO PEDIDO ═══ -->
+<h2 id="f1"><span class="accent">1.</span> Nuevo Pedido</h2>
+<p class="lead">3 implementaciones · 3,207 líneas totales · La mayor divergencia del sistema</p>
+
+<div class="cols cols-3">
+  <div class="col">
+    <div class="col-header role-admin">ADMIN — Dialog modal (1,013 lín)</div>
+    <div class="col-body">
+      <div class="mock-header"><div class="title">Nuevo Pedido</div></div>
+      <div class="mock-field"><label>Cliente *</label><div class="mock-select">— Seleccionar cliente —</div></div>
+      <div class="mock-field"><label>Sucursal</label><div class="mock-select">— Seleccionar sucursal —</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div class="mock-field"><label>Vendedor asignado</label><div class="mock-select">Carlos Gómez</div></div>
+        <div class="mock-field"><label>Plazo crédito</label><div style="display:flex;gap:3px"><span class="mock-btn" style="font-size:8px">Contado</span><span class="mock-btn" style="font-size:8px;background:var(--crimson);color:white">15d</span><span class="mock-btn" style="font-size:8px">30d</span></div></div>
+      </div>
+      <div class="mock-field"><label>☐ Requiere factura</label></div>
+      <div class="mock-field"><label>Productos</label><div class="mock-input" placeholder="">🔍 Buscar producto...</div></div>
+      <div class="mock-table"><thead><tr><th>Código</th><th>Producto</th><th>Qty</th><th>Precio</th><th>Subtotal</th><th></th></tr></thead>
+      <tbody><tr><td>P001</td><td>Dog Chow 25kg</td><td>10</td><td>$965</td><td>$9,650</td><td>🗑</td></tr></tbody></div>
+      <div class="mock-field"><label>Cortesías</label><div class="mock-input">🔍 Agregar cortesía...</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div class="mock-field"><label>Notas internas</label><div class="mock-input" style="height:30px"></div></div>
+        <div class="mock-field"><label>Notas entrega</label><div class="mock-input" style="height:30px"></div></div>
+      </div>
+      <div style="text-align:right;margin-top:8px;font-size:10px;color:var(--ink-500)">Subtotal: $8,318 · IVA: $1,332 · Total: <strong>$9,650</strong></div>
+      <div style="text-align:right;margin-top:6px"><span class="mock-btn primary">Crear Pedido</span></div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="col-header role-vendedor">VENDEDOR — Wizard 4 pasos (1,251 lín + 1,600 sub)</div>
+    <div class="col-body">
+      <div class="mock-header"><div class="title">Mis pedidos.</div><div class="sub">Seguimiento de órdenes en curso</div></div>
+      <div style="display:flex;gap:4px;margin:8px 0">
+        <div style="flex:1;text-align:center;padding:4px;background:var(--crimson);color:white;border-radius:6px;font-size:9px;font-weight:600">1 Cliente</div>
+        <div style="flex:1;text-align:center;padding:4px;background:var(--ink-50);border-radius:6px;font-size:9px;color:var(--ink-500)">2 Productos</div>
+        <div style="flex:1;text-align:center;padding:4px;background:var(--ink-50);border-radius:6px;font-size:9px;color:var(--ink-500)">3 Precios</div>
+        <div style="flex:1;text-align:center;padding:4px;background:var(--ink-50);border-radius:6px;font-size:9px;color:var(--ink-500)">4 Confirmar</div>
+      </div>
+      <p style="font-size:10px;font-weight:600;margin:8px 0 4px">Selecciona un cliente:</p>
+      <div class="mock-card" style="border-left:3px solid var(--vendedor)">
+        <div style="font-size:11px;font-weight:600">El Buen Comer</div>
+        <div style="font-size:9px;color:var(--ink-500)">Últ. pedido: hace 3 días · $12,400</div>
+      </div>
+      <div class="mock-card">
+        <div style="font-size:11px;font-weight:600">Abarrotes López</div>
+        <div style="font-size:9px;color:var(--ink-500)">Últ. pedido: hace 8 días · $4,200</div>
+      </div>
+      <p style="font-size:9px;color:var(--ink-300);margin-top:8px">+ Borradores guardados · Offline disponible</p>
+      <div style="position:relative;margin-top:10px;padding:8px;background:white;border-top:1px solid var(--ink-100);text-align:right">
+        <span class="mock-btn primary">Continuar con El Buen Comer →</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="col-header role-cliente">CLIENTE PORTAL — Page secciones (943 lín)</div>
+    <div class="col-body">
+      <div class="mock-header"><div class="title" style="font-size:16px">Hacer un pedido</div></div>
+      <div class="mock-field"><label>Sucursal de entrega *</label><div class="mock-select">Principal — Av. Revolución 123</div></div>
+      <div class="mock-field"><label>Fecha de entrega *</label><div class="mock-input">📅 28/04/2026</div></div>
+      <p style="font-size:10px;font-weight:600;margin:8px 0 4px">⭐ Mis productos frecuentes</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+        <div class="mock-card" style="font-size:9px;text-align:center;padding:6px"><div>Dog Chow</div><div style="font-weight:600">$965</div><div class="mock-btn" style="font-size:8px;margin-top:3px">+ Agregar</div></div>
+        <div class="mock-card" style="font-size:9px;text-align:center;padding:6px"><div>Aceite 1L</div><div style="font-weight:600">$45</div><div class="mock-btn" style="font-size:8px;margin-top:3px">+ Agregar</div></div>
+      </div>
+      <p style="font-size:9px;color:var(--ink-300);margin-top:6px">Precios fijos (no editables) · Validación de crédito · status=por_autorizar</p>
+      <div style="text-align:right;margin-top:8px"><span class="mock-btn" style="background:var(--cliente);color:white;border-color:var(--cliente)">Enviar pedido</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="findings">
+  <h4>🔍 Divergencias detectadas</h4>
+  <ul>
+    <li><span class="tag-legit">🟢 Legítima:</span> Admin selecciona vendedor; vendedor es auto (auth.uid); cliente es auto</li>
+    <li><span class="tag-legit">🟢 Legítima:</span> Vendedor tiene wizard mobile-first con offline; admin usa dialog desktop</li>
+    <li><span class="tag-legit">🟢 Legítima:</span> Cliente tiene fecha_entrega obligatoria; admin/vendedor no la capturan</li>
+    <li><span class="tag-quest">🟡 Cuestionable:</span> Admin tiene cortesías y notas internas; vendedor no</li>
+    <li><span class="tag-quest">🟡 Cuestionable:</span> Status post-submit: admin/vendedor="pendiente", cliente="por_autorizar"</li>
+  </ul>
+</div>
+
+<!-- ═══ FUNCIÓN 2: NUEVO CLIENTE ═══ -->
+<h2 id="f2"><span class="accent">2.</span> Nuevo Cliente</h2>
+<p class="lead">2 implementaciones · Propósitos distintos (fiscal vs operativo)</p>
+
+<div class="cols cols-2">
+  <div class="col">
+    <div class="col-header role-admin">ADMIN — Page completa (639 lín)</div>
+    <div class="col-body">
+      <div class="mock-header"><div class="title">Nuevo cliente</div><div class="sub">Datos fiscales para facturación</div></div>
+      <div class="mock-field"><label>📎 Subir CSF (auto-parse)</label><div class="mock-btn" style="width:100%;justify-content:center">Seleccionar archivo</div></div>
+      <div class="mock-field"><label>Razón social *</label><div class="mock-input">PAN ROLL S.A. DE C.V.</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div class="mock-field"><label>RFC *</label><div class="mock-input">PRO921020PY4</div></div>
+        <div class="mock-field"><label>Régimen fiscal</label><div class="mock-select">601 - General de Ley</div></div>
+      </div>
+      <div class="mock-field"><label>Dirección fiscal *</label><div class="mock-input" style="height:30px">Av. Insurgentes Sur 1234...</div></div>
+      <div class="mock-field"><label>Uso CFDI</label><div class="mock-select">G03 - Gastos en general</div></div>
+      <hr style="border:none;border-top:1px solid var(--ink-100);margin:8px 0">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div class="mock-field"><label>Vendedor</label><div class="mock-select">Carlos Gómez</div></div>
+        <div class="mock-field"><label>Plazo crédito</label><div style="display:flex;gap:2px"><span class="mock-btn" style="font-size:7px">Contado</span><span class="mock-btn" style="font-size:7px">15d</span><span class="mock-btn" style="font-size:7px">30d</span><span class="mock-btn" style="font-size:7px">60d</span></div></div>
+      </div>
+      <div class="mock-field"><label>Límite de crédito</label><div class="mock-input">$50,000.00</div></div>
+      <p style="font-size:9px;font-weight:600;margin:6px 0 3px">Puntos de entrega (N sucursales)</p>
+      <div class="mock-card" style="font-size:9px">Sucursal 1: Principal — Av. Revolución 123</div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="col-header role-vendedor">VENDEDOR — Sheet lateral (1,012 lín)</div>
+    <div class="col-body">
+      <div class="mock-header"><div class="title" style="font-size:16px">Nuevo cliente</div><div class="sub">Datos operativos para entrega</div></div>
+      <div class="mock-field"><label>Nombre del negocio *</label><div class="mock-input">El Buen Comer</div></div>
+      <p style="font-size:9px;font-weight:600;margin:6px 0 3px">📞 Teléfonos</p>
+      <div class="mock-input" style="font-size:9px">55 1234 5678 (Principal)</div>
+      <p style="font-size:9px;font-weight:600;margin:6px 0 3px">📧 Correos</p>
+      <div class="mock-input" style="font-size:9px">contacto@buencomer.mx</div>
+      <hr style="border:none;border-top:1px solid var(--ink-100);margin:8px 0">
+      <p style="font-size:9px;font-weight:600;margin:0 0 3px">📍 Dirección del negocio</p>
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:4px">
+        <div class="mock-field"><label>Calle *</label><div class="mock-input" style="font-size:8px">Av. Revolución</div></div>
+        <div class="mock-field"><label>No. Ext *</label><div class="mock-input" style="font-size:8px">123</div></div>
+        <div class="mock-field"><label>CP *</label><div class="mock-input" style="font-size:8px">06600</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+        <div class="mock-field"><label>Alcaldía *</label><div class="mock-input" style="font-size:8px;background:#e8f5ee">Cuauhtémoc ✓</div></div>
+        <div class="mock-field"><label>Zona</label><div class="mock-select" style="font-size:8px;background:#e8f5ee">Centro ✓</div></div>
+      </div>
+      <p style="font-size:9px;font-weight:600;margin:6px 0 3px">📍 Ubicación de entrega</p>
+      <div class="mock-field"><label>☑ Entrega en misma dirección</label></div>
+      <p style="font-size:9px;font-weight:600;margin:6px 0 3px">⏰ Restricciones</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+        <div class="mock-field"><label>Horario desde</label><div class="mock-input" style="font-size:8px">08:00</div></div>
+        <div class="mock-field"><label>Horario hasta</label><div class="mock-input" style="font-size:8px">18:00</div></div>
+      </div>
+      <p style="font-size:8px;color:var(--ink-300);margin-top:6px">+ GPS Google Maps · Auto-zona por CP · CSF opcional · Contactos múltiples</p>
+    </div>
+  </div>
+</div>
+
+<div class="findings">
+  <h4>🔍 Divergencias detectadas</h4>
+  <ul>
+    <li><span class="tag-legit">🟢 Legítima:</span> Admin captura datos FISCALES (RFC, régimen, CFDI) para facturar. Vendedor captura datos OPERATIVOS (dirección desglosada, GPS, horarios) para entregar.</li>
+    <li><span class="tag-legit">🟢 Legítima:</span> Admin selecciona vendedor; vendedor se auto-asigna.</li>
+    <li><span class="tag-quest">🟡 Cuestionable:</span> Admin guarda dirección como texto libre; vendedor la desglosa en componentes → data inconsistente en BD.</li>
+  </ul>
+</div>
+
+<!-- ═══ FUNCIÓN 3: NUEVO PRODUCTO ═══ -->
+<h2 id="f3"><span class="accent">3.</span> Nuevo/Editar Producto</h2>
+<p class="lead">2 implementaciones · Dialogs similares con diferencias de navegación</p>
+
+<div class="cols cols-2">
+  <div class="col">
+    <div class="col-header role-admin">ADMIN — Dialog en Productos.tsx</div>
+    <div class="col-body">
+      <div class="mock-header"><div class="title" style="font-size:14px">Editar Producto</div></div>
+      <p style="font-size:9px;color:var(--ink-500)">Navegación: ← Anterior | Siguiente →<br>Filtrado por lista activa (código gap warning, nombre similar)</p>
+      <div class="mock-field"><label>Campos: código, nombre, marca, categoría, especificaciones, contenido, peso, unidad SAT, precio compra/venta, stock mínimo, caducidad, IVA/IEPS, proveedor</label></div>
+      <div style="display:flex;gap:4px;margin-top:6px"><span class="mock-btn primary">Guardar</span><span class="mock-btn">Guardar y Siguiente</span><span class="mock-btn">Cancelar</span></div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="col-header role-secretaria">SECRETARIA — Dialog en SecretariaProductosTab</div>
+    <div class="col-body">
+      <div class="mock-header"><div class="title" style="font-size:14px">Editar producto.</div><div class="sub">Completa la información del catálogo</div></div>
+      <p style="font-size:9px;color:var(--ink-500)">Navegación: "3 de 274" con Anterior/Siguiente paginado<br>✅ Success pulse animation al guardar</p>
+      <div class="mock-field"><label>Campos: código, nombre, marca, categoría, especificaciones, contenido, peso, unidad SAT, precio venta, stock mínimo, caducidad, fumigación, promoción</label></div>
+      <div style="display:flex;gap:4px;margin-top:6px"><span class="mock-btn primary">Guardar</span><span class="mock-btn">Cancelar</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="findings">
+  <h4>🔍 Divergencias detectadas</h4>
+  <ul>
+    <li><span class="tag-legit">🟢 Legítima:</span> Admin tiene "Guardar y Siguiente" para edición masiva rápida. Secretaria tiene paginación secuencial.</li>
+    <li><span class="tag-quest">🟡 Cuestionable:</span> Admin puede editar precio de compra; secretaria solo precio de venta. ¿Es intencional?</li>
+  </ul>
+</div>
+
+<!-- ═══ FUNCIÓN 4: LISTAR PEDIDOS ═══ -->
+<h2 id="f4"><span class="accent">4.</span> Listar Pedidos</h2>
+<p class="lead">3 implementaciones · Tabla vs Cards · Columnas y acciones completamente distintas</p>
+
+<div class="cols cols-3">
+  <div class="col">
+    <div class="col-header role-admin">ADMIN — 5 tabs, tabla 13 cols (1,133 lín)</div>
+    <div class="col-body">
+      <div class="mock-header"><div class="title">Tus <span style="color:var(--crimson)">pedidos.</span></div><div class="sub">Gestión de pedidos y cotizaciones</div><div style="float:right"><span class="mock-btn primary">+ Nuevo Pedido</span></div></div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin:6px 0">
+        <div class="mock-stat"><div class="num" style="font-size:16px">3</div><div class="lbl" style="font-size:7px">Alertas</div></div>
+        <div class="mock-stat"><div class="num" style="font-size:16px">12</div><div class="lbl" style="font-size:7px">Pendientes</div></div>
+        <div class="mock-stat"><div class="num" style="font-size:16px">4</div><div class="lbl" style="font-size:7px">En Ruta</div></div>
+        <div class="mock-stat"><div class="num" style="font-size:16px">6.2t</div><div class="lbl" style="font-size:7px">Peso</div></div>
+        <div class="mock-stat"><div class="num" style="font-size:16px">$84k</div><div class="lbl" style="font-size:7px">Monto</div></div>
+      </div>
+      <div style="display:flex;gap:8px;font-size:9px;border-bottom:1px solid var(--ink-100);padding-bottom:4px;margin-bottom:6px"><span style="color:var(--crimson);border-bottom:2px solid var(--crimson);padding-bottom:3px;font-weight:600">Pedidos</span><span style="color:var(--ink-500)">Alertas</span><span style="color:var(--ink-500)">Cotizaciones</span><span style="color:var(--ink-500)">Análisis</span><span style="color:var(--ink-500)">Calendario</span></div>
+      <div class="mock-table"><thead><tr><th>☐</th><th>Folio</th><th>Cliente</th><th>Zona</th><th>Vendedor</th><th>Total</th><th>Estado</th><th>⋯</th></tr></thead>
+      <tbody><tr><td>☐</td><td style="font-family:monospace">PED-001</td><td>El Buen Comer</td><td>Centro</td><td>Carlos</td><td style="font-family:monospace;text-align:right">$12,450</td><td><span class="badge badge-blue">Pendiente</span></td><td>👁📄🚛</td></tr></tbody></div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="col-header role-secretaria">SECRETARIA — Sin tabs, tabla 12 cols (232 lín)</div>
+    <div class="col-body">
+      <div class="mock-header"><div class="title">Pedidos, <span style="color:var(--crimson)">hoy.</span></div><div class="sub">Autorización, carga y entrega</div></div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin:6px 0">
+        <div class="mock-stat" style="border-color:var(--crimson)"><div class="num" style="font-size:18px">2</div><div class="lbl" style="font-size:7px">Por autorizar</div></div>
+        <div class="mock-stat"><div class="num" style="font-size:18px">12</div><div class="lbl" style="font-size:7px">Pendientes</div></div>
+        <div class="mock-stat"><div class="num" style="font-size:18px">4</div><div class="lbl" style="font-size:7px">En ruta</div></div>
+        <div class="mock-stat"><div class="num" style="font-size:18px">18</div><div class="lbl" style="font-size:7px">Entregados</div></div>
+        <div class="mock-stat"><div class="num" style="font-size:18px">1</div><div class="lbl" style="font-size:7px">Cancelados</div></div>
+      </div>
+      <div class="mock-table"><thead><tr><th>Folio</th><th>Cliente</th><th>Dirección</th><th>Vendedor</th><th>Total</th><th>Estado</th><th>⋯</th></tr></thead>
+      <tbody><tr><td style="font-weight:700">PED-001</td><td>El Buen Comer</td><td style="color:var(--ink-500)">Av. Rev 123</td><td>Carlos</td><td style="font-weight:700;text-align:right">$12,450</td><td><span class="badge badge-blue">📦 Pendiente</span></td><td>📄✏️</td></tr></tbody></div>
+      <p style="font-size:8px;color:var(--ink-300);margin-top:4px">Sin botón "Nuevo Pedido" · Sin tabs (Cotizaciones, Análisis, Calendario) · Editar solo pendientes (precios disabled)</p>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="col-header role-vendedor">VENDEDOR — 6 sub-tabs, Cards (735 lín)</div>
+    <div class="col-body">
+      <div class="mock-header"><div class="title">Mis pedidos.</div><div class="sub">Seguimiento de órdenes en curso</div></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin:6px 0">
+        <div class="mock-stat"><div class="num" style="font-size:16px">5</div><div class="lbl" style="font-size:7px">Por Entregar</div></div>
+        <div class="mock-stat"><div class="num" style="font-size:16px">2</div><div class="lbl" style="font-size:7px">En Ruta</div></div>
+        <div class="mock-stat"><div class="num" style="font-size:16px">3</div><div class="lbl" style="font-size:7px">Por Cobrar</div></div>
+        <div class="mock-stat"><div class="num" style="font-size:16px;color:var(--crimson)">$18k</div><div class="lbl" style="font-size:7px">Monto x Cobrar</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:2px;background:var(--ink-50);padding:3px;border-radius:6px;margin:6px 0">
+        <div style="text-align:center;font-size:7px;padding:3px;color:var(--ink-500)">Por Aut.</div>
+        <div style="text-align:center;font-size:7px;padding:3px;background:white;border-radius:4px;font-weight:600">Pedidos</div>
+        <div style="text-align:center;font-size:7px;padding:3px;color:var(--ink-500)">En Carga</div>
+        <div style="text-align:center;font-size:7px;padding:3px;color:var(--ink-500)">En Ruta</div>
+        <div style="text-align:center;font-size:7px;padding:3px;color:var(--ink-500)">Entregados</div>
+        <div style="text-align:center;font-size:7px;padding:3px;color:var(--ink-500)">Cobrar</div>
+      </div>
+      <div class="mock-card">
+        <div style="display:flex;justify-content:space-between"><div><span style="font-weight:700;font-size:11px">PED-001</span> <span class="badge badge-blue">Pendiente</span></div><div style="font-weight:700;font-size:14px">$12,450</div></div>
+        <div style="font-size:9px;color:var(--ink-500)">El Buen Comer · 📅 23 abr · ⏱ 2 días · ⚖ 420 kg</div>
+        <div style="display:flex;gap:4px;margin-top:6px;border-top:1px solid var(--ink-100);padding-top:4px"><span class="mock-btn" style="flex:1;justify-content:center;font-size:8px">✏️ Editar</span><span class="mock-btn" style="flex:1;justify-content:center;font-size:8px">📄 PDF</span></div>
+      </div>
+      <p style="font-size:8px;color:var(--ink-300);margin-top:4px">Muestra comisión · Alerta descuento inline · Vencimiento crédito · 6 sub-tabs workflow</p>
+    </div>
+  </div>
+</div>
+
+<div class="findings">
+  <h4>🔍 Divergencias detectadas</h4>
+  <ul>
+    <li><span class="tag-legit">🟢 Legítima:</span> Admin = tabla desktop (13 cols, checkbox, multi-select). Vendedor = cards mobile-first.</li>
+    <li><span class="tag-legit">🟢 Legítima:</span> Vendedor tiene sub-tabs por workflow (En Carga, Por Cobrar). Admin organiza por tipo (Cotizaciones, Análisis).</li>
+    <li><span class="tag-legit">🟢 Legítima:</span> Vendedor ve comisión (+1%) y vencimiento crédito. Admin no (no lo necesita).</li>
+    <li><span class="tag-quest">🟡 Cuestionable:</span> Secretaria es admin recortado (misma tabla, sin tabs extra, sin "Nuevo Pedido"). ¿Debería tener su propia vista o basta con roles en la misma?</li>
+  </ul>
+</div>
+
+<!-- ═══ FUNCIONES 5-10 (más compactas) ═══ -->
+
+<h2 id="f5"><span class="accent">5.</span> Listar Clientes</h2>
+<p class="lead">3 implementaciones · Admin: tabla jerárquica + mapa · Secretaria: tabla simple · Vendedor: cards por región</p>
+<div class="findings">
+  <ul>
+    <li><span class="tag-legit">🟢</span> Admin tiene vista mapa + detección de grupos + import Aspel. Vendedor tiene cards por región geográfica con GPS status.</li>
+    <li><span class="tag-legit">🟢</span> Vendedor filtra por región (Valle México, Toluca, Morelos). Admin filtra por vendedor/zona/crédito.</li>
+    <li><span class="tag-quest">🟡</span> Secretaria es tabla simple con filtro vendedor — podría reusar Clientes.tsx con permisos.</li>
+  </ul>
+</div>
+
+<h2 id="f6"><span class="accent">6.</span> Lista de Precios</h2>
+<p class="lead">3 implementaciones · 1,534 líneas totales · Hooks shared ya extraídos (M04.5B.2)</p>
+<div class="findings">
+  <ul>
+    <li><span class="tag-legit">🟢</span> Admin: 11 cols + simulador + bulk update + Excel. Vendedor: read-only + comparar último precio cliente. Secretaria: edición + calculadora margen.</li>
+    <li><span class="tag-legit">🟢</span> 3 hooks shared (useListaPrecios, usePrecioEditor, usePrecioHistorial) centralizan lógica. UI shells son genuinamente distintos.</li>
+    <li><span class="tag-legit">🟢</span> Ya se extrajeron PromocionBadge + ImpuestoBadges + ListaPreciosPdfButton como shared. Conclusión: divergencia es legítima (docs/lecciones/lista-precios-consolidacion.md).</li>
+  </ul>
+</div>
+
+<h2 id="f7"><span class="accent">7.</span> Ver Inventario</h2>
+<p class="lead">3 implementaciones · Admin: 4 tabs CRUD · Secretaria: 3 tabs read-only · Almacén: ajuste stock</p>
+<div class="findings">
+  <ul>
+    <li><span class="tag-legit">🟢</span> Admin tiene CRUD completo (nuevo movimiento, editar lote). Almacén tiene "Ajustar stock" con dialog (canAdjust via usePermissions).</li>
+    <li><span class="tag-legit">🟢</span> Secretaria es read-only monitoring con alerta stock bajo.</li>
+  </ul>
+</div>
+
+<h2 id="f8"><span class="accent">8.</span> Detalle de Pedido</h2>
+<p class="lead">2 implementaciones · Admin: Dialog con edición precios · Vendedor: Dialog read-only + descuentos</p>
+<div class="findings">
+  <ul>
+    <li><span class="tag-legit">🟢</span> Admin puede editar precio unitario inline (canEditPrice via usePermissions). Vendedor solo ve.</li>
+    <li><span class="tag-legit">🟢</span> Vendedor ve alerta de descuento solicitado con grid lista/máx/solicitado/diferencia. Admin no lo necesita.</li>
+  </ul>
+</div>
+
+<h2 id="f9"><span class="accent">9.</span> Ver/Editar Cliente</h2>
+<p class="lead">2 implementaciones · Admin: Page multi-tab · Vendedor: Sheet lateral</p>
+<div class="findings">
+  <ul>
+    <li><span class="tag-legit">🟢</span> Admin tiene page completa con 8+ tabs (pedidos, facturas, pagos, contactos, programación, cortesías, excepciones, usuarios).</li>
+    <li><span class="tag-legit">🟢</span> Vendedor tiene sheet compacto con tabs básicos (info, pedidos, facturas, pagos, historial precios).</li>
+  </ul>
+</div>
+
+<h2 id="f10"><span class="accent">10.</span> Cobranza</h2>
+<p class="lead">2 implementaciones · Vendedor REGISTRA cobros · Secretaria VALIDA pagos</p>
+<div class="findings">
+  <ul>
+    <li><span class="tag-legit">🟢</span> Son funciones COMPLEMENTARIAS, no duplicadas. Vendedor captura; secretaria aprueba. Workflow correcto.</li>
+  </ul>
+</div>
+
+<!-- ═══ DIAGNÓSTICO ═══ -->
+<h2 id="diag"><span class="accent">Diagnóstico</span> General</h2>
+
+<table class="summary-table">
+<thead><tr><th>Función</th><th>Implementaciones</th><th>Líneas totales</th><th>Veredicto</th></tr></thead>
+<tbody>
+<tr><td>Nuevo Pedido</td><td>3</td><td>3,207</td><td><span class="tag-legit">🟢</span> Legítima (3 UIs genuinamente distintas) + <span class="tag-quest">🟡</span> 2 cuestionables</td></tr>
+<tr><td>Nuevo Cliente</td><td>2</td><td>1,651</td><td><span class="tag-legit">🟢</span> Legítima (fiscal vs operativo) + <span class="tag-quest">🟡</span> 1 data inconsistente</td></tr>
+<tr><td>Nuevo Producto</td><td>2</td><td>~1,850</td><td><span class="tag-legit">🟢</span> + <span class="tag-quest">🟡</span> 1 cuestionable (precio compra)</td></tr>
+<tr><td>Listar Pedidos</td><td>3</td><td>2,100</td><td><span class="tag-legit">🟢</span> 3 legítimas + <span class="tag-quest">🟡</span> 1 (secretaria ≈ admin recortado)</td></tr>
+<tr><td>Listar Clientes</td><td>3</td><td>~1,500</td><td><span class="tag-legit">🟢</span> + <span class="tag-quest">🟡</span> 1 (secretaria podría reusar admin)</td></tr>
+<tr><td>Lista Precios</td><td>3</td><td>1,534</td><td><span class="tag-legit">🟢</span> Todas legítimas (documentado en lecciones/)</td></tr>
+<tr><td>Ver Inventario</td><td>3</td><td>~2,000</td><td><span class="tag-legit">🟢</span> Todas legítimas (CRUD vs read-only vs adjust)</td></tr>
+<tr><td>Detalle Pedido</td><td>2</td><td>~880</td><td><span class="tag-legit">🟢</span> Legítima</td></tr>
+<tr><td>Detalle Cliente</td><td>2</td><td>~1,200</td><td><span class="tag-legit">🟢</span> Legítima (page vs sheet)</td></tr>
+<tr><td>Cobranza</td><td>2</td><td>~700</td><td><span class="tag-legit">🟢</span> Complementarias, no duplicadas</td></tr>
+</tbody>
+</table>
+
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin:24px 0">
+  <div class="mock-stat" style="padding:16px"><div class="num" style="font-size:36px;color:#059669">24</div><div class="count-label">Divergencias legítimas</div></div>
+  <div class="mock-stat" style="padding:16px"><div class="num" style="font-size:36px;color:#d97706">6</div><div class="count-label">Cuestionables</div></div>
+  <div class="mock-stat" style="padding:16px"><div class="num" style="font-size:36px;color:#c41e3a">0</div><div class="count-label">Problemáticas</div></div>
+</div>
+
+<div class="findings" style="background:white;border:2px solid var(--crimson)">
+  <h4 style="color:var(--crimson)">Conclusión</h4>
+  <p style="font-size:12px">La mayoría de las divergencias son <strong>legítimas</strong> — cada rol tiene necesidades genuinamente distintas. Las 6 cuestionables son áreas donde podría haber consolidación parcial (como se hizo con Lista de Precios). Cero divergencias son problemáticas (bugs o inconsistencias graves).</p>
+  <p style="font-size:12px;margin-top:8px"><strong>Top 3 oportunidades de consolidación (sin urgencia):</strong></p>
+  <ol style="font-size:11px;padding-left:16px">
+    <li>SecretariaPedidosTab → evaluar si puede reusar Pedidos.tsx con roles (pero secretaria=desktop only, admin tiene cotizaciones/analytics que secretaria no usa)</li>
+    <li>SecretariaClientesTab → evaluar si puede reusar Clientes.tsx con filtro vendedor</li>
+    <li>Nuevo Cliente: unificar cómo se guarda la dirección (texto libre vs desglosada) sin fusionar los formularios</li>
+  </ol>
+</div>
+
+<div style="margin-top:32px;padding-top:16px;border-top:1px solid var(--ink-100);text-align:center">
+  <p style="font-size:10px;color:var(--ink-300)">ALMASA·OS · Audit Visual de Divergencias · 24 abril 2026<br>Abarrotes La Manita, S.A. de C.V. · Desde 1904</p>
+</div>
+
+</div>
+</body>
+</html>

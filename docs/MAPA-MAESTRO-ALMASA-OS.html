@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALMASA·OS — Mapa Maestro</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--crimson:#c41e3a;--ink-900:#1a1a1f;--ink-700:#3a3a3f;--ink-500:#78787e;--ink-300:#a8a8ae;--ink-100:#eae8e4;--ink-50:#f8f8f8;--warm-50:#faf8f5;--warm-100:#f5f1ea}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter Tight',system-ui,sans-serif;color:var(--ink-900);background:var(--warm-50);line-height:1.6}
+.serif{font-family:'Cormorant Garamond',Georgia,serif}
+a{color:var(--crimson);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* Layout */
+.header{position:fixed;top:0;left:0;right:0;z-index:50;background:white;border-bottom:1px solid var(--ink-100);padding:12px 24px;display:flex;align-items:center;justify-content:space-between}
+.header h1{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--crimson)}
+.header h1 span{color:var(--ink-300);font-weight:400;font-size:16px}
+.header .date{font-size:11px;color:var(--ink-500);letter-spacing:0.1em;text-transform:uppercase}
+.toc{position:fixed;top:52px;left:0;width:220px;height:calc(100vh - 52px);background:white;border-right:1px solid var(--ink-100);padding:16px 0;overflow-y:auto;z-index:40}
+.toc a{display:block;padding:8px 20px;font-size:12px;font-weight:500;color:var(--ink-500);transition:all 0.15s}
+.toc a:hover,.toc a.active{color:var(--crimson);background:rgba(196,30,58,0.04);text-decoration:none;border-right:2px solid var(--crimson)}
+.toc .num{color:var(--ink-300);margin-right:6px;font-size:10px}
+.main{margin-left:220px;margin-top:52px;padding:32px 40px 80px;max-width:1200px}
+
+/* Typography */
+h2{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:600;color:var(--ink-900);margin:48px 0 16px;padding-bottom:8px;border-bottom:1px solid var(--ink-100)}
+h2 .accent{color:var(--crimson)}
+h3{font-size:16px;font-weight:600;color:var(--ink-700);margin:28px 0 12px}
+h4{font-size:13px;font-weight:600;color:var(--ink-500);margin:20px 0 8px;text-transform:uppercase;letter-spacing:0.08em}
+p{font-size:14px;color:var(--ink-700);margin:0 0 12px}
+.lead{font-size:14px;color:var(--ink-500);margin:0 0 24px}
+
+/* Components */
+.box{background:white;border:1px solid var(--ink-100);border-radius:12px;padding:20px;margin:16px 0}
+.box-crimson{border-left:3px solid var(--crimson)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px}
+table{width:100%;border-collapse:collapse;font-size:12px;margin:12px 0}
+th{text-align:left;padding:8px 10px;font-size:10px;font-weight:600;color:var(--ink-500);text-transform:uppercase;letter-spacing:0.05em;border-bottom:2px solid var(--ink-100);background:var(--ink-50)}
+td{padding:7px 10px;border-bottom:1px solid var(--ink-100);vertical-align:top}
+tr:hover{background:var(--warm-50)}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:9999px;font-size:10px;font-weight:600;border:1px solid}
+.badge-green{background:#e8f5ee;color:#1a7a4c;border-color:#e8f5ee}
+.badge-yellow{background:#fef3c7;color:#92400e;border-color:#fef3c7}
+.badge-red{background:#fde8ec;color:#c41e3a;border-color:#fde8ec}
+.badge-blue{background:#dbeafe;color:#1e40af;border-color:#dbeafe}
+.badge-gray{background:#f3f4f6;color:#6b7280;border-color:#f3f4f6}
+.mono{font-family:'JetBrains Mono',Consolas,monospace;font-size:11px}
+.tag{display:inline-block;background:var(--ink-50);border:1px solid var(--ink-100);border-radius:4px;padding:1px 6px;font-size:10px;color:var(--ink-700);margin:2px}
+
+/* Flow diagram */
+.flow{display:flex;flex-direction:column;align-items:center;gap:0;margin:20px 0}
+.flow-step{background:white;border:1px solid var(--ink-100);border-radius:10px;padding:14px 20px;min-width:340px;max-width:500px;position:relative}
+.flow-step.start{background:var(--crimson);color:white;border-color:var(--crimson);text-align:center;font-weight:600;font-size:13px;min-width:200px;border-radius:20px;padding:10px 20px}
+.flow-step.end{background:var(--ink-900);color:white;border-color:var(--ink-900);text-align:center;font-weight:600;font-size:13px;min-width:200px;border-radius:20px;padding:10px 20px}
+.flow-step .title{font-weight:600;font-size:13px;margin-bottom:4px}
+.flow-step .detail{font-size:11px;color:var(--ink-500)}
+.flow-step .tables{font-size:10px;color:var(--crimson);margin-top:4px}
+.flow-arrow{width:2px;height:24px;background:var(--crimson);position:relative}
+.flow-arrow::after{content:'▼';position:absolute;bottom:-8px;left:-4px;color:var(--crimson);font-size:10px}
+
+/* Status indicators */
+.status-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px}
+.status-green{background:#22c55e}
+.status-yellow{background:#f59e0b}
+.status-red{background:#ef4444}
+.status-gray{background:#9ca3af}
+
+/* Architecture diagram */
+.arch-box{border:2px solid var(--ink-100);border-radius:12px;padding:16px;text-align:center;background:white}
+.arch-box.primary{border-color:var(--crimson);background:rgba(196,30,58,0.03)}
+.arch-box .label{font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-500);font-weight:600}
+.arch-box .content{font-size:13px;font-weight:500;margin-top:4px}
+.arch-connector{text-align:center;padding:8px;color:var(--crimson);font-size:12px;font-weight:600}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <h1 class="serif">ALMASA<span>·OS</span> — Mapa Maestro</h1>
+  <div class="date">23 abril 2026 · erp.almasa.com.mx</div>
+</div>
+
+<!-- TOC -->
+<nav class="toc">
+  <a href="#s1"><span class="num">01</span> Arquitectura</a>
+  <a href="#s2"><span class="num">02</span> 10 Procesos</a>
+  <a href="#s3"><span class="num">03</span> 8 Roles</a>
+  <a href="#s4"><span class="num">04</span> Base de Datos</a>
+  <a href="#s5"><span class="num">05</span> RPCs y Triggers</a>
+  <a href="#s6"><span class="num">06</span> Integraciones</a>
+  <a href="#s7"><span class="num">07</span> Ciclo del Pedido</a>
+  <a href="#s8"><span class="num">08</span> Completitud</a>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+
+<!-- ═══ SECCIÓN 1 ═══ -->
+<h2 id="s1"><span class="accent">01</span> Arquitectura General</h2>
+<p class="lead">Stack completo: React frontend → Supabase backend → 6 integraciones externas.</p>
+
+<div class="grid2">
+  <div class="arch-box primary">
+    <div class="label">Frontend</div>
+    <div class="content">React 18 + TypeScript 5.8 + Vite 5.4</div>
+    <div style="font-size:11px;color:var(--ink-500);margin-top:8px">
+      shadcn/ui · Tailwind CSS · Cormorant Garamond + Inter Tight<br>
+      TanStack Query · React Hook Form + Zod · Recharts<br>
+      Capacitor 7.4 (iOS/Android) · 446 componentes · 42 rutas
+    </div>
+  </div>
+  <div class="arch-box primary">
+    <div class="label">Backend — Supabase</div>
+    <div class="content">PostgreSQL + Auth + Storage + Edge Functions</div>
+    <div style="font-size:11px;color:var(--ink-500);margin-top:8px">
+      Proyecto: vrcyjmfpteoccqdmdmqn<br>
+      137 tablas · 74 RPCs · 81 triggers · 53 Edge Functions<br>
+      RLS role-based · SECURITY DEFINER con guards
+    </div>
+  </div>
+</div>
+
+<h4>Integraciones externas</h4>
+<div class="grid3">
+  <div class="box" style="border:2px solid #3b82f6;background:rgba(59,130,246,0.03)"><strong>Aspel</strong> <span class="badge badge-blue">PLANEADO</span><br><span style="font-size:11px;color:var(--ink-500)">Facturación CFDI (sistema principal)<br>Integración ALMASA-OS ↔ Aspel pendiente de definir</span></div>
+  <div class="box"><strong>ZKTeco</strong><br><span style="font-size:11px;color:var(--ink-500)">Biométricos 192.168.1.126/127<br>Python script sync 60s → asistencia</span></div>
+  <div class="box"><strong>Google Maps</strong><br><span style="font-size:11px;color:var(--ink-500)">Geocoding + Places + Directions<br>Alta vendedor cliente, rutas chofer</span></div>
+  <div class="box"><strong>Gmail API</strong><br><span style="font-size:11px;color:var(--ink-500)">Correos corporativos OAuth2<br>/correos con multi-cuenta</span></div>
+  <div class="box"><strong>FCM / Push</strong><br><span style="font-size:11px;color:var(--ink-500)">Push notifications iOS/Android<br>Capacitor + Firebase Cloud Messaging</span></div>
+  <div class="box"><strong>Supabase Storage</strong><br><span style="font-size:11px;color:var(--ink-500)">Archivos: expediente, CSF, evidencias<br>Buckets: empleados-documentos, clientes-csf</span></div>
+  <div class="box" style="opacity:0.5;border-style:dashed"><strong><s>Facturama</s></strong> <span class="badge badge-gray">LEGACY</span><br><span style="font-size:11px;color:var(--ink-300)">CFDI 4.0 timbrado + cancelación<br>Código activo pero pendiente de reemplazar por Aspel</span></div>
+</div>
+
+<!-- ═══ SECCIÓN 2 ═══ -->
+<h2 id="s2"><span class="accent">02</span> Los 10 Procesos Operativos</h2>
+<p class="lead">Flujos end-to-end desde el trigger hasta la conclusión. Cada proceso toca múltiples tablas y roles.</p>
+
+<h3>1. Alta de Empleado</h3>
+<div class="box box-crimson">
+  <div style="font-size:11px;color:var(--ink-500);margin-bottom:8px"><strong>Rol:</strong> Admin/Secretaria · <strong>Pantalla:</strong> /empleados → Nuevo · <strong>~10 min</strong></div>
+  <div class="flow">
+    <div class="flow-step start">Admin → "Nuevo empleado"</div>
+    <div class="flow-arrow"></div>
+    <div class="flow-step"><div class="title">Paso 1: Datos básicos</div><div class="detail">nombre, apellidos, puesto, fecha_ingreso, teléfono, email</div></div>
+    <div class="flow-arrow"></div>
+    <div class="flow-step"><div class="title">Paso 2: Laboral</div><div class="detail">sueldo_bruto, periodo_pago, premio_asistencia, comisión, NSS, RFC, CURP, días laborales</div></div>
+    <div class="flow-arrow"></div>
+    <div class="flow-step"><div class="title">Paso 3: Documentos</div><div class="detail">INE, CURP, comprobante, acta, CSF, licencia <span class="badge badge-yellow">⚠️ Upload pendiente</span></div></div>
+    <div class="flow-arrow"></div>
+    <div class="flow-step"><div class="title">Paso 4: Resumen → Submit</div><div class="tables">→ INSERT empleados (16 campos) · activo=true · user_id=null</div></div>
+    <div class="flow-arrow"></div>
+    <div class="flow-step"><div class="title">Post-alta (EmpleadoFicha)</div><div class="detail">Firma contrato (PDF+email) · Expediente digital · Dar acceso sistema → create-user Edge Function → user_roles · Mapeo ZKTeco · Vacaciones · Actas</div><div class="tables">→ TRIGGER auto_link_user_employee si email coincide</div></div>
+    <div class="flow-arrow"></div>
+    <div class="flow-step end">Empleado activo con acceso</div>
+  </div>
+</div>
+
+<h3>2. Alta de Producto</h3>
+<div class="box box-crimson">
+  <div style="font-size:11px;color:var(--ink-500);margin-bottom:8px"><strong>Rol:</strong> Admin/Secretaria · <strong>Pantalla:</strong> /productos → Dialog · <strong>~3 min</strong></div>
+  <p style="font-size:12px">Dialog inline en Productos.tsx → campos: código, nombre, marca, categoría, unidad, precio_venta, precio_por_kilo, peso_kg, descuento_máximo, aplica_iva/ieps, stock_mínimo, codigo_sat, unidad_sat → INSERT productos. Trigger: on_producto_precio_change registra historial automático.</p>
+</div>
+
+<h3>3. Alta de Cliente</h3>
+<div class="box box-crimson">
+  <div style="font-size:11px;color:var(--ink-500);margin-bottom:8px"><strong>2 flujos paralelos — datos distintos por propósito</strong></div>
+  <div class="grid2">
+    <div class="box"><strong>Admin (fiscal)</strong><br><span style="font-size:11px;color:var(--ink-500)">/clientes/nuevo · Page completa<br>CSF parser · RFC validado · dirección fiscal · régimen · CFDI · vendedor asignado · crédito · N sucursales<br>→ clientes + cliente_sucursales · RPC generar_codigo_cliente</span></div>
+    <div class="box"><strong>Vendedor (operativo)</strong><br><span style="font-size:11px;color:var(--ink-500)">Sheet lateral desde VendedorPanel<br>Nombre + dirección desglosada + CP lookup + GPS Google Maps + horarios + días sin entrega + teléfonos/correos/contactos<br>→ clientes + sucursal "Principal" + correos + teléfonos + contactos</span></div>
+  </div>
+</div>
+
+<h3>4. Compra a Proveedor</h3>
+<div class="box box-crimson">
+  <div style="font-size:11px;color:var(--ink-500);margin-bottom:8px"><strong>Rol:</strong> Admin/Secretaria · <strong>Pantalla:</strong> /compras → Wizard 4 pasos · <strong>~15 min</strong></div>
+  <div class="flow">
+    <div class="flow-step start">Crear Orden de Compra</div>
+    <div class="flow-arrow"></div>
+    <div class="flow-step"><div class="title">Wizard: proveedor → productos → entregas → confirmar</div><div class="tables">→ INSERT ordenes_compra + ordenes_compra_detalles · RPC generar_folio_orden_compra · Email a proveedor</div></div>
+    <div class="flow-arrow"></div>
+    <div class="flow-step"><div class="title">Recepción en almacén</div><div class="detail">Verificar cantidades · diferencias (roto/no llegó/rechazado) · evidencia fotográfica · firma digital</div><div class="tables">→ INSERT inventario_lotes · UPDATE ordenes_compra status · Email confirmación</div></div>
+    <div class="flow-arrow"></div>
+    <div class="flow-step"><div class="title">Conciliación factura proveedor</div><div class="tables">→ RPC conciliar_factura_proveedor · UPDATE costos productos · Recalcula costo_promedio_ponderado</div></div>
+    <div class="flow-arrow"></div>
+    <div class="flow-step end">Inventario actualizado + costos sincronizados</div>
+  </div>
+</div>
+
+<h3>5. Captura de Pedido</h3>
+<div class="box box-crimson">
+  <div style="font-size:11px;color:var(--ink-500);margin-bottom:8px"><strong>3 flujos: admin (dialog) · vendedor (wizard 4 pasos + offline) · cliente (page portal)</strong></div>
+  <p style="font-size:12px">→ RPC generar_folio_pedido (PED-YYYYMMDD-NNN) · INSERT pedidos + pedidos_detalles · calcularTotalesPedido (shared) · alertas_precio JSONB · status=pendiente (admin/vendedor) o por_autorizar (cliente) · Notificaciones push a secretaria · Email interno + cliente · PDF nota interna + confirmación · Autosave borrador DB + IndexedDB offline</p>
+</div>
+
+<h3>6. Carga de Ruta (Almacén)</h3>
+<div class="box box-crimson">
+  <div style="font-size:11px;color:var(--ink-500);margin-bottom:8px"><strong>Rol:</strong> Almacén/Gerente · <strong>Pantalla:</strong> /almacen-tablet → Rutas · <strong>~20-40 min por ruta</strong></div>
+  <p style="font-size:12px">CargaRutaInlineFlow (3 pasos: selección chofer/vehículo → escaneo QR → hoja interactiva) · useCargaOperations: 8 funciones atómicas · RPC decrementar_lote por producto · Resync totales pedido · status=en_ruta · PDF hoja de carga</p>
+</div>
+
+<h3>7. Entrega (Chofer)</h3>
+<div class="box box-crimson">
+  <div style="font-size:11px;color:var(--ink-500);margin-bottom:8px"><strong>Rol:</strong> Chofer · <strong>Pantalla:</strong> /chofer · <strong>Todo el día</strong></div>
+  <p style="font-size:12px">GPS tracking web + nativo (Capacitor background) cada 30s → chofer_ubicaciones · RegistrarEntregaSheet: status entregado/parcial/rechazado · Firma digital canvas · 7 motivos de rechazo · Auto-completar ruta cuando todas las entregas están hechas</p>
+</div>
+
+<h3>8. Facturación</h3>
+<div class="box" style="border:2px solid #f59e0b;background:#fffbeb;margin-bottom:12px">
+  <p style="font-size:12px;font-weight:600;color:#92400e;margin:0 0 4px">⚠️ CAMBIO ESTRATÉGICO (24 abril 2026)</p>
+  <p style="font-size:11px;color:#78350f;margin:0">Este proceso está en transición. Objetivo: usar <strong>Aspel</strong> como sistema principal de facturación. Integración ALMASA-OS ↔ Aspel por definir. El código actual de Facturama se mantiene por ahora pero está marcado como legacy.</p>
+</div>
+<div class="box box-crimson">
+  <div style="font-size:11px;color:var(--ink-500);margin-bottom:8px"><strong>Rol:</strong> Admin/Secretaria/Contadora · <strong>Pantalla:</strong> /facturas o SecretariaFacturacionTab</div>
+  <p style="font-size:12px"><strong>Flujo actual (Facturama — legacy):</strong> GenerarFacturaDialog (desde pedido) o NuevaFacturaDirectaDialog (sin pedido) · Edge Function timbrar-cfdi → Facturama API → CFDI UUID + XML + PDF URLs · Cancelación con motivos SAT (01-04) · Remisión/Nota de venta imprimible · Envío por email</p>
+  <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--ink-100)">
+    <p style="font-size:12px;font-weight:600;color:var(--ink-700);margin:0 0 4px">Plan futuro (Aspel):</p>
+    <ul style="font-size:11px;color:var(--ink-500);margin:0;padding-left:16px">
+      <li>Aspel será el sistema de facturación principal</li>
+      <li>Los pedidos/remisiones se exportarán a Aspel (método por definir)</li>
+      <li>Aspel timbra y devuelve CFDI</li>
+      <li>Facturama queda como respaldo o se elimina después</li>
+    </ul>
+  </div>
+</div>
+
+<h3>9. Cobranza</h3>
+<div class="box box-crimson">
+  <div style="font-size:11px;color:var(--ink-500);margin-bottom:8px"><strong>Rol:</strong> Vendedor (registra) → Secretaria (valida) · <strong>~2 min por cobro</strong></div>
+  <p style="font-size:12px">VendedorCobranzaTab → RegistrarCobroPedidoDialog (4 formas: efectivo/depósito/transferencia/cheque) · RPC registrar_cobro_pedido · pagos_cliente status=pendiente → Secretaria valida → status=validado · Trigger actualizar_saldo_cliente_pago recalcula saldo</p>
+</div>
+
+<h3>10. Asistencia</h3>
+<div class="box box-crimson">
+  <div style="font-size:11px;color:var(--ink-500);margin-bottom:8px"><strong>Automático:</strong> ZKTeco sync · <strong>Manual:</strong> Admin/Secretaria · <strong>Pantalla:</strong> /asistencia 5 tabs</div>
+  <p style="font-size:12px">Python script lee ZKTeco 192.168.1.126/127 cada 60s → INSERT asistencia · Retardo si > 8:30 AM · Premio binario: 1 falta = $0, 2+ retardos = $0 · Reportes: semanal, quincenal, mensual · Mapeo admin ZK → empleado · Vacaciones masivas</p>
+</div>
+
+<!-- ═══ SECCIÓN 3 ═══ -->
+<h2 id="s3"><span class="accent">03</span> Los 8 Roles</h2>
+
+<table>
+<thead><tr><th>Rol</th><th>Dispositivo</th><th>Ubicación</th><th>Panel</th><th>Tabs</th><th>Módulos</th><th>Acciones exclusivas</th></tr></thead>
+<tbody>
+<tr><td><strong>Admin</strong></td><td>Todo</td><td>Cualquiera</td><td>/dashboard + sidebar</td><td>—</td><td>TODOS (36+ rutas)</td><td>Autorizar precios, config, permisos, dar de baja, modo cobro</td></tr>
+<tr><td><strong>Secretaria</strong></td><td>Laptop</td><td>Oficina</td><td>/secretaria</td><td>13</td><td>M01-M10 (excepto M05 carga)</td><td>Facturar, conciliar rutas, validar pagos</td></tr>
+<tr><td><strong>Vendedor</strong></td><td>Todo</td><td>Campo+oficina</td><td>/vendedor</td><td>10</td><td>M01 (sus clientes), M04, M10</td><td>Capturar pedidos offline, cobrar, comisiones</td></tr>
+<tr><td><strong>Contadora</strong></td><td>Laptop</td><td>Oficina</td><td>Sin panel propio</td><td>—</td><td>M07 costos, M08, M10, M02</td><td>Rentabilidad, conciliar facturas proveedor</td></tr>
+<tr><td><strong>Almacén</strong></td><td>iPad+laptop</td><td>Oficina+fuera</td><td>/almacen-tablet</td><td>8</td><td>M05, M09 carga</td><td>Recepcionar, cargar rutas, venta mostrador</td></tr>
+<tr><td><strong>Gerente Almacén</strong></td><td>iPad+laptop</td><td>Oficina+fuera</td><td>/almacen-tablet</td><td>14 (+6 flotilla)</td><td>M05 + flotilla + config</td><td>Dar de baja lotes, gestión vehículos/personal</td></tr>
+<tr><td><strong>Chofer</strong></td><td>Celular+tablet</td><td>Camioneta</td><td>/chofer</td><td>Vista única</td><td>M09 entregas</td><td>Entregar con GPS+firma, cobrar en ruta</td></tr>
+<tr><td><strong>Cliente</strong></td><td>Todo</td><td>Cualquiera</td><td>/portal-cliente</td><td>4</td><td>Sus pedidos, estado cta</td><td>Auto-servicio pedidos, ver entregas</td></tr>
+</tbody>
+</table>
+
+<!-- ═══ SECCIÓN 4 ═══ -->
+<h2 id="s4"><span class="accent">04</span> Base de Datos — 137 Tablas</h2>
+
+<h4>Autenticación</h4>
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+  <span class="tag">auth.users</span><span class="tag">profiles</span><span class="tag">user_roles</span><span class="tag">device_tokens</span><span class="tag">security_audit_log</span>
+</div>
+
+<h4>Empleados + RRHH</h4>
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+  <span class="tag">empleados</span><span class="tag">empleados_historial_sueldo</span><span class="tag">empleados_vacaciones</span><span class="tag">empleados_actas</span><span class="tag">empleados_documentos</span><span class="tag">asistencia</span><span class="tag">zk_mapeo</span><span class="tag">comisiones_vendedor</span><span class="tag">comisiones_detalle</span>
+</div>
+
+<h4>Catálogo de Productos</h4>
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+  <span class="tag">productos</span><span class="tag">categorias_productos</span><span class="tag">productos_historial_precios</span><span class="tag">productos_historial_costos</span><span class="tag">productos_historial_estado</span><span class="tag">productos_revision_precio</span>
+</div>
+
+<h4>Clientes</h4>
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+  <span class="tag">clientes</span><span class="tag">cliente_sucursales</span><span class="tag">cliente_correos</span><span class="tag">cliente_telefonos</span><span class="tag">cliente_contactos</span><span class="tag">cliente_productos_frecuentes</span><span class="tag">cliente_programacion_pedidos</span><span class="tag">cliente_cortesias_default</span><span class="tag">cliente_creditos_excepciones</span><span class="tag">zonas</span>
+</div>
+
+<h4>Compras</h4>
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+  <span class="tag">ordenes_compra</span><span class="tag">ordenes_compra_detalles</span><span class="tag">ordenes_compra_entregas</span><span class="tag">proveedores</span><span class="tag">proveedor_facturas</span><span class="tag">proveedor_factura_detalles</span><span class="tag">proveedor_contactos</span><span class="tag">proveedor_correos</span><span class="tag">proveedor_creditos_pendientes</span><span class="tag">devoluciones_proveedor</span>
+</div>
+
+<h4>Inventario</h4>
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+  <span class="tag">inventario_lotes</span><span class="tag">inventario_movimientos</span><span class="tag">bodegas</span>
+</div>
+
+<h4>Pedidos</h4>
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+  <span class="tag">pedidos</span><span class="tag">pedidos_detalles</span><span class="tag">pedidos_historial_cambios</span><span class="tag">pedidos_acumulativos</span><span class="tag">solicitudes_descuento</span><span class="tag">solicitudes_venta_mostrador</span>
+</div>
+
+<h4>Logística</h4>
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+  <span class="tag">rutas</span><span class="tag">entregas</span><span class="tag">carga_productos</span><span class="tag">carga_evidencias</span><span class="tag">chofer_ubicaciones</span><span class="tag">vehiculos</span><span class="tag">vehiculos_checkups</span><span class="tag">vehiculos_mantenimientos</span><span class="tag">disponibilidad_personal</span><span class="tag">ayudantes_externos</span>
+</div>
+
+<h4>Facturación + Cobranza</h4>
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+  <span class="tag">facturas</span><span class="tag">factura_detalles</span><span class="tag">pagos_cliente</span><span class="tag">pagos_cliente_detalle</span><span class="tag">cobros_pedido</span>
+</div>
+
+<h4>Comunicación</h4>
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+  <span class="tag">conversaciones</span><span class="tag">mensajes</span><span class="tag">notificaciones</span><span class="tag">gmail_cuentas</span><span class="tag">gmail_firmas</span><span class="tag">correos_enviados</span>
+</div>
+
+<h4>Cotizaciones Lecaroz</h4>
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+  <span class="tag">cotizaciones_lecaroz</span><span class="tag">cotizacion_lecaroz_lineas</span><span class="tag">tandas_lecaroz</span><span class="tag">cotizaciones</span><span class="tag">cotizaciones_detalles</span>
+</div>
+
+<h4>Sistema</h4>
+<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+  <span class="tag">configuracion_empresa</span><span class="tag">module_permissions</span><span class="tag">resumenes_diarios</span><span class="tag">configuracion_flotilla</span>
+</div>
+
+<!-- ═══ SECCIÓN 5 ═══ -->
+<h2 id="s5"><span class="accent">05</span> RPCs y Triggers</h2>
+
+<h4>RPCs atómicas con role guards</h4>
+<table>
+<thead><tr><th>RPC</th><th>Parámetros</th><th>Roles permitidos</th><th>Efecto</th></tr></thead>
+<tbody>
+<tr><td class="mono">generar_folio_pedido()</td><td>—</td><td>Todos (auth)</td><td>PED-YYYYMMDD-NNN · advisory lock</td></tr>
+<tr><td class="mono">generar_codigo_cliente()</td><td>—</td><td>Todos (auth)</td><td>Código secuencial cliente</td></tr>
+<tr><td class="mono">decrementar_lote(id, qty)</td><td>uuid, numeric</td><td>admin, almacen, gerente</td><td>Decrementa inventario_lotes</td></tr>
+<tr><td class="mono">incrementar_lote(id, qty)</td><td>uuid, numeric</td><td>admin, almacen, gerente</td><td>Incrementa inventario_lotes</td></tr>
+<tr><td class="mono">registrar_baja_caducidad(...)</td><td>uuid, numeric, text, text</td><td>admin, almacen, gerente</td><td>Baja + movimiento atómico</td></tr>
+<tr><td class="mono">registrar_cobro_pedido(...)</td><td>uuid, uuid, numeric, text, ...</td><td>admin, secretaria, contadora, chofer</td><td>Cobro + actualiza saldo</td></tr>
+<tr><td class="mono">update_empleado_completo(...)</td><td>30 params</td><td>admin, secretaria</td><td>Update empleados</td></tr>
+<tr><td class="mono">conciliar_factura_proveedor(...)</td><td>uuid, jsonb</td><td>admin, contadora</td><td>Ajusta costos OC + lotes</td></tr>
+<tr><td class="mono">ajustar_costos_oc(...)</td><td>uuid, jsonb</td><td>admin, contadora</td><td>Recalcula costos OC</td></tr>
+</tbody>
+</table>
+
+<h4>Triggers automáticos (principales)</h4>
+<table>
+<thead><tr><th>Trigger</th><th>Tabla</th><th>Evento</th><th>Efecto</th></tr></thead>
+<tbody>
+<tr><td class="mono">auto_link_user_employee</td><td>profiles, empleados</td><td>INSERT/UPDATE</td><td>Vincula user_id cuando email coincide</td></tr>
+<tr><td class="mono">actualizar_saldo_cliente_pago</td><td>pagos_cliente</td><td>UPDATE</td><td>Recalcula saldo_pendiente del cliente</td></tr>
+<tr><td class="mono">on_producto_precio_change</td><td>productos</td><td>UPDATE</td><td>Registra en productos_historial_precios</td></tr>
+<tr><td class="mono">on_producto_estado_change</td><td>productos</td><td>UPDATE</td><td>Registra en productos_historial_estado</td></tr>
+<tr><td class="mono">trg_actualizar_costo_promedio</td><td>inventario_lotes</td><td>INSERT/UPDATE</td><td>Recalcula costo_promedio_ponderado</td></tr>
+<tr><td class="mono">trg_sync_stock_on_lote_*</td><td>inventario_lotes</td><td>INSERT/UPDATE/DELETE</td><td>Sincroniza productos.stock_actual</td></tr>
+<tr><td class="mono">liberar_vehiculos_chofer_*</td><td>empleados</td><td>UPDATE/DELETE</td><td>Libera vehículo si chofer se desactiva</td></tr>
+<tr><td class="mono">normalize_*_trigger</td><td>clientes, proveedores, productos, empleados</td><td>INSERT/UPDATE</td><td>Normaliza texto (título case, dirección)</td></tr>
+</tbody>
+</table>
+<p style="font-size:11px;color:var(--ink-500)">+ ~40 triggers updated_at automáticos en todas las tablas principales.</p>
+
+<!-- ═══ SECCIÓN 6 ═══ -->
+<h2 id="s6"><span class="accent">06</span> Integraciones Externas</h2>
+
+<h4 style="color:#22c55e">Activas (en uso hoy)</h4>
+<table>
+<thead><tr><th>Integración</th><th>Qué hace</th><th>Edge Function</th><th>Dónde se usa</th></tr></thead>
+<tbody>
+<tr><td><strong>ZKTeco</strong></td><td>Biométricos asistencia (2 dispositivos LAN)</td><td>zk-attendance</td><td>/asistencia → AsistenciaView, ZkMappingPanel</td></tr>
+<tr><td><strong>Google Maps</strong></td><td>Geocoding, Places, Directions, Autocomplete</td><td>geocode-addresses, get-place-details, get-route-directions, lookup-postal-code</td><td>VendedorNuevoClienteSheet, SugerirRutasAI</td></tr>
+<tr><td><strong>Gmail API</strong></td><td>Correos corporativos multi-cuenta OAuth2</td><td>gmail-api, gmail-auth, gmail-callback</td><td>/correos (CorreosV2), SecretariaCorreosTab</td></tr>
+<tr><td><strong>FCM (Firebase)</strong></td><td>Push notifications iOS/Android</td><td>send-push-notification</td><td>PushNotificationsGate, pedidos, rutas, choferes</td></tr>
+<tr><td><strong>CSF Parser</strong></td><td>OCR de Constancia de Situación Fiscal</td><td>parse-csf</td><td>NuevoCliente, VendedorNuevoClienteSheet</td></tr>
+<tr><td><strong>Vehicle OCR</strong></td><td>Extracción datos de documentos vehículo</td><td>extract-tarjeta-circulacion, extract-factura-vehiculo, extract-placas-vehiculo</td><td>VehiculosTab</td></tr>
+</tbody>
+</table>
+
+<h4 style="color:#3b82f6">Planeada (objetivo futuro)</h4>
+<table>
+<thead><tr><th>Integración</th><th>Qué hace</th><th>Edge Function</th><th>Dónde se usa</th></tr></thead>
+<tbody>
+<tr style="background:rgba(59,130,246,0.04)"><td><strong>Aspel</strong> <span class="badge badge-blue">PLANEADO</span></td><td>Facturación CFDI — sistema principal</td><td>Por definir</td><td>Integración ALMASA-OS ↔ Aspel pendiente de diseño</td></tr>
+</tbody>
+</table>
+
+<h4 style="color:#9ca3af">Legacy (pendiente de reemplazar)</h4>
+<table style="opacity:0.6">
+<thead><tr><th>Integración</th><th>Qué hace</th><th>Edge Function</th><th>Dónde se usa</th></tr></thead>
+<tbody>
+<tr><td><strong><s>Facturama</s></strong> <span class="badge badge-gray">LEGACY</span></td><td>Timbrado CFDI 4.0 + cancelación SAT</td><td>timbrar-cfdi, cancelar-cfdi, descargar-cfdi</td><td>SecretariaFacturacionTab, GenerarFacturaDialog</td></tr>
+</tbody>
+</table>
+
+<!-- ═══ SECCIÓN 7 ═══ -->
+<h2 id="s7"><span class="accent">07</span> Ciclo de Vida del Pedido</h2>
+<p class="lead">El pedido es el objeto central del sistema. Atraviesa 7 estados y toca 12+ tablas.</p>
+
+<div class="flow">
+  <div class="flow-step start">VENDEDOR captura pedido (wizard 4 pasos + offline)</div>
+  <div class="flow-arrow"></div>
+  <div class="flow-step"><div class="title">RPC generar_folio_pedido → PED-YYYYMMDD-NNN</div><div class="tables">→ INSERT pedidos (status=pendiente) + pedidos_detalles · alertas_precio JSONB</div></div>
+  <div class="flow-arrow"></div>
+  <div class="flow-step"><div class="title">¿Tiene alerta de precio?</div><div class="detail">bajo_piso o error_dedo → Push notification a admin · Admin/Secretaria revisa en AutorizacionRapidaSheet</div></div>
+  <div class="flow-arrow"></div>
+  <div class="flow-step"><div class="title">ALMACÉN selecciona para carga</div><div class="detail">CargaRutaInlineFlow: chofer + vehículo + escaneo QR + hoja interactiva</div><div class="tables">→ RPC decrementar_lote × N productos · carga_productos · resyncPedidoTotals</div></div>
+  <div class="flow-arrow"></div>
+  <div class="flow-step"><div class="title">status = en_ruta</div><div class="detail">Pedido asignado a ruta con chofer/vehículo · PDF hoja de carga impreso</div><div class="tables">→ UPDATE pedidos status · UPDATE rutas status=cargada · Notif vendedor</div></div>
+  <div class="flow-arrow"></div>
+  <div class="flow-step"><div class="title">CHOFER entrega</div><div class="detail">GPS tracking 30s · Firma digital canvas · status: entregado/parcial/rechazado</div><div class="tables">→ UPDATE entregas · chofer_ubicaciones · RegistrarEntregaSheet</div></div>
+  <div class="flow-arrow"></div>
+  <div class="flow-step" style="border-color:#f59e0b"><div class="title">SECRETARIA decide: ¿facturar o remisión?</div><div class="detail">Si factura → exportar a Aspel (futuro) / Facturama (actual, legacy)<br>Si no → queda como nota de remisión, va a factura global mensual</div></div>
+  <div class="flow-arrow"></div>
+  <div class="flow-step"><div class="title">status = entregado</div><div class="detail">Vendedor/Admin registra cobro · 4 formas de pago</div><div class="tables">→ RPC registrar_cobro_pedido · pagos_cliente status=pendiente</div></div>
+  <div class="flow-arrow"></div>
+  <div class="flow-step"><div class="title">SECRETARIA valida pago</div><div class="tables">→ pagos_cliente status=validado · TRIGGER actualizar_saldo_cliente_pago</div></div>
+  <div class="flow-arrow"></div>
+  <div class="flow-step end">PEDIDO CERRADO — ciclo completo</div>
+</div>
+
+<h4>Estados del pedido</h4>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0">
+  <span class="badge badge-gray">borrador</span>
+  <span style="color:var(--ink-300)">→</span>
+  <span class="badge badge-yellow">por_autorizar</span>
+  <span style="color:var(--ink-300)">→</span>
+  <span class="badge badge-blue">pendiente</span>
+  <span style="color:var(--ink-300)">→</span>
+  <span class="badge" style="background:#dbeafe;color:#1e40af;border-color:#dbeafe">en_ruta</span>
+  <span style="color:var(--ink-300)">→</span>
+  <span class="badge badge-green">entregado</span>
+  <span style="color:var(--ink-300)">→</span>
+  <span class="badge badge-green">por_cobrar</span>
+  <span style="color:var(--ink-300)">|</span>
+  <span class="badge badge-red">rechazado</span>
+  <span style="color:var(--ink-300)">|</span>
+  <span class="badge badge-red">cancelado</span>
+</div>
+
+<!-- ═══ SECCIÓN 8 ═══ -->
+<h2 id="s8"><span class="accent">08</span> Estado de Completitud</h2>
+<p class="lead">Basado en docs/roadmap/orden-madurez-REAL.md — criterio operativo: "¿opera sin Jose?"</p>
+
+<table>
+<thead><tr><th>Módulo</th><th>Madurez</th><th>Estado</th><th>Gap principal</th></tr></thead>
+<tbody>
+<tr><td>M02 Productos + Precios</td><td><strong>85%</strong></td><td><span class="status-dot status-green"></span>Sólido</td><td>Falta codigo_barras, monolitos</td></tr>
+<tr><td>M07 Compras / OC</td><td><strong>82%</strong></td><td><span class="status-dot status-green"></span>Sólido</td><td>3 monolitos >2,000 lín, emails hardcoded</td></tr>
+<tr><td>M09 Rutas / Carga / Entrega</td><td><strong>81%</strong></td><td><span class="status-dot status-green"></span>Sólido</td><td>Sugerencias AI poco autónomas</td></tr>
+<tr><td>M05-R Recepción</td><td><strong>80%</strong></td><td><span class="status-dot status-green"></span>Funcional</td><td>Monolito 2,619 lín, 17 as any</td></tr>
+<tr><td>M08 Facturación</td><td><strong>80%</strong></td><td><span class="status-dot status-green"></span>Funcional</td><td>Sin retry Facturama, sin export Aspel</td></tr>
+<tr><td>M01 Clientes</td><td><strong>79%</strong></td><td><span class="status-dot status-green"></span>Funcional</td><td>Data inconsistente admin/vendedor</td></tr>
+<tr><td>M06 Empleados + Asistencia</td><td><strong>78%</strong></td><td><span class="status-dot status-yellow"></span>Funcional</td><td>Upload docs wizard pendiente, ZK requiere Jose</td></tr>
+<tr><td>M04 Pedidos</td><td><strong>75%</strong></td><td><span class="status-dot status-yellow"></span>Funcional</td><td>3 implementaciones divergentes, falta fecha_entrega</td></tr>
+<tr><td>M05-I Inventario</td><td><strong>72%</strong></td><td><span class="status-dot status-yellow"></span>Con gaps</td><td>Sin FIFO, bypass RPC caducidad, RLS abierto</td></tr>
+<tr><td>M10 Cobranza</td><td><strong>55%</strong></td><td><span class="status-dot status-red"></span>Incompleto</td><td>Sin contabilidad formal, sin aging, sin allocación</td></tr>
+</tbody>
+</table>
+
+<div class="box" style="margin-top:24px;text-align:center">
+  <p style="font-size:13px;color:var(--ink-500);margin:0">Promedio general de madurez operativa</p>
+  <p class="serif" style="font-size:64px;font-weight:700;color:var(--crimson);margin:8px 0;line-height:1">76.5%</p>
+  <p style="font-size:12px;color:var(--ink-500);margin:0">446 componentes · 137 tablas · 53 Edge Functions · 8 roles · 42 rutas</p>
+</div>
+
+<!-- FOOTER -->
+<div style="margin-top:48px;padding-top:24px;border-top:1px solid var(--ink-100);text-align:center">
+  <p style="font-size:11px;color:var(--ink-300)">
+    ALMASA·OS · Mapa Maestro · 23 abril 2026<br>
+    Documentos relacionados:
+    <a href="roadmap/orden-madurez-REAL.md">Madurez Real</a> ·
+    <a href="roadmap/orden-madurez-operativa.md">Madurez Técnica</a> ·
+    <a href="auditoria/inventario-pantallas.md">Inventario Pantallas</a>
+  </p>
+  <p style="font-size:10px;color:var(--ink-300);margin-top:8px">Abarrotes La Manita, S.A. de C.V. · Desde 1904</p>
+</div>
+
+</div><!-- end .main -->
+</body>
+</html>

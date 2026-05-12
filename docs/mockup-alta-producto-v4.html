@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>v4 FINAL — Alta de Producto — ALMASA-OS</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>
+tailwind.config={theme:{extend:{colors:{crimson:{500:'#B8252F',600:'#9E1F28'},ink:{50:'#F0EEE8',100:'#E5E2DA',300:'#B8B8B5',500:'#8A8478',700:'#2A2A2A',900:'#1A1815'},soft:'#FAFAF7',warm:'#F7F5EF',accent:'#F5F2EA',ok:'#2D7D52',warn:'#C68A1E'},fontFamily:{serif:['Cormorant Garamond','Georgia','serif'],sans:['Inter Tight','-apple-system','sans-serif'],mono:['JetBrains Mono','monospace']}}}}
+</script>
+<style>
+*{box-sizing:border-box}body{font-family:'Inter Tight',sans-serif;background:#FAFAF7;color:#1A1815;margin:0}
+input,select{font-family:inherit;border:1px solid #E5E2DA;border-radius:.5rem;padding:.5rem .75rem;font-size:.875rem;width:100%;background:#fff;color:#1A1815;transition:border-color .15s,box-shadow .15s;outline:none}
+input:focus,select:focus{border-color:#B8252F;box-shadow:0 0 0 2px rgba(184,37,47,.12)}input::placeholder{color:#B8B8B5}
+.lbl{font-size:.8125rem;font-weight:500;display:block;margin-bottom:.25rem}.req{color:#B8252F}
+.hlp{font-size:.6875rem;color:#8A8478;margin-top:.2rem;line-height:1.4}
+.sw{position:relative;width:36px;height:20px;display:inline-block;flex-shrink:0}.sw input{opacity:0;width:0;height:0}
+.sw .sl{position:absolute;inset:0;background:#E5E2DA;border-radius:999px;transition:background .2s;cursor:pointer}
+.sw .sl::before{content:'';position:absolute;width:16px;height:16px;left:2px;bottom:2px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.sw input:checked+.sl{background:#B8252F}.sw input:checked+.sl::before{transform:translateX(16px)}
+.bp{background:#B8252F;color:#fff;padding:.625rem 2rem;border-radius:.5rem;font-weight:500;font-size:.9375rem;border:none;cursor:pointer;transition:all .15s}
+.bp:hover{background:#9E1F28}.bp:disabled{background:#E5E2DA;color:#B8B8B5;cursor:not-allowed}
+.bo{background:transparent;color:#1A1815;padding:.625rem 1.5rem;border-radius:.5rem;font-weight:500;font-size:.875rem;border:1px solid #E5E2DA;cursor:pointer;transition:all .15s}.bo:hover{background:#F0EEE8}
+.dlr{position:relative}.dlr .pfx{position:absolute;left:.75rem;top:50%;transform:translateY(-50%);color:#B8B8B5;font-size:.875rem;pointer-events:none}.dlr input{padding-left:1.75rem;font-family:'JetBrains Mono',monospace}
+.sfx{position:absolute;right:.75rem;top:50%;transform:translateY(-50%);color:#B8B8B5;font-size:.75rem;pointer-events:none}
+.sect{background:#F5F2EA;border-radius:.75rem;padding:1.25rem 1.5rem}
+details summary{cursor:pointer;list-style:none}details summary::-webkit-details-marker{display:none}details[open] .chv{transform:rotate(180deg)}.chv{transition:transform .2s}
+.fade{animation:fadeIn .25s ease-out}@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+#dupeBox{display:none}#dupeBox.show{display:block}
+.sel-btn{padding:.375rem .875rem;font-size:.75rem;border-radius:999px;border:1px solid #E5E2DA;background:#fff;cursor:pointer;transition:all .15s;color:#8A8478;white-space:nowrap}
+.sel-btn:hover{border-color:#B8B8B5}.sel-btn.active{background:#B8252F;color:#fff;border-color:#B8252F}
+.cond{overflow:hidden;max-height:0;transition:max-height .3s ease-out,opacity .2s;opacity:0}
+.cond.open{max-height:200px;opacity:1}
+</style>
+</head>
+<body>
+<div class="max-w-[1280px] mx-auto px-6 py-8">
+
+<!-- HEADER -->
+<div class="mb-6">
+  <p class="text-[11px] uppercase tracking-[.22em] text-crimson-500 font-medium mb-3">— Catálogos</p>
+  <h1 class="font-serif text-5xl font-light text-ink-900" style="letter-spacing:-.025em;line-height:.95">Nuevo <em class="italic text-crimson-500 font-normal">producto</em>.</h1>
+  <p class="font-serif italic text-lg text-ink-500 leading-relaxed font-light mt-3">Tal cual lo captures, así aparecerá en todos lados.</p>
+</div>
+
+<!-- SELECTOR -->
+<div class="flex items-center gap-2 mb-6 flex-wrap">
+  <span class="text-xs text-ink-500">Ver con datos de ejemplo:</span>
+  <button class="sel-btn active" onclick="loadEx(0,this)">Azúcar (bulto)</button>
+  <button class="sel-btn" onclick="loadEx(1,this)">Alpiste (kg)</button>
+  <button class="sel-btn" onclick="loadEx(2,this)">Ganador (promo)</button>
+  <button class="sel-btn" onclick="clearAll(this)">Vacío</button>
+</div>
+
+<!-- 2-COL -->
+<div class="flex gap-8 items-start">
+
+<!-- ════════════ LEFT: FORM ════════════ -->
+<div class="flex-[3] min-w-0 space-y-6">
+
+<!-- BANNER -->
+<div id="banner" class="relative border border-ink-100 bg-accent rounded-xl p-5 space-y-2">
+  <button onclick="this.parentElement.style.display='none'" class="absolute top-3 right-3 text-ink-300 hover:text-ink-700 text-lg leading-none" title="Cerrar">&times;</button>
+  <p class="text-sm font-medium text-ink-900">Antes de capturar</p>
+  <p class="text-sm text-ink-700">Lo que escribas aquí aparecerá <strong>idéntico</strong> en:</p>
+  <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-ink-700">
+    <span>&#128203; Lista de precios</span><span>&#128228; Órdenes de compra</span>
+    <span>&#128241; Pedidos del almacén</span><span>&#129534; Notas y facturas</span>
+  </div>
+  <p class="text-xs text-ink-500 italic border-t border-ink-100 pt-2">Si está mal escrito una vez, estará mal en seis lados.</p>
+</div>
+
+<!-- S1: IDENTIDAD -->
+<div class="space-y-4">
+  <div class="relative">
+    <label class="lbl text-base">Nombre completo del producto <span class="req">*</span></label>
+    <input id="f_nombre" type="text" placeholder="Ej: AZUCAR ESTANDAR 50 KG, ALPISTE 25 KG APROX" class="text-lg py-3 font-medium" style="text-transform:uppercase" oninput="onNombre()">
+    <p class="hlp font-serif italic">Como aparecerá en OC, pedidos, factura y lista de precios</p>
+    <div id="dupeBox" class="absolute z-50 left-0 right-0 mt-1 border-2 border-amber-300 bg-amber-50 rounded-lg shadow-lg overflow-hidden fade">
+      <div class="px-3 py-2 border-b border-amber-200 text-amber-700 text-xs font-medium">Productos parecidos ya existen:</div>
+      <div id="dupeList" class="divide-y divide-amber-100 max-h-48 overflow-y-auto"></div>
+      <div class="px-3 py-2 flex justify-end gap-3 bg-amber-100/50">
+        <button onclick="closeDupes()" class="text-xs text-amber-800 font-medium underline">Crear nuevo de todos modos</button>
+      </div>
+    </div>
+  </div>
+  <div class="grid grid-cols-2 gap-4">
+    <div><label class="lbl">Marca</label><input id="f_marca" type="text" placeholder="Ej: Ingenio Potrero, Malta" oninput="sync()"></div>
+    <div><label class="lbl">Categoría <span class="req">*</span></label>
+      <select id="f_cat" onchange="sync();suggestCode()"><option value="">Selecciona</option>
+        <option>Azúcar</option><option>Semillas</option><option>Croquetas</option><option>Veladoras</option>
+        <option>Botanas</option><option>Cereales</option><option>Aceites</option><option>Conservas</option>
+        <option>Limpieza</option><option>Papel</option><option>Alimentos para Aves</option><option>Sales</option><option>Especias</option>
+      </select></div>
+  </div>
+  <div class="grid grid-cols-2 gap-4">
+    <div><label class="lbl">Código interno <span class="req">*</span></label>
+      <input id="f_cod" type="text" placeholder="AZU-001" class="font-mono" oninput="codEdited=true;sync()">
+      <p class="hlp">Se sugiere al elegir categoría</p></div>
+    <div><label class="lbl">Código SAT <span class="req">*</span></label>
+      <input id="f_sat" type="text" placeholder="Ej: 50161800" class="font-mono" oninput="sync()">
+      <p class="hlp">Búscalo en <strong>sat.gob.mx</strong> o pregunta al contador</p></div>
+  </div>
+</div>
+
+<!-- S2: UNIDAD, PESO, PRECIO -->
+<div class="sect space-y-4">
+  <div class="grid grid-cols-2 gap-4">
+    <div><label class="lbl">Unidad de venta <span class="req">*</span></label>
+      <select id="f_uni" onchange="sync()"><option selected>Bulto</option><option>Caja</option><option>Costal</option><option>Saco</option><option>Cubeta</option><option>Balón</option><option>Churla</option><option>Paquete</option><option>Pieza</option></select></div>
+    <div><label class="lbl">Peso (kg) <span class="req">*</span></label>
+      <div style="position:relative"><input id="f_peso" type="number" step="0.1" placeholder="Ej: 50" oninput="sync()"><span class="sfx">kg</span></div>
+      <p class="hlp">Peso del bulto/caja para cálculos de carga del camión</p></div>
+  </div>
+  <div class="flex items-center gap-3 p-3 rounded-lg border border-ink-100 bg-white">
+    <label class="sw"><input type="checkbox" id="f_kilo" onchange="toggleKilo()"><span class="sl"></span></label>
+    <div><label for="f_kilo" class="text-sm text-ink-900 cursor-pointer font-medium">Se vende por kilo (granel)</label>
+      <p class="text-[11px] text-ink-500">Activa si el peso de cada bulto varía. El cliente pide bultos, pero el precio se calcula sobre el peso real.</p></div>
+  </div>
+  <div>
+    <label class="lbl" id="lblP">Precio por bulto <span class="req">*</span></label>
+    <div class="dlr" style="max-width:280px"><span class="pfx">$</span>
+      <input id="f_precio" type="number" step="0.01" placeholder="0.00" oninput="sync()"></div>
+    <p class="hlp">Precio FINAL que paga el cliente. Incluye IVA si aplica.</p>
+  </div>
+  <div id="kiloCalc" class="hidden fade px-4 py-3 rounded-lg bg-white border border-crimson-500/20 text-sm text-ink-900"></div>
+</div>
+
+<!-- S3: IMPUESTOS -->
+<div class="sect space-y-3">
+  <div class="grid grid-cols-2 gap-3">
+    <div class="flex items-center gap-3 p-3 rounded-lg border border-ink-100 bg-white">
+      <label class="sw"><input type="checkbox" checked id="f_iva"><span class="sl"></span></label>
+      <div><label for="f_iva" class="text-sm text-ink-900 cursor-pointer font-medium">IVA 16%</label>
+        <p class="text-[11px] text-ink-500">Mayoría. Desactiva si exento.</p></div>
+    </div>
+    <div class="flex items-center gap-3 p-3 rounded-lg border border-ink-100 bg-white">
+      <label class="sw"><input type="checkbox" id="f_ieps"><span class="sl"></span></label>
+      <div><label for="f_ieps" class="text-sm text-ink-900 cursor-pointer font-medium">IEPS 8%</label>
+        <p class="text-[11px] text-ink-500">Solo botanas, golosinas, refrescos.</p></div>
+    </div>
+  </div>
+  <p class="text-[11px] text-ink-500 text-center italic">El precio es el FINAL. El sistema desglosa al facturar.</p>
+</div>
+
+<!-- S4: RENTABILIDAD -->
+<div class="space-y-4 border border-ink-100 rounded-xl p-5 bg-warm">
+  <p class="text-xs font-medium text-ink-700 uppercase tracking-wide">Rentabilidad y piso de precios</p>
+  <div class="grid grid-cols-3 gap-4">
+    <div><label class="lbl" id="lblC">Costo por bulto</label>
+      <div class="dlr"><span class="pfx">$</span><input id="f_costo" type="number" step="0.01" placeholder="0.00" oninput="sync()"></div>
+      <p class="hlp">Se actualiza al recibir mercancía</p></div>
+    <div><label class="lbl" id="lblD">Desc. máx por bulto</label>
+      <div class="dlr"><span class="pfx">$</span><input id="f_desc" type="number" step="0.01" placeholder="0.00" oninput="sync()"></div>
+      <p class="hlp" style="color:#B8252F;font-style:italic">Piso de precios para vendedores</p></div>
+    <div><label class="lbl">Stock mínimo</label>
+      <input type="number" placeholder="0" value="0"><p class="hlp">Alerta cuando baje</p></div>
+  </div>
+</div>
+
+<!-- S5: MÁS DETALLES -->
+<details id="detSection">
+  <summary class="flex items-center gap-2 text-sm font-medium text-ink-500 py-2 hover:text-ink-700 transition-colors">
+    <svg class="chv" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    Más detalles <span class="text-xs text-ink-300">(opcional)</span>
+  </summary>
+  <div class="space-y-3 pt-4">
+    <div class="flex items-center gap-3 p-2.5 rounded-lg border border-ink-100 bg-white">
+      <label class="sw"><input type="checkbox" id="f_caduc"><span class="sl"></span></label>
+      <div><label for="f_caduc" class="text-sm text-ink-900 cursor-pointer">Maneja caducidad</label><p class="text-[11px] text-ink-500">Almacén registra fecha al recibir cada lote</p></div>
+    </div>
+    <div class="flex items-center gap-3 p-2.5 rounded-lg border border-ink-100 bg-white">
+      <label class="sw"><input type="checkbox" id="f_fumi" onchange="toggleCond('fumiC',this.checked)"><span class="sl"></span></label>
+      <div><label for="f_fumi" class="text-sm text-ink-900 cursor-pointer">Requiere fumigación periódica</label><p class="text-[11px] text-ink-500">Para semillas, granos. El sistema avisa al almacén.</p></div>
+    </div>
+    <div id="fumiC" class="cond ml-12 space-y-1 pl-1">
+      <label class="text-xs font-medium">Frecuencia (meses)</label>
+      <input id="f_fumiM" type="number" value="6" style="max-width:120px" class="text-sm">
+      <p class="text-[11px] text-ink-500">El sistema notificará al almacenista cuando se acerque la fecha.</p>
+    </div>
+    <div class="flex items-center gap-3 p-2.5 rounded-lg border border-ink-100 bg-white">
+      <label class="sw"><input type="checkbox" id="f_promo" onchange="toggleCond('promoC',this.checked);sync()"><span class="sl"></span></label>
+      <div><label for="f_promo" class="text-sm text-ink-900 cursor-pointer">Es promoción</label><p class="text-[11px] text-ink-500">Variante promocional (ej: "+ 3KG GRATIS", "2x1")</p></div>
+    </div>
+    <div id="promoC" class="cond ml-12 space-y-1 pl-1">
+      <label class="text-xs font-medium">Descripción de la promoción</label>
+      <input id="f_promoD" type="text" placeholder="Ej: Promoción abril 2026 — 3kg gratis" oninput="sync()">
+      <p class="text-[11px] text-ink-500">Para histórico y reportes</p>
+    </div>
+  </div>
+</details>
+
+<!-- FOOTER -->
+<div class="flex items-center justify-between pt-6 border-t border-ink-100 mt-2">
+  <div class="flex items-center gap-2"><label class="sw"><input type="checkbox" checked><span class="sl"></span></label><span class="text-xs text-ink-500">Producto activo</span></div>
+  <div class="flex gap-3"><button class="bo">Cancelar</button><button id="btnCrear" class="bp" disabled>Crear producto</button></div>
+</div>
+</div>
+
+<!-- ════════════ RIGHT: PREVIEWS ════════════ -->
+<div class="flex-[2] min-w-0 sticky top-6 space-y-5 hidden lg:block">
+
+<p class="font-serif italic text-sm text-ink-500">Así verán este producto</p>
+
+<!-- PRODUCT CARD -->
+<div class="bg-white border border-ink-100 rounded-xl overflow-hidden" style="box-shadow:0 2px 8px rgba(10,10,10,.05)">
+  <div class="p-5">
+    <p id="pv_name" class="text-lg font-semibold text-ink-900 tracking-wide uppercase">PRODUCTO</p>
+    <p id="pv_marca" class="text-sm text-ink-500 mt-0.5 hidden"></p>
+    <div class="h-px bg-ink-100 my-3"></div>
+    <div class="flex items-center justify-between">
+      <p id="pv_meta" class="text-sm text-ink-500 font-mono">— · Bulto</p>
+      <p id="pv_badge" class="hidden text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-medium uppercase tracking-wide"></p>
+    </div>
+    <div class="mt-3">
+      <span class="font-serif text-[34px] font-light text-ink-900 tabular-nums leading-tight" id="pv_price">$—</span>
+      <span id="pv_unit" class="text-sm text-ink-500 ml-1"></span>
+    </div>
+    <p id="pv_kiloEst" class="hidden text-xs text-ink-500 mt-1 italic"></p>
+    <div id="pv_promoTag" class="hidden mt-3 text-xs bg-crimson-500/10 text-crimson-500 px-3 py-1.5 rounded-lg font-medium"></div>
+  </div>
+</div>
+
+<!-- ANÁLISIS FINANCIERO -->
+<div id="analisis" class="hidden fade bg-white border rounded-xl overflow-hidden" style="box-shadow:0 2px 8px rgba(10,10,10,.05)">
+  <div id="anHead" class="px-5 py-2.5 text-xs font-semibold border-b flex items-center gap-2"></div>
+  <div id="anBody" class="px-5 py-4 font-mono text-[13px] space-y-1.5"></div>
+  <div id="anFoot" class="hidden px-5 py-3 border-t text-[11px] text-ink-500 italic"></div>
+</div>
+
+<!-- MINI LISTA DE PRECIOS -->
+<div class="bg-white border border-ink-100 rounded-xl overflow-hidden" style="box-shadow:0 2px 8px rgba(10,10,10,.05)">
+  <div class="px-4 py-2 bg-soft border-b border-ink-100 text-[10px] uppercase tracking-widest text-ink-500 font-medium" id="lp_header">Lista de precios</div>
+  <table class="w-full text-sm"><thead><tr class="border-b border-ink-100 text-[10px] uppercase tracking-wider text-ink-300">
+    <th class="text-left py-2 px-4 font-medium">Código</th><th class="text-left py-2 font-medium">Producto</th><th class="text-right py-2 px-4 font-medium">Precio</th>
+  </tr></thead><tbody class="text-ink-700">
+    <tr class="border-b border-ink-50"><td class="py-1.5 px-4 font-mono text-xs text-ink-300">AZU-001</td><td class="py-1.5 text-xs">AZUCAR ESTANDAR 50 KG</td><td class="py-1.5 px-4 text-right font-mono text-xs">$920.00</td></tr>
+    <tr class="border-b-2 border-crimson-500 bg-crimson-500/5" id="lp_row">
+      <td class="py-2 px-4 font-mono text-xs text-crimson-500 font-medium" id="lp_cod">—</td>
+      <td class="py-2 text-xs font-medium text-crimson-500" id="lp_nom">TU PRODUCTO</td>
+      <td class="py-2 px-4 text-right font-mono text-xs text-crimson-500 font-semibold" id="lp_pre">$—</td>
+    </tr>
+    <tr><td class="py-1.5 px-4 font-mono text-xs text-ink-300">AVE-001</td><td class="py-1.5 text-xs">ALPISTE 25 KG APROX</td><td class="py-1.5 px-4 text-right font-mono text-xs">$17.00/kg</td></tr>
+  </tbody></table>
+</div>
+
+</div>
+</div>
+</div>
+
+<script>
+const DB=[
+{n:'AZUCAR ESTANDAR 50 KG',c:'AZU-001'},{n:'AZUCAR REFINADA POTRERO 50 KG',c:'AZU-002'},
+{n:'ALPISTE 25 KG APROX',c:'AVE-001'},{n:'FRIJOL NEGRO BOLA 25 KG',c:'FRI-001'},
+{n:'PEDIGREE ADULTO 25 KG',c:'CRO-001'},{n:'VELADORA SAN JUDAS 40 PZ',c:'VEL-001'},
+{n:'ARROZ MORELOS 25/1 KG',c:'ARR-001'},{n:'PAPEL ESTRAZA 25 KG',c:'PAP-001'},
+{n:'CANELA H1 ALMASA 25 KG',c:'ESP-001'},{n:'JAMAICA NIGERIA 25 KG',c:'SEM-001'},
+];
+const EX=[
+  {nombre:'AZUCAR ESTANDAR 50 KG',marca:'',cat:'Azúcar',cod:'AZU-001',sat:'50161800',uni:'Bulto',peso:'50',kilo:false,precio:'920',costo:'850',desc:'50',iva:true,ieps:false,promo:false,promoD:''},
+  {nombre:'ALPISTE 25 KG APROX',marca:'',cat:'Alimentos para Aves',cod:'AVE-001',sat:'50171530',uni:'Bulto',peso:'25',kilo:true,precio:'17',costo:'15',desc:'1',iva:false,ieps:false,promo:false,promoD:''},
+  {nombre:'GANADOR 20KG MAS 3KG GRATIS',marca:'Malta',cat:'Croquetas',cod:'CRO-015',sat:'22120000',uni:'Bulto',peso:'23',kilo:false,precio:'890',costo:'720',desc:'',iva:true,ieps:false,promo:true,promoD:'Promoción abril 2026 — 3kg gratis'},
+];
+const PFX={'Azúcar':'AZU','Semillas':'SEM','Croquetas':'CRO','Veladoras':'VEL','Botanas':'BOT','Cereales':'CER','Aceites':'ACE','Conservas':'CON','Limpieza':'LIM','Papel':'PAP','Alimentos para Aves':'AVE','Sales':'SAL','Especias':'ESP'};
+let codEdited=false;
+
+function $(id){return document.getElementById(id)}
+function fmt(n){return'$'+n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2})}
+
+function loadEx(i,btn){
+  document.querySelectorAll('.sel-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  const e=EX[i];codEdited=true;
+  $('f_nombre').value=e.nombre;$('f_marca').value=e.marca;$('f_cat').value=e.cat;
+  $('f_cod').value=e.cod;$('f_sat').value=e.sat;$('f_uni').value=e.uni;
+  $('f_peso').value=e.peso;$('f_kilo').checked=e.kilo;
+  $('f_precio').value=e.precio;$('f_costo').value=e.costo;$('f_desc').value=e.desc;
+  $('f_iva').checked=e.iva;$('f_ieps').checked=e.ieps;
+  $('f_promo').checked=e.promo;toggleCond('promoC',e.promo);
+  $('f_promoD').value=e.promoD;
+  if(e.promo)$('detSection').open=true;
+  toggleKilo();closeDupes();
+}
+function clearAll(btn){
+  document.querySelectorAll('.sel-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+  ['f_nombre','f_marca','f_cod','f_sat','f_peso','f_precio','f_costo','f_desc','f_promoD'].forEach(id=>$(id).value='');
+  $('f_cat').value='';$('f_uni').value='Bulto';$('f_kilo').checked=false;
+  $('f_iva').checked=true;$('f_ieps').checked=false;$('f_promo').checked=false;
+  toggleCond('promoC',false);toggleCond('fumiC',false);
+  codEdited=false;toggleKilo();closeDupes();
+}
+
+function toggleCond(id,open){const el=$(id);if(open)el.classList.add('open');else el.classList.remove('open')}
+
+function suggestCode(){if(codEdited)return;const c=$('f_cat').value;if(c)$('f_cod').value=(PFX[c]||'PRD')+'-001'}
+
+function onNombre(){
+  const v=$('f_nombre').value.toUpperCase();
+  if(v.length>=3){
+    const w=v.split(/\s+/).filter(x=>x.length>=2);
+    const m=DB.filter(p=>w.some(x=>p.n.toUpperCase().includes(x)));
+    if(m.length>0){
+      $('dupeList').innerHTML=m.map(x=>`<div class="px-3 py-2 text-sm hover:bg-amber-100/50"><strong>${x.n}</strong> <span class="text-ink-500 text-xs font-mono ml-2">${x.c}</span></div>`).join('');
+      $('dupeBox').classList.add('show');
+    }else $('dupeBox').classList.remove('show');
+  }else $('dupeBox').classList.remove('show');
+  sync();
+}
+function closeDupes(){$('dupeBox').classList.remove('show')}
+
+function toggleKilo(){
+  const on=$('f_kilo').checked;const u=$('f_uni').value.toLowerCase();
+  $('lblP').innerHTML=on?'Precio por kilo <span class="req">*</span>':'Precio por '+u+' <span class="req">*</span>';
+  $('lblC').textContent=on?'Costo por kilo':'Costo por '+u;
+  $('lblD').textContent=on?'Desc. máx por kilo':'Desc. máx por '+u;
+  sync();
+}
+
+function sync(){
+  const nombre=$('f_nombre').value.toUpperCase()||'PRODUCTO';
+  const marca=$('f_marca').value;
+  const uni=$('f_uni').value;
+  const codigo=$('f_cod').value||'—';
+  const isK=$('f_kilo').checked;
+  const precio=parseFloat($('f_precio').value)||0;
+  const peso=parseFloat($('f_peso').value)||0;
+  const costo=parseFloat($('f_costo').value)||0;
+  const desc=parseFloat($('f_desc').value)||0;
+  const isPromo=$('f_promo').checked;
+  const promoD=$('f_promoD')?.value||'';
+
+  // ── RIGHT: Product card ──
+  $('pv_name').textContent=nombre;
+  const mEl=$('pv_marca');if(marca){mEl.textContent='Marca: '+marca;mEl.classList.remove('hidden')}else mEl.classList.add('hidden');
+  let meta=codigo+' · '+uni;if(isK&&peso>0)meta+=' (≈'+peso+' kg c/u)';else if(peso>0)meta+=' ('+peso+' kg)';
+  $('pv_meta').textContent=meta;
+
+  $('pv_price').textContent=precio>0?fmt(precio):'$—';
+  $('pv_unit').textContent=precio>0?(isK?'/ kg':'/ '+uni.toLowerCase()):'';
+
+  const keEl=$('pv_kiloEst');
+  if(isK&&precio>0&&peso>0){keEl.textContent='Estimado por '+uni.toLowerCase()+': '+fmt(precio*peso);keEl.classList.remove('hidden')}
+  else keEl.classList.add('hidden');
+
+  const bg=$('pv_badge');if(isK){bg.textContent='Granel · por kg';bg.classList.remove('hidden')}else bg.classList.add('hidden');
+  const pt=$('pv_promoTag');
+  if(isPromo&&promoD){pt.innerHTML='&#127873; '+promoD;pt.classList.remove('hidden')}
+  else if(isPromo){pt.innerHTML='&#127873; Promoción';pt.classList.remove('hidden')}
+  else pt.classList.add('hidden');
+
+  // ── RIGHT: Lista de precios ──
+  $('lp_cod').textContent=codigo;$('lp_nom').textContent=nombre;
+  $('lp_pre').textContent=precio>0?(isK?fmt(precio)+'/kg':fmt(precio)):'$—';
+
+  // ── LEFT: Kilo calc ──
+  const kc=$('kiloCalc');
+  if(isK&&precio>0&&peso>0){
+    kc.innerHTML='<span class="font-medium">Estimado por '+uni+'</span> = '+fmt(precio)+'/kg &times; '+peso+' kg = <strong>'+fmt(precio*peso)+'</strong><br><span class="text-xs text-ink-500">(peso real al cargar puede variar)</span>';
+    kc.classList.remove('hidden');
+  }else kc.classList.add('hidden');
+
+  // ── RIGHT: Análisis financiero ──
+  const an=$('analisis'),ah=$('anHead'),ab=$('anBody'),af=$('anFoot');
+  // KEY: NO multiplicar por peso. Análisis es por unidad natural (bulto o kg)
+  const p=precio,c=costo,d=desc;
+
+  if(p>0&&c>0){
+    const m=(p-c)/p*100;const ut=p-c;
+    const sfx=isK?' / kg':' / '+uni.toLowerCase();
+    let clr;if(m<0)clr='#B8252F';else if(m<10)clr='#B8252F';else if(m<20)clr='#C68A1E';else clr='#2D7D52';
+    let bg;if(m<0)bg='#fef2f2';else if(m<10)bg='#fef2f2';else if(m<20)bg='#fefce8';else bg='#f0fdf4';
+    let bdr;if(m<0)bdr='#fecaca';else if(m<10)bdr='#fecaca';else if(m<20)bdr='#fef08a';else bdr='#bbf7d0';
+
+    ah.style.cssText='background:'+bg+';color:'+clr;an.style.borderColor=bdr;
+    const dot=m<0?'&#128308;':m<10?'&#128308;':m<20?'&#128993;':'&#128994;';
+    ah.innerHTML=(m<0?'&#9888;&#65039; Margen negativo':'&#128202; Análisis de rentabilidad')+' <span class="text-[10px] font-normal opacity-60">'+(isK?'Por kilo':'Por '+uni.toLowerCase())+'</span>';
+
+    let h='';
+    h+='<div class="flex justify-between text-ink-500"><span>Costo:</span><span class="text-ink-900">'+fmt(c)+sfx+'</span></div>';
+    h+='<div class="flex justify-between text-ink-500"><span>Precio lista:</span><span class="text-ink-900">'+fmt(p)+sfx+'</span></div>';
+    h+='<div class="border-t border-ink-100 my-1.5"></div>';
+    h+='<div class="flex justify-between font-semibold" style="color:'+clr+'"><span>Utilidad bruta:</span><span>'+fmt(ut)+sfx+' ('+m.toFixed(1)+'%) '+dot+'</span></div>';
+
+    if(d>0&&m>0){
+      const piso=p-d;const uProt=piso-c;const mProt=piso>0?(uProt/piso*100):0;
+      h+='<div class="border-t border-ink-100 my-2"></div>';
+      h+='<div class="text-[11px] text-ink-500 mb-1">Descuento máx '+fmt(d)+sfx+':</div>';
+      h+='<div class="flex justify-between text-ink-500"><span>&#128678; Piso:</span><span class="text-ink-900 font-bold">'+fmt(piso)+sfx+'</span></div>';
+      if(uProt>0)h+='<div class="flex justify-between text-ink-500"><span>Utilidad protegida:</span><span style="color:'+clr+'">'+fmt(uProt)+sfx+' ('+mProt.toFixed(1)+'%)</span></div>';
+      else h+='<div class="text-crimson-500 font-semibold text-xs mt-1">&#9888;&#65039; El descuento elimina la utilidad</div>';
+    }
+    ab.innerHTML=h;
+
+    if(d>0&&m>0){af.textContent='Vendedores no podrán vender por debajo del piso sin tu autorización.';af.classList.remove('hidden')}
+    else if(m<0){af.textContent='Estás vendiendo por debajo del costo. ¿Es intencional?';af.classList.remove('hidden')}
+    else af.classList.add('hidden');
+
+    an.classList.remove('hidden');
+  }else an.classList.add('hidden');
+
+  // ── Button ──
+  const ok=$('f_nombre').value.trim().length>0&&$('f_cat').value!==''
+    &&$('f_cod').value.trim().length>0&&$('f_sat').value.trim().length>0
+    &&peso>0&&precio>0;
+  $('btnCrear').disabled=!ok;
+}
+
+document.addEventListener('click',e=>{if(!e.target.closest('#f_nombre')&&!e.target.closest('#dupeBox'))closeDupes()});
+window.addEventListener('DOMContentLoaded',()=>{loadEx(0,document.querySelector('.sel-btn'))});
+</script>
+
+<!--
+═══════════════════════════════════════════════════════════
+FORM V4 FINAL — MODELO APROBADO 29 abril 2026
+
+INSIGHT: "Todo se parte desde el alta. Tal cual como demos de alta
+1 producto es como va a salir en lista de precios, OC, pedidos."
+
+REGLA DE ORO: "Siempre bultos. El kilo solo afecta precio."
+
+REGLA ANÁLISIS: Por bulto → pesos absolutos. Por kilo → sufijo /kg.
+NO multiplicar por peso del bulto en el análisis.
+
+REQUIRED (7): Nombre, Categoría, Código, SAT, Unidad, Peso, Precio
+OPCIONALES VISIBLES (6): Marca, Switch kg, IVA, IEPS, Costo, Stock
+COLAPSABLE (4): Caducidad, Fumigación, Promoción, Desc. máximo
+
+REDUCCIÓN: 17 campos vs 26 originales (-35%)
++ Vista previa + Análisis financiero condicional
+═══════════════════════════════════════════════════════════
+-->
+</body>
+</html>

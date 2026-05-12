@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>ALMASA·OS — Audit Estético Puro</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--crimson:#c41e3a;--ink-900:#1a1a1f;--ink-700:#3a3a3f;--ink-500:#78787e;--ink-300:#a8a8ae;--ink-100:#eae8e4;--ink-50:#f8f8f8;--warm-50:#faf8f5}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter Tight',system-ui,sans-serif;color:var(--ink-900);background:var(--warm-50);line-height:1.5}
+.serif{font-family:'Cormorant Garamond',Georgia,serif}
+.main{max-width:1600px;margin:0 auto;padding:32px 40px 80px}
+h1{font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:300;color:var(--ink-900);margin-bottom:4px}
+h1 em{color:var(--crimson);font-style:italic}
+h2{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:var(--ink-900);margin:40px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--ink-100)}
+h3{font-size:14px;font-weight:600;margin:20px 0 8px;color:var(--ink-700)}
+p{font-size:13px;color:var(--ink-700);margin:0 0 10px}
+.lead{font-size:14px;color:var(--ink-500);font-family:'Cormorant Garamond',serif;font-style:italic;margin:0 0 28px}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:0.22em;color:var(--crimson);font-weight:500;margin-bottom:8px}
+
+table{width:100%;border-collapse:collapse;font-size:11px;margin:12px 0}
+th{text-align:left;padding:8px 6px;font-size:9px;font-weight:600;color:var(--ink-500);text-transform:uppercase;letter-spacing:0.06em;border-bottom:2px solid var(--ink-100);background:var(--ink-50);white-space:nowrap}
+td{padding:6px;border-bottom:1px solid var(--ink-100);vertical-align:top}
+tr:hover{background:var(--warm-50)}
+.cell-ok{background:#f0fdf4;color:#166534}
+.cell-warn{background:#fffbeb;color:#92400e}
+.cell-bad{background:#fef2f2;color:#991b1b}
+.cell-na{background:var(--ink-50);color:var(--ink-300)}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.box{background:white;border:1px solid var(--ink-100);border-radius:10px;padding:16px;margin:8px 0}
+.box-header{font-size:10px;font-weight:600;color:white;padding:6px 12px;border-radius:8px 8px 0 0;margin:-16px -16px 12px;text-align:center;letter-spacing:0.05em}
+.anno{font-size:9px;color:var(--ink-500);background:var(--ink-50);border:1px solid var(--ink-100);border-radius:4px;padding:2px 5px;display:inline-block;margin:2px}
+
+.style-a{border-left:4px solid var(--crimson)}
+.style-b{border-left:4px solid #3b82f6}
+.style-c{border-left:4px solid #059669}
+
+.legend{display:flex;gap:16px;margin:16px 0;font-size:11px;align-items:center}
+.legend-dot{width:12px;height:12px;border-radius:3px;display:inline-block;margin-right:4px;vertical-align:middle}
+
+.count-big{font-family:'Cormorant Garamond',serif;font-size:56px;font-weight:600;line-height:1;text-align:center}
+.count-label{text-align:center;font-size:10px;color:var(--ink-500);text-transform:uppercase;letter-spacing:0.1em;margin-top:4px}
+
+.finding{background:white;border:1px solid var(--ink-100);border-radius:8px;padding:14px;margin:16px 0}
+.finding h4{font-size:12px;font-weight:600;margin:0 0 8px;color:var(--ink-700)}
+.finding li{margin:3px 0;font-size:11px}
+
+/* Mini mockup styles */
+.mock{background:white;border:1px solid var(--ink-100);border-radius:8px;padding:12px;min-height:120px}
+.mock .m-eyebrow{font-size:8px;text-transform:uppercase;letter-spacing:0.2em;color:var(--crimson);font-weight:500}
+.mock .m-title-editorial{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:300;line-height:1;color:var(--ink-900)}
+.mock .m-title-editorial em{color:var(--crimson);font-style:italic}
+.mock .m-title-functional{font-size:16px;font-weight:700;color:var(--ink-900)}
+.mock .m-title-sheet{font-size:14px;font-weight:600}
+.mock .m-lead{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:11px;color:var(--ink-500);margin-top:3px}
+.mock .m-section{font-size:9px;font-weight:600;color:var(--ink-700);margin:8px 0 3px;padding-bottom:2px;border-bottom:1px solid var(--ink-100)}
+.mock .m-label{font-size:7px;font-weight:600;color:var(--ink-500);text-transform:uppercase;letter-spacing:0.04em;margin:4px 0 1px}
+.mock .m-input{border:1px solid var(--ink-100);border-radius:4px;padding:3px 6px;font-size:8px;color:var(--ink-300);background:var(--ink-50);margin:1px 0 4px}
+.mock .m-input-lg{border:1px solid var(--ink-100);border-radius:6px;padding:6px 8px;font-size:11px;color:var(--ink-300);background:var(--ink-50);margin:2px 0 6px}
+.mock .m-btn{display:inline-block;padding:3px 8px;border-radius:5px;font-size:8px;font-weight:600;color:white;background:var(--crimson);margin:2px}
+.mock .m-btn-outline{display:inline-block;padding:3px 8px;border-radius:5px;font-size:8px;font-weight:600;color:var(--ink-700);border:1px solid var(--ink-100);background:white;margin:2px}
+.mock .m-divider{display:flex;align-items:center;gap:6px;margin:8px 0;font-size:8px;color:var(--ink-500);font-weight:600}
+.mock .m-divider::before,.mock .m-divider::after{content:'';flex:1;height:1px;background:var(--ink-100)}
+</style>
+</head>
+<body>
+<div class="main">
+
+<!-- HEADER -->
+<div class="eyebrow">— Audit estético</div>
+<h1>¿Se ven del <em>mismo sistema?</em></h1>
+<p class="lead">Este audit NO analiza funcionalidad, permisos ni lógica de negocio. Solo compara estética visual: tipografía, colores, espaciados, estructura de títulos.</p>
+
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:24px 0">
+  <div><div class="count-big" style="color:var(--crimson)">2</div><div class="count-label">Estilos dominantes detectados</div></div>
+  <div><div class="count-big" style="color:#d97706">8</div><div class="count-label">Pantallas con estilo mixto</div></div>
+  <div><div class="count-big">18</div><div class="count-label">Pantallas auditadas</div></div>
+</div>
+
+<div class="legend">
+  <span><span class="legend-dot" style="background:var(--crimson)"></span> <strong>Estilo A "Editorial"</strong> — PageHeader serif, font-light, italic accent, punto final, eyebrow</span>
+  <span><span class="legend-dot" style="background:#3b82f6"></span> <strong>Estilo B "Funcional"</strong> — Dialog/Sheet, sans-serif bold, sin punto, ícono en título</span>
+  <span><span class="legend-dot" style="background:#059669"></span> <strong>Estilo C "Mobile-First"</strong> — Inputs grandes (h-14), secciones con divider centrado</span>
+</div>
+
+<!-- ═══ TABLA MAESTRA ═══ -->
+<h2>Tabla Maestra de Estética</h2>
+
+<div style="overflow-x:auto">
+<table>
+<thead>
+<tr>
+<th>Pantalla</th>
+<th>Estilo</th>
+<th>Título</th>
+<th>Punto final</th>
+<th>Fuente título</th>
+<th>Tamaño</th>
+<th>Eyebrow</th>
+<th>Lead italic</th>
+<th>Labels</th>
+<th>Input height</th>
+<th>Btn primary pos.</th>
+<th>Dividers</th>
+<th>Padding</th>
+</tr>
+</thead>
+<tbody>
+<!-- ADMIN PAGES (editorial) -->
+<tr><td><strong>Productos</strong> (admin page)</td><td class="cell-ok">A</td><td>Tus <em>productos.</em></td><td class="cell-ok">Sí .</td><td class="cell-ok">Serif 5xl light</td><td class="cell-ok">text-5xl</td><td class="cell-ok">Sí "Catálogos"</td><td class="cell-ok">Sí</td><td>Label component</td><td>default</td><td>Header actions</td><td>Spacing</td><td>Layout default</td></tr>
+<tr><td><strong>Pedidos</strong> (admin page)</td><td class="cell-ok">A</td><td>Tus <em>pedidos.</em></td><td class="cell-ok">Sí .</td><td class="cell-ok">Serif 5xl light</td><td class="cell-ok">text-5xl</td><td class="cell-ok">Sí "Operación"</td><td class="cell-ok">Sí</td><td>Label component</td><td>default</td><td>Header actions</td><td>Spacing</td><td>space-y-6</td></tr>
+<tr><td><strong>Clientes</strong> (admin page)</td><td class="cell-ok">A</td><td>Tus <em>clientes.</em></td><td class="cell-ok">Sí .</td><td class="cell-ok">Serif 5xl light</td><td class="cell-ok">text-5xl</td><td class="cell-ok">Sí "Catálogos"</td><td class="cell-ok">Sí</td><td>Label component</td><td>default</td><td>Header dropdown</td><td>Spacing</td><td>space-y-6</td></tr>
+<tr><td><strong>Inventario</strong> (admin page)</td><td class="cell-ok">A</td><td>Tu <em>inventario.</em></td><td class="cell-ok">Sí .</td><td class="cell-ok">Serif 5xl light</td><td class="cell-ok">text-5xl</td><td class="cell-ok">Sí "Operaciones"</td><td class="cell-ok">Sí</td><td>Label component</td><td>default</td><td>Header actions</td><td>Spacing</td><td>space-y-4/6</td></tr>
+
+<!-- SECRETARIA TABS (editorial) -->
+<tr><td><strong>Productos</strong> (secretaria tab)</td><td class="cell-ok">A</td><td>Productos.</td><td class="cell-ok">Sí .</td><td class="cell-ok">Serif (PageHeader)</td><td class="cell-ok">text-5xl</td><td class="cell-na">No</td><td class="cell-ok">Sí</td><td>Label component</td><td>default</td><td>Header actions</td><td>Spacing</td><td>space-y-4</td></tr>
+<tr><td><strong>Pedidos</strong> (secretaria tab)</td><td class="cell-ok">A</td><td>Pedidos, <em>hoy.</em></td><td class="cell-ok">Sí .</td><td class="cell-ok">Serif (PageHeader)</td><td class="cell-ok">text-5xl</td><td class="cell-na">No</td><td class="cell-ok">Sí</td><td>—</td><td>—</td><td>—</td><td>Spacing</td><td>space-y-4</td></tr>
+<tr><td><strong>Clientes</strong> (secretaria tab)</td><td class="cell-ok">A</td><td>Clientes.</td><td class="cell-ok">Sí .</td><td class="cell-ok">Serif (PageHeader)</td><td class="cell-ok">text-5xl</td><td class="cell-na">No</td><td class="cell-ok">Sí</td><td>—</td><td>—</td><td>Header action</td><td>Spacing</td><td>space-y-4</td></tr>
+<tr><td><strong>Inventario</strong> (secretaria tab)</td><td class="cell-ok">A</td><td>Inventario.</td><td class="cell-ok">Sí .</td><td class="cell-ok">Serif (PageHeader)</td><td class="cell-ok">text-5xl</td><td class="cell-na">No</td><td class="cell-ok">Sí</td><td>—</td><td>—</td><td>—</td><td>Spacing</td><td>space-y-4</td></tr>
+<tr><td><strong>Precios</strong> (secretaria tab)</td><td class="cell-ok">A</td><td>Lista de precios.</td><td class="cell-ok">Sí .</td><td class="cell-ok">Serif (PageHeader)</td><td class="cell-ok">text-5xl</td><td class="cell-na">No</td><td class="cell-ok">Sí</td><td>—</td><td>—</td><td>Header PDF btn</td><td>Spacing</td><td>sticky header</td></tr>
+
+<!-- VENDEDOR TABS (editorial) -->
+<tr><td><strong>Pedidos</strong> (vendedor tab)</td><td class="cell-ok">A</td><td>Mis pedidos.</td><td class="cell-ok">Sí .</td><td class="cell-ok">Serif (PageHeader)</td><td class="cell-ok">text-5xl</td><td class="cell-na">No</td><td class="cell-ok">Sí</td><td>—</td><td>—</td><td>—</td><td>Spacing</td><td>space-y-4</td></tr>
+<tr><td><strong>Nuevo pedido</strong> (vendedor tab)</td><td class="cell-ok">A</td><td>Nuevo pedido.</td><td class="cell-ok">Sí .</td><td class="cell-ok">Serif (PageHeader)</td><td class="cell-ok">text-5xl</td><td class="cell-na">No</td><td class="cell-ok">Sí</td><td>Label</td><td>default</td><td>Sticky bottom</td><td>Spacing</td><td>px-4</td></tr>
+
+<!-- CREATION FLOWS (funcional) -->
+<tr style="background:#fef2f2"><td><strong>Nuevo Pedido</strong> (admin dialog)</td><td class="cell-bad">B</td><td>🛒 Nuevo Pedido</td><td class="cell-bad">No</td><td class="cell-bad">Sans bold</td><td class="cell-warn">DialogTitle</td><td class="cell-bad">No</td><td class="cell-bad">No</td><td>Label default</td><td>default</td><td>Bottom form</td><td>Spacing</td><td>space-y-6</td></tr>
+<tr style="background:#fef2f2"><td><strong>Nuevo Cliente</strong> (admin page)</td><td class="cell-bad">B</td><td>Nuevo cliente</td><td class="cell-bad">No</td><td class="cell-bad">Sans 2xl bold</td><td class="cell-warn">text-2xl</td><td class="cell-bad">No (breadcrumb)</td><td class="cell-bad">No</td><td class="cell-warn">xs uppercase tracking</td><td>default</td><td>Bottom form</td><td>border-b</td><td>py-8 PageContainer</td></tr>
+<tr style="background:#fffbeb"><td><strong>Nuevo Cliente</strong> (vendedor sheet)</td><td class="cell-warn">C</td><td>Nuevo Cliente</td><td class="cell-warn">No</td><td class="cell-warn">Sans xl semibold</td><td class="cell-warn">text-xl</td><td class="cell-warn">No</td><td class="cell-warn">No</td><td class="cell-warn">text-base semibold</td><td class="cell-warn">h-14 text-lg</td><td>Bottom sheet</td><td class="cell-warn">Centered line</td><td>px-4 py-4</td></tr>
+<tr style="background:#fef2f2"><td><strong>Nuevo Pedido</strong> (cliente page)</td><td class="cell-bad">B</td><td>Hacer un pedido</td><td class="cell-bad">No</td><td class="cell-bad">Sans bold</td><td class="cell-warn">text-lg</td><td class="cell-bad">No</td><td class="cell-bad">No</td><td>Label default</td><td>default</td><td>Bottom form</td><td>Spacing</td><td>Card sections</td></tr>
+
+<!-- ALMACEN -->
+<tr><td><strong>Inventario</strong> (almacén tab)</td><td class="cell-ok">A</td><td>Inventario.</td><td class="cell-ok">Sí .</td><td class="cell-ok">Serif (PageHeader)</td><td class="cell-ok">text-5xl</td><td class="cell-na">No</td><td class="cell-ok">Sí</td><td>—</td><td>—</td><td>—</td><td>Spacing</td><td>space-y-4</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- ═══ MOCKUPS LADO A LADO ═══ -->
+<h2>Comparativa Visual: Los 2 Estilos</h2>
+
+<div class="grid2" style="margin:20px 0">
+  <div class="box style-a">
+    <div class="box-header" style="background:var(--crimson)">ESTILO A — "Editorial" (13 de 18 pantallas)</div>
+    <div class="mock">
+      <div class="m-eyebrow">— Catálogos</div>
+      <div class="m-title-editorial">Tus <em>productos.</em></div>
+      <div class="m-lead">Catálogo activo · 274 productos con precio vigente.</div>
+      <div style="float:right;margin-top:-36px"><span class="m-btn">+ Nuevo Producto</span></div>
+      <div style="clear:both"></div>
+      <div style="display:flex;gap:4px;margin:10px 0;font-size:8px;border-bottom:1px solid var(--ink-100);padding-bottom:4px">
+        <span style="color:var(--crimson);border-bottom:2px solid var(--crimson);padding-bottom:3px;font-weight:600">Activos</span>
+        <span style="color:var(--ink-500)">Inactivos</span>
+      </div>
+    </div>
+    <div style="margin-top:12px">
+      <p style="font-size:10px;font-weight:600;color:var(--ink-700)">Características:</p>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">
+        <span class="anno">Cormorant Garamond</span>
+        <span class="anno">text-5xl font-light</span>
+        <span class="anno">Punto final .</span>
+        <span class="anno">Italic accent en crimson</span>
+        <span class="anno">Eyebrow "— Catálogos"</span>
+        <span class="anno">Lead serif italic</span>
+        <span class="anno">Botón header derecho</span>
+        <span class="anno">Spacing sin dividers</span>
+      </div>
+      <p style="font-size:10px;color:var(--ink-500);margin-top:8px">Usado en: admin pages (/productos, /pedidos, /clientes, /inventario) + todos los tabs de secretaria + tabs de vendedor + almacén</p>
+    </div>
+  </div>
+
+  <div class="box style-b">
+    <div class="box-header" style="background:#3b82f6">ESTILO B — "Funcional" (4 de 18 pantallas)</div>
+    <div class="mock">
+      <div class="m-title-functional">🛒 Nuevo Pedido</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px">
+        <div><div class="m-label">Cliente *</div><div class="m-input">— Seleccionar —</div></div>
+        <div><div class="m-label">Vendedor</div><div class="m-input">Carlos Gómez</div></div>
+      </div>
+      <div class="m-section">Productos</div>
+      <div class="m-input">🔍 Buscar producto...</div>
+      <div style="text-align:right;margin-top:8px"><span class="m-btn">Crear Pedido</span></div>
+    </div>
+    <div style="margin-top:12px">
+      <p style="font-size:10px;font-weight:600;color:var(--ink-700)">Características:</p>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">
+        <span class="anno">Inter Tight</span>
+        <span class="anno">Sans-serif bold</span>
+        <span class="anno">SIN punto final</span>
+        <span class="anno">Ícono en título</span>
+        <span class="anno">Sin eyebrow ni lead</span>
+        <span class="anno">Labels: Label component</span>
+        <span class="anno">Botón bottom form</span>
+        <span class="anno">Spacing o border-b</span>
+      </div>
+      <p style="font-size:10px;color:var(--ink-500);margin-top:8px">Usado en: NuevoPedidoDialog (admin), NuevoCliente (admin page), ClienteNuevoPedido (portal)</p>
+    </div>
+  </div>
+</div>
+
+<div class="box style-c" style="max-width:50%">
+  <div class="box-header" style="background:#059669">ESTILO C — "Mobile-First" (1 de 18 pantallas)</div>
+  <div class="mock">
+    <div class="m-title-sheet">Nuevo Cliente</div>
+    <div class="m-label" style="font-size:9px;font-weight:600;margin-top:8px">👤 Nombre del negocio *</div>
+    <div class="m-input-lg">El Buen Comer</div>
+    <div class="m-divider">📍 Dirección del negocio</div>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:4px">
+      <div><div class="m-label">Calle *</div><div class="m-input-lg">Av. Revolución</div></div>
+      <div><div class="m-label">No. Ext *</div><div class="m-input-lg">123</div></div>
+    </div>
+  </div>
+  <div style="margin-top:12px">
+    <p style="font-size:10px;font-weight:600;color:var(--ink-700)">Características:</p>
+    <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">
+      <span class="anno">SheetTitle sans semibold</span>
+      <span class="anno">Inputs h-14 text-lg (GRANDES)</span>
+      <span class="anno">Dividers centrados con línea</span>
+      <span class="anno">Íconos en labels</span>
+      <span class="anno">Sheet bottom 92vh</span>
+    </div>
+    <p style="font-size:10px;color:var(--ink-500);margin-top:8px">Usado en: VendedorNuevoClienteSheet (único)</p>
+  </div>
+</div>
+
+<!-- ═══ PARES COMPARATIVOS ═══ -->
+<h2>Pares donde la divergencia se nota más</h2>
+
+<h3>1. "Nuevo Producto" — Admin vs Secretaria</h3>
+<div class="grid2">
+  <div class="mock">
+    <p style="font-size:8px;color:var(--crimson);font-weight:600;margin-bottom:4px">ADMIN (Productos.tsx dialog)</p>
+    <div class="m-title-functional">Nuevo Producto</div>
+    <div style="font-size:8px;color:var(--ink-500);margin:2px 0 6px">Completa la información del producto</div>
+    <div class="m-section">📦 Información básica</div>
+    <div class="m-label">Código</div><div class="m-input">P275</div>
+    <div class="m-label">Nombre</div><div class="m-input">Dog Chow Adulto 25kg</div>
+    <div style="margin-top:6px"><span class="m-btn">Guardar</span> <span class="m-btn-outline">Guardar y Siguiente →</span> <span class="m-btn-outline">Cancelar</span></div>
+    <div style="margin-top:6px"><span class="anno">Estilo B</span> <span class="anno">Sans bold, sin punto</span> <span class="anno">Ícono en sección</span> <span class="anno">"Guardar y Siguiente" para batch</span></div>
+  </div>
+  <div class="mock">
+    <p style="font-size:8px;color:var(--secretaria);font-weight:600;margin-bottom:4px">SECRETARIA (SecretariaProductosTab dialog)</p>
+    <div class="m-title-functional">Editar producto.</div>
+    <div style="font-size:8px;color:var(--ink-500);margin:2px 0 6px">Completa la información del catálogo</div>
+    <div style="font-size:8px;color:var(--ink-300);margin-bottom:6px">← 3 de 274 →</div>
+    <div class="m-label">Código</div><div class="m-input">P275</div>
+    <div class="m-label">Nombre</div><div class="m-input">Dog Chow Adulto 25kg</div>
+    <div style="margin-top:6px"><span class="m-btn">Guardar</span> <span class="m-btn-outline">Cancelar</span></div>
+    <div style="margin-top:6px"><span class="anno">Estilo B pero CON punto .</span> <span class="anno">Paginación "3 de 274"</span> <span class="anno">✅ Success pulse</span></div>
+  </div>
+</div>
+<div class="finding">
+  <h4>Observación estética</h4>
+  <p style="font-size:11px">Ambos son dialogs con campos idénticos. La diferencia visual es mínima: secretaria tiene punto final en título y paginación "X de Y". Admin tiene "Guardar y Siguiente" para batch editing. Estéticamente son <strong>casi iguales</strong> (ambos Estilo B dentro de dialog).</p>
+</div>
+
+<h3>2. "Nuevo Cliente" — Admin vs Vendedor</h3>
+<div class="grid2">
+  <div class="mock">
+    <p style="font-size:8px;color:var(--crimson);font-weight:600;margin-bottom:4px">ADMIN (NuevoCliente.tsx — Page)</p>
+    <div style="font-size:8px;color:var(--ink-500)">← Clientes / Nuevo cliente</div>
+    <div class="m-title-functional" style="margin-top:2px">Nuevo cliente</div>
+    <div style="font-size:8px;color:var(--ink-500);margin-bottom:6px">Captura los datos básicos</div>
+    <div class="m-section" style="font-size:8px;font-weight:600;border-bottom:1px solid var(--ink-100)">Datos del cliente</div>
+    <div style="font-size:7px;color:var(--ink-300);margin-bottom:4px">La razón social a la que se le va a facturar</div>
+    <div class="m-label">RAZÓN SOCIAL *</div><div class="m-input">PAN ROLL S.A. DE C.V.</div>
+    <div class="m-label">RFC *</div><div class="m-input">PRO921020PY4</div>
+    <div style="margin-top:6px"><span class="anno">Estilo B</span> <span class="anno">h1 sans 2xl bold</span> <span class="anno">Breadcrumb arriba</span> <span class="anno">Labels UPPERCASE xs</span> <span class="anno">border-b en secciones</span></div>
+  </div>
+  <div class="mock">
+    <p style="font-size:8px;color:var(--vendedor);font-weight:600;margin-bottom:4px">VENDEDOR (VendedorNuevoClienteSheet — Sheet bottom)</p>
+    <div class="m-title-sheet" style="border-bottom:1px solid var(--ink-100);padding-bottom:4px">Nuevo Cliente</div>
+    <div class="m-label" style="font-size:10px;font-weight:600;margin-top:8px">👤 Nombre del negocio *</div>
+    <div class="m-input-lg" style="font-size:12px">El Buen Comer</div>
+    <div class="m-divider">📍 Dirección del negocio</div>
+    <div class="m-label" style="font-size:9px;font-weight:600">Calle *</div>
+    <div class="m-input-lg">Av. Revolución</div>
+    <div style="margin-top:6px"><span class="anno">Estilo C</span> <span class="anno">SheetTitle sans</span> <span class="anno">Inputs GRANDES h-14</span> <span class="anno">Dividers centrados ——text——</span> <span class="anno">Íconos en labels</span></div>
+  </div>
+</div>
+<div class="finding">
+  <h4>Observación estética</h4>
+  <p style="font-size:11px">Estos dos se ven de <strong>apps completamente distintas</strong>. Admin: page con breadcrumb, h1 bold, labels UPPERCASE xs, inputs default. Vendedor: sheet bottom, labels con ícono + text-base, inputs GRANDES (h-14 text-lg), dividers centrados. El gap estético es el más grande del sistema.</p>
+</div>
+
+<!-- ═══ DIAGNÓSTICO ═══ -->
+<h2>Diagnóstico de Estilo Dominante</h2>
+
+<table class="summary-table" style="font-size:12px">
+<thead><tr><th>Estilo</th><th>Pantallas</th><th>Count</th><th>Descripción</th></tr></thead>
+<tbody>
+<tr class="style-a"><td><strong>A "Editorial"</strong></td><td>Admin pages (4) + Secretaria tabs (5) + Vendedor tabs (2) + Almacén (1) + Admin Precios (1)</td><td><strong>13</strong></td><td>PageHeader con Cormorant Garamond 5xl font-light, italic accent crimson, punto final, eyebrow opcional, lead serif italic</td></tr>
+<tr class="style-b"><td><strong>B "Funcional"</strong></td><td>NuevoPedidoDialog (admin), NuevoCliente (admin page), ClienteNuevoPedido (portal), Producto dialogs</td><td><strong>4</strong></td><td>Sans-serif bold, sin punto, ícono en título, labels default, botón al final del form</td></tr>
+<tr class="style-c"><td><strong>C "Mobile-First"</strong></td><td>VendedorNuevoClienteSheet</td><td><strong>1</strong></td><td>Sheet bottom 92vh, inputs h-14 text-lg, dividers centrados con línea, íconos en labels</td></tr>
+</tbody>
+</table>
+
+<div class="finding" style="border:2px solid var(--crimson)">
+  <h4 style="color:var(--crimson)">Conclusión</h4>
+  <p style="font-size:12px"><strong>El Estilo A "Editorial" (PageHeader) es el canon.</strong> 13 de 18 pantallas lo usan. Es el Design System v1.1 oficial de ALMASA-OS: Cormorant Garamond, font-light, italic accent, punto final.</p>
+  <p style="font-size:12px;margin-top:6px"><strong>Las 4 pantallas de Estilo B</strong> son todas flujos de CREACIÓN (dialogs/pages de "Nuevo X"). Usan sans-serif bold sin punto porque son modales/forms, no páginas principales. Esto es una divergencia <strong>aceptable</strong> — los modales tienen su propio idioma visual en la mayoría de design systems.</p>
+  <p style="font-size:12px;margin-top:6px"><strong>La 1 pantalla de Estilo C</strong> (VendedorNuevoClienteSheet) es la más alejada del canon: inputs gigantes, dividers centrados, íconos en labels. Fue diseñada mobile-first para uso en campo con celular. La divergencia es <strong>legítima por contexto</strong> pero visualmente se siente como otra app.</p>
+  <p style="font-size:12px;margin-top:8px;color:var(--ink-500)"><strong>No hay urgencia de unificar.</strong> El dato está aquí para que Jose decida si quiere que los flujos de creación (Estilo B) adopten el PageHeader editorial, o si acepta que los modales tengan su propio idioma. El VendedorNuevoClienteSheet (Estilo C) podría eventualmente alinearse más con A/B sin perder su funcionalidad mobile-first.</p>
+</div>
+
+<div style="margin-top:40px;padding-top:16px;border-top:1px solid var(--ink-100);text-align:center">
+  <p style="font-size:10px;color:var(--ink-300)">ALMASA·OS · Audit Estético Puro · 24 abril 2026<br>Abarrotes La Manita, S.A. de C.V. · Desde 1904</p>
+</div>
+
+</div>
+</body>
+</html>

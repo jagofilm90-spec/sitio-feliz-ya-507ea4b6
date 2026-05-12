@@ -29,7 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Search, ShoppingCart, Building2, AlertTriangle, Gift, MapPin, User, CreditCard, Truck } from "lucide-react";
+import { Plus, Trash2, Search, Building2, AlertTriangle, Gift, MapPin, User, CreditCard, Truck } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { calcularSubtotal, validarAntesDeGuardar, LineaPedido, obtenerPrecioUnitarioVenta } from "@/lib/calculos";
 import { calcularTotalesPedido } from "@/lib/pedidoUtils";
@@ -498,10 +498,10 @@ const NuevoPedidoDialog = ({ open, onOpenChange, onPedidoCreated }: NuevoPedidoD
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5" />
-            Nuevo Pedido
+          <DialogTitle className="font-serif text-2xl font-light text-ink-900">
+            Nuevo <em className="italic text-crimson-500 font-normal">pedido</em>.
           </DialogTitle>
+          <p className="font-serif italic text-sm text-ink-500">Captura de orden para cliente.</p>
         </DialogHeader>
 
         <div className="space-y-6">
