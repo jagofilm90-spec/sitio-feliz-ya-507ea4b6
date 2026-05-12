@@ -286,7 +286,6 @@ const Layout = ({ children }: LayoutProps) => {
       label: "Sistema",
       items: [
         { icon: Settings, label: "Configuración", path: "/configuracion" },
-        { icon: Smartphone, label: "App Móvil", path: "/generate-assets" },
         { icon: Warehouse, label: "Almacén Tablet", path: "/almacen-tablet" },
       ]
     },

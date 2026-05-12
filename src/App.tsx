@@ -33,8 +33,6 @@ import Rentabilidad from "./pages/Rentabilidad";
 import Fumigaciones from "./pages/Fumigaciones";
 import CorreosCorporativos from "./pages/CorreosCorporativos";
 import CorreosV2 from "./pages/CorreosV2";
-import GenerateAssets from "./pages/GenerateAssets";
-import DisenosCamioneta from "./pages/DisenosCamioneta";
 import Permisos from "./pages/Permisos";
 import Respaldos from "./pages/Respaldos";
 import AlmacenTablet from "./pages/AlmacenTablet";
@@ -44,7 +42,6 @@ import VendedorPanel from "./pages/VendedorPanel";
 import VendedorAnalisisVentas from "./pages/VendedorAnalisisVentas";
 import SecretariaPanel from "./pages/SecretariaPanel";
 import AppMobileGuide from "./pages/AppMobileGuide";
-import TestFirma from "./pages/TestFirma";
 import Precios from "./pages/Precios";
 import ProductosModoCobro from "./pages/ProductosModoCobro";
 import ProductosHistorialPrecios from "./pages/ProductosHistorialPrecios";
@@ -52,7 +49,6 @@ import LandingAlmasa from "./pages/LandingAlmasa";
 import Configuracion from "./pages/Configuracion";
 import Asistencia from "./pages/Asistencia";
 import VehiculosPage from "./pages/VehiculosPage";
-import PushDiagnosticsPage from "./pages/PushDiagnosticsPage";
 import LecarozCotizaciones from "./pages/LecarozCotizaciones";
 import LecarozCotizacionEditor from "./pages/LecarozCotizacionEditor";
 import LecarozBandeja from "./pages/LecarozBandeja";
@@ -330,15 +326,9 @@ const App = () => (
                   <CorreosCorporativos />
                 </ProtectedRoute>
               } />
-              <Route path="/generate-assets" element={
-                <ProtectedRoute allowedRoles={['admin']} redirectTo="/auth">
-                  <GenerateAssets />
-                </ProtectedRoute>
-              } />
               <Route path="/tarjeta" element={<TarjetaDigital />} />
               <Route path="/privacidad" element={<Privacidad />} />
               <Route path="/soporte" element={<Soporte />} />
-              <Route path="/disenos-camioneta" element={<DisenosCamioneta />} />
               <Route path="/permisos" element={
                 <ProtectedRoute allowedRoles={['admin']} redirectTo="/auth">
                   <Permisos />
@@ -400,19 +390,9 @@ const App = () => (
                 </ProtectedRoute>
               } />
               <Route path="/app-mobile" element={<AppMobileGuide />} />
-              <Route path="/test-firma" element={
-                <ProtectedRoute allowedRoles={['admin']} redirectTo="/auth">
-                  <TestFirma />
-                </ProtectedRoute>
-              } />
               <Route path="/configuracion" element={
                 <ProtectedRoute allowedRoles={['admin', 'contadora', 'gerente_almacen']} redirectTo="/auth">
                   <Configuracion />
-                </ProtectedRoute>
-              } />
-              <Route path="/push-diagnostics" element={
-                <ProtectedRoute allowedRoles={['admin']} redirectTo="/auth">
-                  <PushDiagnosticsPage />
                 </ProtectedRoute>
               } />
               

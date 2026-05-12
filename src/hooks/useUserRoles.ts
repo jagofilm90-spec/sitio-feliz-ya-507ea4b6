@@ -116,7 +116,6 @@ export const MODULE_PERMISSIONS: Record<string, AppRole[]> = {
   '/usuarios': ['admin'],
   '/chat': ['admin', 'secretaria', 'vendedor', 'contadora', 'almacen', 'gerente_almacen'],
   '/correos': ['admin', 'secretaria'],
-  '/generate-assets': ['admin'],
   '/permisos': ['admin'],
   '/almacen-tablet': ['admin', 'almacen', 'gerente_almacen'],
   '/chofer': ['admin', 'chofer'],

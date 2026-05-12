@@ -765,10 +765,6 @@ const VehiculosTab = () => {
           <p className="text-sm text-muted-foreground">Gestiona tu flota de vehículos</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => navigate('/disenos-camioneta')}>
-            <Palette className="h-4 w-4 mr-2" />
-            Diseñar Rotulado
-          </Button>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={resetForm}>
