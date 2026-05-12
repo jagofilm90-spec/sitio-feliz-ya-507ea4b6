@@ -11,6 +11,7 @@ import { useUnreadEmails } from "@/hooks/useUnreadEmails";
 import { useUserRoles, useUserModulePermissions } from "@/hooks/useUserRoles";
 import { CentroNotificaciones } from "@/components/CentroNotificaciones";
 import AlertasBell from "@/components/la-corona/AlertasBell";
+import JosanFloatingWidget from "@/components/josan/JosanFloatingWidget";
 
 import { UserPreferencesPopover } from "@/components/UserPreferencesPopover";
 import { AlmasaLogo } from "@/components/brand/AlmasaLogo";
@@ -55,6 +56,7 @@ import {
   Receipt,
   HandCoins,
   BarChart3,
+  Sparkles,
 } from "lucide-react";
 
 interface LayoutProps {
@@ -218,6 +220,7 @@ const Layout = ({ children }: LayoutProps) => {
       items: [
         { icon: Home, label: "Dashboard", path: "/dashboard" },
         { icon: BarChart3, label: "Ejecutivo", path: "/dashboard-ejecutivo" },
+        { icon: Sparkles, label: "JOSAN IA", path: "/josan" },
       ]
     },
     {
@@ -582,6 +585,7 @@ const Layout = ({ children }: LayoutProps) => {
         <CumpleanosBannerLazy />
         {/* Main Content */}
         <main className="flex-1 px-6 sm:px-8 lg:px-12 py-8 lg:py-10 overflow-auto min-h-0">{children}</main>
+        {isAdmin && <JosanFloatingWidget />}
       </div>
     </div>
   );

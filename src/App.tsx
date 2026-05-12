@@ -70,6 +70,7 @@ import ComplementosPago from "./pages/ComplementosPago";
 import Cobranza from "./pages/Cobranza";
 import DashboardEjecutivo from "./pages/DashboardEjecutivo";
 import MiRutaHoy from "./pages/chofer/MiRutaHoy";
+import Josan from "./pages/Josan";
 import EntregaDetalle from "./pages/chofer/EntregaDetalle";
 
 import PushNotificationsGate from "./components/PushNotificationsGate";
@@ -160,6 +161,11 @@ const App = () => (
               <Route path="/dashboard-ejecutivo" element={
                 <ProtectedRoute allowedRoles={['admin', 'contadora']} redirectTo="/auth">
                   <DashboardEjecutivo />
+                </ProtectedRoute>
+              } />
+              <Route path="/josan" element={
+                <ProtectedRoute allowedRoles={['admin', 'secretaria', 'contadora']} redirectTo="/auth">
+                  <Josan />
                 </ProtectedRoute>
               } />
               
