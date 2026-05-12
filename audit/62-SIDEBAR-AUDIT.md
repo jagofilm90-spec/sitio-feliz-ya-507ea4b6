@@ -112,4 +112,28 @@ Sistema (3) — agregar Respaldos + Permisos
 
 ---
 
-*29 items, 0 huérfanos, 0 duplicados. Sidebar limpio.*
+---
+
+## FASE 4.2 — Ejecutada 11 mayo 2026
+
+### Cambios aplicados (5):
+1. Vehículos: RRHH → Logística
+2. Almacén Tablet: Sistema → Logística
+3. Correos: agregado en Comunicación
+4. Permisos: agregado en Sistema
+5. Respaldos: agregado en Sistema
+
+### Estructura final (9 secciones, 32 items):
+```
+Principal (3): Dashboard, Ejecutivo, JOSAN IA
+Catálogos (5): Productos, Modo cobro, Historial precios, Lista Precios, Fumigaciones
+Operaciones (4): Clientes, Pedidos, Compras, Inventario
+Lecaroz (2): Cotizaciones, Bandeja
+Logística (6): Rutas, Cartas Porte, Vehículos, Almacén Tablet, LA CORONA, Conteos Ciegos
+Finanzas (5): Facturas, NC, Complementos Pago, Cobranza, Rentabilidad
+RRHH (2): Empleados, Asistencia
+Comunicación (2): Chat, Correos
+Sistema (3): Configuración, Permisos, Respaldos
+```
+
+*32 items, 0 huérfanos, coherencia por módulo.*

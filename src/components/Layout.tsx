@@ -254,6 +254,8 @@ const Layout = ({ children }: LayoutProps) => {
       items: [
         { icon: Truck, label: "Rutas y Entregas", path: "/rutas" },
         { icon: FileText, label: "Cartas Porte", path: "/cartas-porte" },
+        { icon: Truck, label: "Vehículos", path: "/vehiculos" },
+        { icon: Warehouse, label: "Almacén Tablet", path: "/almacen-tablet" },
         { icon: Shield, label: "LA CORONA", path: "/la-corona" },
         { icon: ClipboardCheck, label: "Conteos Ciegos", path: "/conteos-ciegos" },
       ]
@@ -273,20 +275,21 @@ const Layout = ({ children }: LayoutProps) => {
       items: [
         { icon: UserCog, label: "Empleados", path: "/empleados" },
         { icon: Clock, label: "Asistencia", path: "/asistencia" },
-        { icon: Truck, label: "Vehículos", path: "/vehiculos" },
       ]
     },
     {
       label: "Comunicación",
       items: [
         { icon: MessageCircle, label: "Chat", path: "/chat" },
+        { icon: Mail, label: "Correos", path: "/correos" },
       ]
     },
     {
       label: "Sistema",
       items: [
         { icon: Settings, label: "Configuración", path: "/configuracion" },
-        { icon: Warehouse, label: "Almacén Tablet", path: "/almacen-tablet" },
+        { icon: CreditCard, label: "Permisos", path: "/permisos" },
+        { icon: Warehouse, label: "Respaldos", path: "/respaldos" },
       ]
     },
   ], []);
