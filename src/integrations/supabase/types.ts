@@ -788,6 +788,99 @@ export type Database = {
           },
         ]
       }
+      cliente_credito: {
+        Row: {
+          cliente_id: string
+          created_at: string | null
+          credito_balance: number
+          credito_limite: number
+          dias_gracia: number
+          handling_policy: string
+          hold_activado_at: string | null
+          hold_activado_por: string | null
+          hold_activo: boolean
+          hold_motivo: string | null
+          id: string
+          limite_sugerido_at: string | null
+          limite_sugerido_ia: number | null
+          limite_sugerido_razon: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string | null
+          credito_balance?: number
+          credito_limite?: number
+          dias_gracia?: number
+          handling_policy?: string
+          hold_activado_at?: string | null
+          hold_activado_por?: string | null
+          hold_activo?: boolean
+          hold_motivo?: string | null
+          id?: string
+          limite_sugerido_at?: string | null
+          limite_sugerido_ia?: number | null
+          limite_sugerido_razon?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string | null
+          credito_balance?: number
+          credito_limite?: number
+          dias_gracia?: number
+          handling_policy?: string
+          hold_activado_at?: string | null
+          hold_activado_por?: string | null
+          hold_activo?: boolean
+          hold_motivo?: string | null
+          id?: string
+          limite_sugerido_at?: string | null
+          limite_sugerido_ia?: number | null
+          limite_sugerido_razon?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      cliente_credito_log: {
+        Row: {
+          accion: string
+          cliente_id: string
+          created_at: string | null
+          id: string
+          motivo: string | null
+          realizado_por: string | null
+          referencia_id: string | null
+          referencia_tabla: string | null
+          valor_antes: number | null
+          valor_despues: number | null
+        }
+        Insert: {
+          accion: string
+          cliente_id: string
+          created_at?: string | null
+          id?: string
+          motivo?: string | null
+          realizado_por?: string | null
+          referencia_id?: string | null
+          referencia_tabla?: string | null
+          valor_antes?: number | null
+          valor_despues?: number | null
+        }
+        Update: {
+          accion?: string
+          cliente_id?: string
+          created_at?: string | null
+          id?: string
+          motivo?: string | null
+          realizado_por?: string | null
+          referencia_id?: string | null
+          referencia_tabla?: string | null
+          valor_antes?: number | null
+          valor_despues?: number | null
+        }
+        Relationships: []
+      }
       cliente_creditos_excepciones: {
         Row: {
           cliente_id: string
@@ -9986,9 +10079,17 @@ export type Database = {
         Args: { p_oc_id: string; p_productos: Json }
         Returns: undefined
       }
+      aplicar_credit_hold: {
+        Args: { p_cliente_id: string; p_motivo: string }
+        Returns: boolean
+      }
       calcular_costo_promedio_ponderado: {
         Args: { p_producto_id: string }
         Returns: number
+      }
+      cambiar_credito_limite: {
+        Args: { p_cliente_id: string; p_motivo: string; p_nuevo_limite: number }
+        Returns: boolean
       }
       check_chofer_client_access: {
         Args: { p_chofer_id: string; p_cliente_id: string }
@@ -10044,6 +10145,19 @@ export type Database = {
       generar_folio_pedido: { Args: never; Returns: string }
       generar_folio_venta_mostrador: { Args: never; Returns: string }
       generar_notificaciones_fumigacion: { Args: never; Returns: undefined }
+      get_cliente_credito_status: {
+        Args: { p_cliente_id: string }
+        Returns: {
+          cliente_id: string
+          credito_balance: number
+          credito_disponible: number
+          credito_limite: number
+          estado: string
+          hold_activo: boolean
+          hold_motivo: string
+          porcentaje_usado: number
+        }[]
+      }
       get_cliente_id_for_user: { Args: { user_uuid: string }; Returns: string }
       get_proveedor_compras_mensuales: {
         Args: { p_proveedor_id: string }
@@ -10073,6 +10187,10 @@ export type Database = {
       incrementar_lote: {
         Args: { p_cantidad: number; p_lote_id: string }
         Returns: undefined
+      }
+      liberar_credit_hold: {
+        Args: { p_cliente_id: string; p_motivo?: string }
+        Returns: boolean
       }
       lookup_employee_by_email: { Args: { p_email: string }; Returns: Json }
       obtener_termino_credito: {
@@ -10105,6 +10223,14 @@ export type Database = {
         Returns: string
       }
       unaccent: { Args: { "": string }; Returns: string }
+      verificar_credito_para_pedido: {
+        Args: { p_cliente_id: string; p_monto: number }
+        Returns: {
+          credito_disponible: number
+          permitido: boolean
+          razon: string
+        }[]
+      }
     }
     Enums: {
       app_role:
