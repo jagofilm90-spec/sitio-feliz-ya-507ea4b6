@@ -5137,6 +5137,51 @@ export type Database = {
           },
         ]
       }
+      josan_conversaciones: {
+        Row: {
+          created_at: string | null
+          estado: string | null
+          id: string
+          mensajes: Json | null
+          resumen: string | null
+          titulo: string | null
+          tools_usados: string[] | null
+          total_mensajes: number | null
+          total_tools_usados: number | null
+          ultimo_mensaje_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          estado?: string | null
+          id?: string
+          mensajes?: Json | null
+          resumen?: string | null
+          titulo?: string | null
+          tools_usados?: string[] | null
+          total_mensajes?: number | null
+          total_tools_usados?: number | null
+          ultimo_mensaje_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          estado?: string | null
+          id?: string
+          mensajes?: Json | null
+          resumen?: string | null
+          titulo?: string | null
+          tools_usados?: string[] | null
+          total_mensajes?: number | null
+          total_tools_usados?: number | null
+          ultimo_mensaje_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       mensajes: {
         Row: {
           archivo_nombre: string | null
