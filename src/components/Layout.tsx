@@ -87,7 +87,7 @@ const Layout = ({ children }: LayoutProps) => {
   const { toast } = useToast();
   const unreadCount = useUnreadMessages();
   const { counts: emailCounts, cuentas: emailCuentas, totalUnread: totalUnreadEmails } = useUnreadEmails();
-  const { roles, isLoading: rolesLoading } = useUserRoles();
+  const { roles, isLoading: rolesLoading, isAdmin, hasRole } = useUserRoles();
   const { allowedPaths, isLoading: permissionsLoading, checkAccess } = useUserModulePermissions();
 
   useEffect(() => {
