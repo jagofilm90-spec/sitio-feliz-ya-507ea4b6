@@ -14,6 +14,158 @@ export type Database = {
   }
   public: {
     Tables: {
+      alertas_la_corona: {
+        Row: {
+          anomalia_id: string | null
+          created_at: string | null
+          destinatarios_roles: string[] | null
+          desviacion_id: string | null
+          discrepancia_id: string | null
+          estado: string | null
+          hoja_salida_id: string | null
+          id: string
+          lat: number | null
+          lng: number | null
+          mensaje: string
+          metadata: Json | null
+          requiere_sonido: boolean | null
+          resolucion_notas: string | null
+          resuelta_at: string | null
+          resuelta_por: string | null
+          severidad: string
+          tipo_alerta: string
+          titulo: string
+          user_id: string | null
+          vista_at: string | null
+          vista_por: string | null
+        }
+        Insert: {
+          anomalia_id?: string | null
+          created_at?: string | null
+          destinatarios_roles?: string[] | null
+          desviacion_id?: string | null
+          discrepancia_id?: string | null
+          estado?: string | null
+          hoja_salida_id?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          mensaje: string
+          metadata?: Json | null
+          requiere_sonido?: boolean | null
+          resolucion_notas?: string | null
+          resuelta_at?: string | null
+          resuelta_por?: string | null
+          severidad?: string
+          tipo_alerta: string
+          titulo: string
+          user_id?: string | null
+          vista_at?: string | null
+          vista_por?: string | null
+        }
+        Update: {
+          anomalia_id?: string | null
+          created_at?: string | null
+          destinatarios_roles?: string[] | null
+          desviacion_id?: string | null
+          discrepancia_id?: string | null
+          estado?: string | null
+          hoja_salida_id?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          mensaje?: string
+          metadata?: Json | null
+          requiere_sonido?: boolean | null
+          resolucion_notas?: string | null
+          resuelta_at?: string | null
+          resuelta_por?: string | null
+          severidad?: string
+          tipo_alerta?: string
+          titulo?: string
+          user_id?: string | null
+          vista_at?: string | null
+          vista_por?: string | null
+        }
+        Relationships: []
+      }
+      anomalias_la_corona: {
+        Row: {
+          cerrada_at: string | null
+          cerrada_por: string | null
+          created_at: string | null
+          detalle: Json | null
+          empleado_id: string | null
+          entrega_id: string | null
+          estado: string | null
+          hoja_salida_id: string | null
+          id: string
+          notificado_admin: boolean | null
+          resolucion: string | null
+          severidad: string | null
+          tipo_anomalia: string
+        }
+        Insert: {
+          cerrada_at?: string | null
+          cerrada_por?: string | null
+          created_at?: string | null
+          detalle?: Json | null
+          empleado_id?: string | null
+          entrega_id?: string | null
+          estado?: string | null
+          hoja_salida_id?: string | null
+          id?: string
+          notificado_admin?: boolean | null
+          resolucion?: string | null
+          severidad?: string | null
+          tipo_anomalia: string
+        }
+        Update: {
+          cerrada_at?: string | null
+          cerrada_por?: string | null
+          created_at?: string | null
+          detalle?: Json | null
+          empleado_id?: string | null
+          entrega_id?: string | null
+          estado?: string | null
+          hoja_salida_id?: string | null
+          id?: string
+          notificado_admin?: boolean | null
+          resolucion?: string | null
+          severidad?: string | null
+          tipo_anomalia?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anomalias_la_corona_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomalias_la_corona_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados_vista_segura"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomalias_la_corona_entrega_id_fkey"
+            columns: ["entrega_id"]
+            isOneToOne: false
+            referencedRelation: "entregas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anomalias_la_corona_hoja_salida_id_fkey"
+            columns: ["hoja_salida_id"]
+            isOneToOne: false
+            referencedRelation: "hojas_salida"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asistencia: {
         Row: {
           created_at: string
@@ -284,6 +436,102 @@ export type Database = {
           },
         ]
       }
+      cartas_porte: {
+        Row: {
+          chofer_id: string | null
+          created_at: string | null
+          created_by: string | null
+          errores_validacion: Json | null
+          estado: string | null
+          fecha_cancelacion: string | null
+          fecha_timbrado: string | null
+          folio: string | null
+          id: string
+          id_ccp: string | null
+          motivo_cancelacion: string | null
+          pac_response: Json | null
+          pac_usado: string | null
+          pdf_url: string | null
+          ruta_id: string | null
+          tipo_cfdi: string
+          total_dist_recorrida: number | null
+          transp_internac: string | null
+          updated_at: string | null
+          updated_by: string | null
+          uuid_cancelacion: string | null
+          uuid_sat: string | null
+          vehiculo_id: string | null
+          xml_url: string | null
+        }
+        Insert: {
+          chofer_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          errores_validacion?: Json | null
+          estado?: string | null
+          fecha_cancelacion?: string | null
+          fecha_timbrado?: string | null
+          folio?: string | null
+          id?: string
+          id_ccp?: string | null
+          motivo_cancelacion?: string | null
+          pac_response?: Json | null
+          pac_usado?: string | null
+          pdf_url?: string | null
+          ruta_id?: string | null
+          tipo_cfdi?: string
+          total_dist_recorrida?: number | null
+          transp_internac?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          uuid_cancelacion?: string | null
+          uuid_sat?: string | null
+          vehiculo_id?: string | null
+          xml_url?: string | null
+        }
+        Update: {
+          chofer_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          errores_validacion?: Json | null
+          estado?: string | null
+          fecha_cancelacion?: string | null
+          fecha_timbrado?: string | null
+          folio?: string | null
+          id?: string
+          id_ccp?: string | null
+          motivo_cancelacion?: string | null
+          pac_response?: Json | null
+          pac_usado?: string | null
+          pdf_url?: string | null
+          ruta_id?: string | null
+          tipo_cfdi?: string
+          total_dist_recorrida?: number | null
+          transp_internac?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          uuid_cancelacion?: string | null
+          uuid_sat?: string | null
+          vehiculo_id?: string | null
+          xml_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cartas_porte_ruta_id_fkey"
+            columns: ["ruta_id"]
+            isOneToOne: false
+            referencedRelation: "rutas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cartas_porte_vehiculo_id_fkey"
+            columns: ["vehiculo_id"]
+            isOneToOne: false
+            referencedRelation: "vehiculos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categorias_productos: {
         Row: {
           activo: boolean
@@ -308,6 +556,48 @@ export type Database = {
           nombre?: string
           orden?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      chofer_sync_queue: {
+        Row: {
+          chofer_id: string | null
+          created_at: string | null
+          error_mensaje: string | null
+          estado: string | null
+          evento_timestamp_cliente: string
+          hoja_salida_id: string | null
+          id: string
+          intentos: number | null
+          payload: Json | null
+          procesado_at: string | null
+          tipo_evento: string
+        }
+        Insert: {
+          chofer_id?: string | null
+          created_at?: string | null
+          error_mensaje?: string | null
+          estado?: string | null
+          evento_timestamp_cliente: string
+          hoja_salida_id?: string | null
+          id?: string
+          intentos?: number | null
+          payload?: Json | null
+          procesado_at?: string | null
+          tipo_evento: string
+        }
+        Update: {
+          chofer_id?: string | null
+          created_at?: string | null
+          error_mensaje?: string | null
+          estado?: string | null
+          evento_timestamp_cliente?: string
+          hoja_salida_id?: string | null
+          id?: string
+          intentos?: number | null
+          payload?: Json | null
+          procesado_at?: string | null
+          tipo_evento?: string
         }
         Relationships: []
       }
@@ -977,6 +1267,140 @@ export type Database = {
           },
         ]
       }
+      cobros: {
+        Row: {
+          banco_emisor: string | null
+          capturado_at: string | null
+          capturado_por: string | null
+          cliente_id: string
+          complemento_pago_id: string | null
+          conciliado_at: string | null
+          conciliado_por: string | null
+          created_at: string | null
+          estado: string | null
+          fecha_deposito: string | null
+          folio: string | null
+          forma_pago_sat: string
+          foto_comprobante_url: string | null
+          gps_lat: number | null
+          gps_lng: number | null
+          id: string
+          moneda: string | null
+          monto_total: number
+          motivo_rechazo: string | null
+          notas_cobrador: string | null
+          notas_validacion: string | null
+          numero_cheque: string | null
+          numero_cuenta_emisor: string | null
+          numero_operacion: string | null
+          requiere_rep: boolean | null
+          updated_at: string | null
+          validado_at: string | null
+          validado_por: string | null
+        }
+        Insert: {
+          banco_emisor?: string | null
+          capturado_at?: string | null
+          capturado_por?: string | null
+          cliente_id: string
+          complemento_pago_id?: string | null
+          conciliado_at?: string | null
+          conciliado_por?: string | null
+          created_at?: string | null
+          estado?: string | null
+          fecha_deposito?: string | null
+          folio?: string | null
+          forma_pago_sat: string
+          foto_comprobante_url?: string | null
+          gps_lat?: number | null
+          gps_lng?: number | null
+          id?: string
+          moneda?: string | null
+          monto_total: number
+          motivo_rechazo?: string | null
+          notas_cobrador?: string | null
+          notas_validacion?: string | null
+          numero_cheque?: string | null
+          numero_cuenta_emisor?: string | null
+          numero_operacion?: string | null
+          requiere_rep?: boolean | null
+          updated_at?: string | null
+          validado_at?: string | null
+          validado_por?: string | null
+        }
+        Update: {
+          banco_emisor?: string | null
+          capturado_at?: string | null
+          capturado_por?: string | null
+          cliente_id?: string
+          complemento_pago_id?: string | null
+          conciliado_at?: string | null
+          conciliado_por?: string | null
+          created_at?: string | null
+          estado?: string | null
+          fecha_deposito?: string | null
+          folio?: string | null
+          forma_pago_sat?: string
+          foto_comprobante_url?: string | null
+          gps_lat?: number | null
+          gps_lng?: number | null
+          id?: string
+          moneda?: string | null
+          monto_total?: number
+          motivo_rechazo?: string | null
+          notas_cobrador?: string | null
+          notas_validacion?: string | null
+          numero_cheque?: string | null
+          numero_cuenta_emisor?: string | null
+          numero_operacion?: string | null
+          requiere_rep?: boolean | null
+          updated_at?: string | null
+          validado_at?: string | null
+          validado_por?: string | null
+        }
+        Relationships: []
+      }
+      cobros_facturas: {
+        Row: {
+          cobro_id: string | null
+          created_at: string | null
+          factura_id: string
+          id: string
+          monto_aplicado: number
+          num_parcialidad: number | null
+          saldo_antes: number | null
+          saldo_despues: number | null
+        }
+        Insert: {
+          cobro_id?: string | null
+          created_at?: string | null
+          factura_id: string
+          id?: string
+          monto_aplicado: number
+          num_parcialidad?: number | null
+          saldo_antes?: number | null
+          saldo_despues?: number | null
+        }
+        Update: {
+          cobro_id?: string | null
+          created_at?: string | null
+          factura_id?: string
+          id?: string
+          monto_aplicado?: number
+          num_parcialidad?: number | null
+          saldo_antes?: number | null
+          saldo_despues?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cobros_facturas_cobro_id_fkey"
+            columns: ["cobro_id"]
+            isOneToOne: false
+            referencedRelation: "cobros"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cobros_pedido: {
         Row: {
           cliente_id: string
@@ -1200,6 +1624,149 @@ export type Database = {
           },
         ]
       }
+      complementos_pago: {
+        Row: {
+          cfdi_error: string | null
+          cfdi_estado: string | null
+          cfdi_fecha_timbrado: string | null
+          cfdi_pdf_url: string | null
+          cfdi_uuid: string | null
+          cfdi_xml_url: string | null
+          cliente_id: string | null
+          created_at: string | null
+          created_by: string | null
+          cuenta_emisor: string | null
+          cuenta_receptor: string | null
+          fecha_pago: string
+          folio: string | null
+          forma_pago: string
+          id: string
+          moneda: string | null
+          monto: number
+          nom_banco_emisor: string | null
+          notas: string | null
+          num_operacion: string | null
+          rfc_emisor_cta: string | null
+          rfc_receptor_cta: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          cfdi_error?: string | null
+          cfdi_estado?: string | null
+          cfdi_fecha_timbrado?: string | null
+          cfdi_pdf_url?: string | null
+          cfdi_uuid?: string | null
+          cfdi_xml_url?: string | null
+          cliente_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          cuenta_emisor?: string | null
+          cuenta_receptor?: string | null
+          fecha_pago: string
+          folio?: string | null
+          forma_pago: string
+          id?: string
+          moneda?: string | null
+          monto: number
+          nom_banco_emisor?: string | null
+          notas?: string | null
+          num_operacion?: string | null
+          rfc_emisor_cta?: string | null
+          rfc_receptor_cta?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          cfdi_error?: string | null
+          cfdi_estado?: string | null
+          cfdi_fecha_timbrado?: string | null
+          cfdi_pdf_url?: string | null
+          cfdi_uuid?: string | null
+          cfdi_xml_url?: string | null
+          cliente_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          cuenta_emisor?: string | null
+          cuenta_receptor?: string | null
+          fecha_pago?: string
+          folio?: string | null
+          forma_pago?: string
+          id?: string
+          moneda?: string | null
+          monto?: number
+          nom_banco_emisor?: string | null
+          notas?: string | null
+          num_operacion?: string | null
+          rfc_emisor_cta?: string | null
+          rfc_receptor_cta?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "complementos_pago_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      complementos_pago_doctos: {
+        Row: {
+          complemento_id: string | null
+          created_at: string | null
+          factura_id: string | null
+          folio: string | null
+          id: string
+          imp_pagado: number | null
+          imp_saldo_ant: number | null
+          imp_saldo_insoluto: number | null
+          num_parcialidad: number | null
+          serie: string | null
+          uuid_factura: string | null
+        }
+        Insert: {
+          complemento_id?: string | null
+          created_at?: string | null
+          factura_id?: string | null
+          folio?: string | null
+          id?: string
+          imp_pagado?: number | null
+          imp_saldo_ant?: number | null
+          imp_saldo_insoluto?: number | null
+          num_parcialidad?: number | null
+          serie?: string | null
+          uuid_factura?: string | null
+        }
+        Update: {
+          complemento_id?: string | null
+          created_at?: string | null
+          factura_id?: string | null
+          folio?: string | null
+          id?: string
+          imp_pagado?: number | null
+          imp_saldo_ant?: number | null
+          imp_saldo_insoluto?: number | null
+          num_parcialidad?: number | null
+          serie?: string | null
+          uuid_factura?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "complementos_pago_doctos_complemento_id_fkey"
+            columns: ["complemento_id"]
+            isOneToOne: false
+            referencedRelation: "complementos_pago"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "complementos_pago_doctos_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "facturas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       configuracion_empresa: {
         Row: {
           clave: string
@@ -1250,6 +1817,148 @@ export type Database = {
           valor?: string
         }
         Relationships: []
+      }
+      conteos_ciegos: {
+        Row: {
+          asignado_a: string | null
+          created_at: string | null
+          estado: string | null
+          fin_at: string | null
+          folio: string | null
+          id: string
+          inicio_at: string | null
+          motivo: string | null
+          productos_con_diferencia: number | null
+          productos_contados: number | null
+          programado_por: string | null
+          shrinkage_rate: number | null
+          tipo: string | null
+          total_productos: number | null
+          updated_at: string | null
+          valor_diferencia: number | null
+        }
+        Insert: {
+          asignado_a?: string | null
+          created_at?: string | null
+          estado?: string | null
+          fin_at?: string | null
+          folio?: string | null
+          id?: string
+          inicio_at?: string | null
+          motivo?: string | null
+          productos_con_diferencia?: number | null
+          productos_contados?: number | null
+          programado_por?: string | null
+          shrinkage_rate?: number | null
+          tipo?: string | null
+          total_productos?: number | null
+          updated_at?: string | null
+          valor_diferencia?: number | null
+        }
+        Update: {
+          asignado_a?: string | null
+          created_at?: string | null
+          estado?: string | null
+          fin_at?: string | null
+          folio?: string | null
+          id?: string
+          inicio_at?: string | null
+          motivo?: string | null
+          productos_con_diferencia?: number | null
+          productos_contados?: number | null
+          programado_por?: string | null
+          shrinkage_rate?: number | null
+          tipo?: string | null
+          total_productos?: number | null
+          updated_at?: string | null
+          valor_diferencia?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conteos_ciegos_asignado_a_fkey"
+            columns: ["asignado_a"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conteos_ciegos_asignado_a_fkey"
+            columns: ["asignado_a"]
+            isOneToOne: false
+            referencedRelation: "empleados_vista_segura"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conteos_ciegos_detalles: {
+        Row: {
+          cantidad_contada: number | null
+          cantidad_teorica: number | null
+          codigo_producto: string | null
+          contado_at: string | null
+          conteo_id: string | null
+          created_at: string | null
+          diferencia: number | null
+          id: string
+          nombre_producto: string | null
+          notas: string | null
+          precio_unitario: number | null
+          producto_id: string | null
+          valor_diferencia: number | null
+        }
+        Insert: {
+          cantidad_contada?: number | null
+          cantidad_teorica?: number | null
+          codigo_producto?: string | null
+          contado_at?: string | null
+          conteo_id?: string | null
+          created_at?: string | null
+          diferencia?: number | null
+          id?: string
+          nombre_producto?: string | null
+          notas?: string | null
+          precio_unitario?: number | null
+          producto_id?: string | null
+          valor_diferencia?: number | null
+        }
+        Update: {
+          cantidad_contada?: number | null
+          cantidad_teorica?: number | null
+          codigo_producto?: string | null
+          contado_at?: string | null
+          conteo_id?: string | null
+          created_at?: string | null
+          diferencia?: number | null
+          id?: string
+          nombre_producto?: string | null
+          notas?: string | null
+          precio_unitario?: number | null
+          producto_id?: string | null
+          valor_diferencia?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conteos_ciegos_detalles_conteo_id_fkey"
+            columns: ["conteo_id"]
+            isOneToOne: false
+            referencedRelation: "conteos_ciegos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conteos_ciegos_detalles_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conteos_ciegos_detalles_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos_stock_bajo"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       conversacion_participantes: {
         Row: {
@@ -1783,6 +2492,469 @@ export type Database = {
           },
         ]
       }
+      cp_autotransporte: {
+        Row: {
+          anio_modelo_vm: number
+          asegura_carga: string | null
+          asegura_med_ambiente: string | null
+          asegura_resp_civil: string
+          carta_porte_id: string | null
+          config_vehicular: string
+          created_at: string | null
+          id: string
+          num_permiso_sct: string
+          perm_sct: string
+          peso_bruto_vehicular: number | null
+          placa_vm: string
+          poliza_carga: string | null
+          poliza_med_ambiente: string | null
+          poliza_resp_civil: string
+          prima_seguro: number | null
+        }
+        Insert: {
+          anio_modelo_vm: number
+          asegura_carga?: string | null
+          asegura_med_ambiente?: string | null
+          asegura_resp_civil: string
+          carta_porte_id?: string | null
+          config_vehicular: string
+          created_at?: string | null
+          id?: string
+          num_permiso_sct: string
+          perm_sct: string
+          peso_bruto_vehicular?: number | null
+          placa_vm: string
+          poliza_carga?: string | null
+          poliza_med_ambiente?: string | null
+          poliza_resp_civil: string
+          prima_seguro?: number | null
+        }
+        Update: {
+          anio_modelo_vm?: number
+          asegura_carga?: string | null
+          asegura_med_ambiente?: string | null
+          asegura_resp_civil?: string
+          carta_porte_id?: string | null
+          config_vehicular?: string
+          created_at?: string | null
+          id?: string
+          num_permiso_sct?: string
+          perm_sct?: string
+          peso_bruto_vehicular?: number | null
+          placa_vm?: string
+          poliza_carga?: string | null
+          poliza_med_ambiente?: string | null
+          poliza_resp_civil?: string
+          prima_seguro?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cp_autotransporte_carta_porte_id_fkey"
+            columns: ["carta_porte_id"]
+            isOneToOne: true
+            referencedRelation: "cartas_porte"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cp_eventos: {
+        Row: {
+          carta_porte_id: string | null
+          created_at: string | null
+          detalle: Json | null
+          id: string
+          ip_address: unknown
+          tipo_evento: string
+          user_agent: string | null
+          usuario_id: string | null
+          usuario_nombre: string | null
+        }
+        Insert: {
+          carta_porte_id?: string | null
+          created_at?: string | null
+          detalle?: Json | null
+          id?: string
+          ip_address?: unknown
+          tipo_evento: string
+          user_agent?: string | null
+          usuario_id?: string | null
+          usuario_nombre?: string | null
+        }
+        Update: {
+          carta_porte_id?: string | null
+          created_at?: string | null
+          detalle?: Json | null
+          id?: string
+          ip_address?: unknown
+          tipo_evento?: string
+          user_agent?: string | null
+          usuario_id?: string | null
+          usuario_nombre?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cp_eventos_carta_porte_id_fkey"
+            columns: ["carta_porte_id"]
+            isOneToOne: false
+            referencedRelation: "cartas_porte"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cp_figura_transporte: {
+        Row: {
+          carta_porte_id: string | null
+          created_at: string | null
+          domicilio: Json | null
+          id: string
+          nombre_figura: string
+          num_licencia: string | null
+          num_reg_id_trib: string | null
+          residencia_fiscal: string | null
+          rfc_figura: string
+          tipo_figura: string
+        }
+        Insert: {
+          carta_porte_id?: string | null
+          created_at?: string | null
+          domicilio?: Json | null
+          id?: string
+          nombre_figura: string
+          num_licencia?: string | null
+          num_reg_id_trib?: string | null
+          residencia_fiscal?: string | null
+          rfc_figura: string
+          tipo_figura: string
+        }
+        Update: {
+          carta_porte_id?: string | null
+          created_at?: string | null
+          domicilio?: Json | null
+          id?: string
+          nombre_figura?: string
+          num_licencia?: string | null
+          num_reg_id_trib?: string | null
+          residencia_fiscal?: string | null
+          rfc_figura?: string
+          tipo_figura?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cp_figura_transporte_carta_porte_id_fkey"
+            columns: ["carta_porte_id"]
+            isOneToOne: false
+            referencedRelation: "cartas_porte"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cp_mercancias: {
+        Row: {
+          bienes_transp: string
+          cantidad: number
+          carta_porte_id: string | null
+          clave_unidad: string
+          created_at: string | null
+          cve_material_peligroso: string | null
+          descrip_embalaje: string | null
+          descripcion: string
+          embalaje: string | null
+          fraccion_arancelaria: string | null
+          id: string
+          material_peligroso: boolean | null
+          pedido_detalle_id: string | null
+          pedimentos: Json | null
+          peso_en_kg: number
+          unidad: string | null
+          uuid_comercio_ext: string | null
+        }
+        Insert: {
+          bienes_transp: string
+          cantidad: number
+          carta_porte_id?: string | null
+          clave_unidad: string
+          created_at?: string | null
+          cve_material_peligroso?: string | null
+          descrip_embalaje?: string | null
+          descripcion: string
+          embalaje?: string | null
+          fraccion_arancelaria?: string | null
+          id?: string
+          material_peligroso?: boolean | null
+          pedido_detalle_id?: string | null
+          pedimentos?: Json | null
+          peso_en_kg: number
+          unidad?: string | null
+          uuid_comercio_ext?: string | null
+        }
+        Update: {
+          bienes_transp?: string
+          cantidad?: number
+          carta_porte_id?: string | null
+          clave_unidad?: string
+          created_at?: string | null
+          cve_material_peligroso?: string | null
+          descrip_embalaje?: string | null
+          descripcion?: string
+          embalaje?: string | null
+          fraccion_arancelaria?: string | null
+          id?: string
+          material_peligroso?: boolean | null
+          pedido_detalle_id?: string | null
+          pedimentos?: Json | null
+          peso_en_kg?: number
+          unidad?: string | null
+          uuid_comercio_ext?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cp_mercancias_carta_porte_id_fkey"
+            columns: ["carta_porte_id"]
+            isOneToOne: false
+            referencedRelation: "cartas_porte"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cp_remolques: {
+        Row: {
+          autotransporte_id: string | null
+          created_at: string | null
+          id: string
+          placa: string
+          subtipo_rem: string
+        }
+        Insert: {
+          autotransporte_id?: string | null
+          created_at?: string | null
+          id?: string
+          placa: string
+          subtipo_rem: string
+        }
+        Update: {
+          autotransporte_id?: string | null
+          created_at?: string | null
+          id?: string
+          placa?: string
+          subtipo_rem?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cp_remolques_autotransporte_id_fkey"
+            columns: ["autotransporte_id"]
+            isOneToOne: false
+            referencedRelation: "cp_autotransporte"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cp_ubicaciones: {
+        Row: {
+          calle: string | null
+          carta_porte_id: string | null
+          codigo_postal: string
+          colonia: string | null
+          created_at: string | null
+          distancia_recorrida: number | null
+          estado: string | null
+          fecha_hora_estimada: string
+          id: string
+          localidad: string | null
+          municipio: string | null
+          nombre_remitente_destinatario: string | null
+          numero_exterior: string | null
+          numero_interior: string | null
+          orden_secuencia: number
+          pais: string | null
+          rfc: string
+          tipo: string
+        }
+        Insert: {
+          calle?: string | null
+          carta_porte_id?: string | null
+          codigo_postal: string
+          colonia?: string | null
+          created_at?: string | null
+          distancia_recorrida?: number | null
+          estado?: string | null
+          fecha_hora_estimada: string
+          id?: string
+          localidad?: string | null
+          municipio?: string | null
+          nombre_remitente_destinatario?: string | null
+          numero_exterior?: string | null
+          numero_interior?: string | null
+          orden_secuencia: number
+          pais?: string | null
+          rfc: string
+          tipo: string
+        }
+        Update: {
+          calle?: string | null
+          carta_porte_id?: string | null
+          codigo_postal?: string
+          colonia?: string | null
+          created_at?: string | null
+          distancia_recorrida?: number | null
+          estado?: string | null
+          fecha_hora_estimada?: string
+          id?: string
+          localidad?: string | null
+          municipio?: string | null
+          nombre_remitente_destinatario?: string | null
+          numero_exterior?: string | null
+          numero_interior?: string | null
+          orden_secuencia?: number
+          pais?: string | null
+          rfc?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cp_ubicaciones_carta_porte_id_fkey"
+            columns: ["carta_porte_id"]
+            isOneToOne: false
+            referencedRelation: "cartas_porte"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cuadrilla_hoja_salida: {
+        Row: {
+          created_at: string | null
+          empleado_id: string | null
+          firma_digital_url: string | null
+          firmado_at: string | null
+          hoja_salida_id: string | null
+          id: string
+          nombre_snapshot: string | null
+          orden_ayudante: number | null
+          rol_en_entrega: string
+        }
+        Insert: {
+          created_at?: string | null
+          empleado_id?: string | null
+          firma_digital_url?: string | null
+          firmado_at?: string | null
+          hoja_salida_id?: string | null
+          id?: string
+          nombre_snapshot?: string | null
+          orden_ayudante?: number | null
+          rol_en_entrega: string
+        }
+        Update: {
+          created_at?: string | null
+          empleado_id?: string | null
+          firma_digital_url?: string | null
+          firmado_at?: string | null
+          hoja_salida_id?: string | null
+          id?: string
+          nombre_snapshot?: string | null
+          orden_ayudante?: number | null
+          rol_en_entrega?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cuadrilla_hoja_salida_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cuadrilla_hoja_salida_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados_vista_segura"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cuadrilla_hoja_salida_hoja_salida_id_fkey"
+            columns: ["hoja_salida_id"]
+            isOneToOne: false
+            referencedRelation: "hojas_salida"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      desviaciones_ruta: {
+        Row: {
+          anomalia_id: string | null
+          created_at: string | null
+          distancia_del_waypoint_km: number | null
+          duracion_minutos: number | null
+          estado: string | null
+          finalizada_at: string | null
+          hoja_salida_id: string | null
+          id: string
+          iniciada_at: string
+          justificacion_chofer: string | null
+          justificada_at: string | null
+          lat: number | null
+          lng: number | null
+          resolucion_notas: string | null
+          resuelta_at: string | null
+          resuelta_por: string | null
+          ruta_id: string | null
+          severidad: string | null
+          tipo_desviacion: string
+          updated_at: string | null
+          user_id: string | null
+          vehiculo_id: string | null
+          velocidad_kmh: number | null
+        }
+        Insert: {
+          anomalia_id?: string | null
+          created_at?: string | null
+          distancia_del_waypoint_km?: number | null
+          duracion_minutos?: number | null
+          estado?: string | null
+          finalizada_at?: string | null
+          hoja_salida_id?: string | null
+          id?: string
+          iniciada_at: string
+          justificacion_chofer?: string | null
+          justificada_at?: string | null
+          lat?: number | null
+          lng?: number | null
+          resolucion_notas?: string | null
+          resuelta_at?: string | null
+          resuelta_por?: string | null
+          ruta_id?: string | null
+          severidad?: string | null
+          tipo_desviacion: string
+          updated_at?: string | null
+          user_id?: string | null
+          vehiculo_id?: string | null
+          velocidad_kmh?: number | null
+        }
+        Update: {
+          anomalia_id?: string | null
+          created_at?: string | null
+          distancia_del_waypoint_km?: number | null
+          duracion_minutos?: number | null
+          estado?: string | null
+          finalizada_at?: string | null
+          hoja_salida_id?: string | null
+          id?: string
+          iniciada_at?: string
+          justificacion_chofer?: string | null
+          justificada_at?: string | null
+          lat?: number | null
+          lng?: number | null
+          resolucion_notas?: string | null
+          resuelta_at?: string | null
+          resuelta_por?: string | null
+          ruta_id?: string | null
+          severidad?: string | null
+          tipo_desviacion?: string
+          updated_at?: string | null
+          user_id?: string | null
+          vehiculo_id?: string | null
+          velocidad_kmh?: number | null
+        }
+        Relationships: []
+      }
       device_tokens: {
         Row: {
           created_at: string | null
@@ -2009,6 +3181,115 @@ export type Database = {
             columns: ["devolucion_id"]
             isOneToOne: false
             referencedRelation: "devoluciones_proveedor"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discrepancias_la_corona: {
+        Row: {
+          cantidad_esperada: number | null
+          cantidad_real: number | null
+          created_at: string | null
+          detectado_at: string | null
+          detectado_por: string | null
+          diferencia: number | null
+          empleado_responsable_id: string | null
+          entrega_id: string | null
+          es_robo_sospechado: boolean | null
+          estado_investigacion: string | null
+          hoja_salida_id: string | null
+          id: string
+          producto_id: string | null
+          resolucion: string | null
+          resolucion_at: string | null
+          resolucion_por: string | null
+          severidad: string | null
+          tipo_discrepancia: string
+          valor_monetario: number | null
+        }
+        Insert: {
+          cantidad_esperada?: number | null
+          cantidad_real?: number | null
+          created_at?: string | null
+          detectado_at?: string | null
+          detectado_por?: string | null
+          diferencia?: number | null
+          empleado_responsable_id?: string | null
+          entrega_id?: string | null
+          es_robo_sospechado?: boolean | null
+          estado_investigacion?: string | null
+          hoja_salida_id?: string | null
+          id?: string
+          producto_id?: string | null
+          resolucion?: string | null
+          resolucion_at?: string | null
+          resolucion_por?: string | null
+          severidad?: string | null
+          tipo_discrepancia: string
+          valor_monetario?: number | null
+        }
+        Update: {
+          cantidad_esperada?: number | null
+          cantidad_real?: number | null
+          created_at?: string | null
+          detectado_at?: string | null
+          detectado_por?: string | null
+          diferencia?: number | null
+          empleado_responsable_id?: string | null
+          entrega_id?: string | null
+          es_robo_sospechado?: boolean | null
+          estado_investigacion?: string | null
+          hoja_salida_id?: string | null
+          id?: string
+          producto_id?: string | null
+          resolucion?: string | null
+          resolucion_at?: string | null
+          resolucion_por?: string | null
+          severidad?: string | null
+          tipo_discrepancia?: string
+          valor_monetario?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discrepancias_la_corona_empleado_responsable_id_fkey"
+            columns: ["empleado_responsable_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discrepancias_la_corona_empleado_responsable_id_fkey"
+            columns: ["empleado_responsable_id"]
+            isOneToOne: false
+            referencedRelation: "empleados_vista_segura"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discrepancias_la_corona_entrega_id_fkey"
+            columns: ["entrega_id"]
+            isOneToOne: false
+            referencedRelation: "entregas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discrepancias_la_corona_hoja_salida_id_fkey"
+            columns: ["hoja_salida_id"]
+            isOneToOne: false
+            referencedRelation: "hojas_salida"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discrepancias_la_corona_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discrepancias_la_corona_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos_stock_bajo"
             referencedColumns: ["id"]
           },
         ]
@@ -2608,6 +3889,162 @@ export type Database = {
           },
         ]
       }
+      eventos_conciliacion: {
+        Row: {
+          anomalia_detalle: string | null
+          anomalia_tipo: string | null
+          completado_at: string | null
+          created_at: string | null
+          dentro_geo_fence: boolean | null
+          duracion_segundos: number | null
+          entrega_id: string | null
+          estado: string | null
+          firma_url: string | null
+          foto_url: string | null
+          gps_accuracy: number | null
+          gps_lat: number | null
+          gps_lng: number | null
+          hoja_salida_id: string | null
+          id: string
+          metadata: Json | null
+          momento_id: string | null
+          notas: string | null
+          rol_usuario: string | null
+          tiene_anomalia: boolean | null
+          updated_at: string | null
+          usuario_id: string | null
+          usuario_nombre: string | null
+        }
+        Insert: {
+          anomalia_detalle?: string | null
+          anomalia_tipo?: string | null
+          completado_at?: string | null
+          created_at?: string | null
+          dentro_geo_fence?: boolean | null
+          duracion_segundos?: number | null
+          entrega_id?: string | null
+          estado?: string | null
+          firma_url?: string | null
+          foto_url?: string | null
+          gps_accuracy?: number | null
+          gps_lat?: number | null
+          gps_lng?: number | null
+          hoja_salida_id?: string | null
+          id?: string
+          metadata?: Json | null
+          momento_id?: string | null
+          notas?: string | null
+          rol_usuario?: string | null
+          tiene_anomalia?: boolean | null
+          updated_at?: string | null
+          usuario_id?: string | null
+          usuario_nombre?: string | null
+        }
+        Update: {
+          anomalia_detalle?: string | null
+          anomalia_tipo?: string | null
+          completado_at?: string | null
+          created_at?: string | null
+          dentro_geo_fence?: boolean | null
+          duracion_segundos?: number | null
+          entrega_id?: string | null
+          estado?: string | null
+          firma_url?: string | null
+          foto_url?: string | null
+          gps_accuracy?: number | null
+          gps_lat?: number | null
+          gps_lng?: number | null
+          hoja_salida_id?: string | null
+          id?: string
+          metadata?: Json | null
+          momento_id?: string | null
+          notas?: string | null
+          rol_usuario?: string | null
+          tiene_anomalia?: boolean | null
+          updated_at?: string | null
+          usuario_id?: string | null
+          usuario_nombre?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventos_conciliacion_entrega_id_fkey"
+            columns: ["entrega_id"]
+            isOneToOne: false
+            referencedRelation: "entregas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_conciliacion_hoja_salida_id_fkey"
+            columns: ["hoja_salida_id"]
+            isOneToOne: false
+            referencedRelation: "hojas_salida"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_conciliacion_momento_id_fkey"
+            columns: ["momento_id"]
+            isOneToOne: false
+            referencedRelation: "momentos_clave"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      eventos_geofence: {
+        Row: {
+          alerta_disparada: boolean | null
+          created_at: string | null
+          detectado_at: string | null
+          duracion_dwell_minutos: number | null
+          geofence_id: string | null
+          hoja_salida_id: string | null
+          id: string
+          lat: number | null
+          lng: number | null
+          tipo_evento: string
+          user_id: string | null
+          vehiculo_id: string | null
+          velocidad_kmh: number | null
+        }
+        Insert: {
+          alerta_disparada?: boolean | null
+          created_at?: string | null
+          detectado_at?: string | null
+          duracion_dwell_minutos?: number | null
+          geofence_id?: string | null
+          hoja_salida_id?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          tipo_evento: string
+          user_id?: string | null
+          vehiculo_id?: string | null
+          velocidad_kmh?: number | null
+        }
+        Update: {
+          alerta_disparada?: boolean | null
+          created_at?: string | null
+          detectado_at?: string | null
+          duracion_dwell_minutos?: number | null
+          geofence_id?: string | null
+          hoja_salida_id?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          tipo_evento?: string
+          user_id?: string | null
+          vehiculo_id?: string | null
+          velocidad_kmh?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventos_geofence_geofence_id_fkey"
+            columns: ["geofence_id"]
+            isOneToOne: false
+            referencedRelation: "geo_fences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       eventos_proveedor: {
         Row: {
           created_at: string | null
@@ -2714,6 +4151,7 @@ export type Database = {
           cfdi_xml_url: string | null
           cliente_id: string
           created_at: string
+          dias_credito: number | null
           fecha_emision: string
           fecha_pago: string | null
           fecha_vencimiento: string | null
@@ -2724,7 +4162,10 @@ export type Database = {
           metodo_pago: string | null
           notas: string | null
           pagada: boolean | null
+          pagada_at: string | null
           pedido_id: string | null
+          remision_id: string | null
+          saldo_pendiente: number | null
           subtotal: number
           total: number
           updated_at: string
@@ -2739,6 +4180,7 @@ export type Database = {
           cfdi_xml_url?: string | null
           cliente_id: string
           created_at?: string
+          dias_credito?: number | null
           fecha_emision?: string
           fecha_pago?: string | null
           fecha_vencimiento?: string | null
@@ -2749,7 +4191,10 @@ export type Database = {
           metodo_pago?: string | null
           notas?: string | null
           pagada?: boolean | null
+          pagada_at?: string | null
           pedido_id?: string | null
+          remision_id?: string | null
+          saldo_pendiente?: number | null
           subtotal: number
           total: number
           updated_at?: string
@@ -2764,6 +4209,7 @@ export type Database = {
           cfdi_xml_url?: string | null
           cliente_id?: string
           created_at?: string
+          dias_credito?: number | null
           fecha_emision?: string
           fecha_pago?: string | null
           fecha_vencimiento?: string | null
@@ -2774,7 +4220,10 @@ export type Database = {
           metodo_pago?: string | null
           notas?: string | null
           pagada?: boolean | null
+          pagada_at?: string | null
           pedido_id?: string | null
+          remision_id?: string | null
+          saldo_pendiente?: number | null
           subtotal?: number
           total?: number
           updated_at?: string
@@ -2885,6 +4334,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      geo_fences: {
+        Row: {
+          activo: boolean | null
+          centro_lat: number
+          centro_lng: number
+          cliente_id: string | null
+          created_at: string | null
+          created_by: string | null
+          descripcion: string | null
+          horario_fin: string | null
+          horario_inicio: string | null
+          id: string
+          nombre: string | null
+          radio_metros: number | null
+          ruta_id: string | null
+          severidad_alerta: string | null
+          tipo: string
+          trigger_entrada_alerta: boolean | null
+          trigger_salida_alerta: boolean | null
+        }
+        Insert: {
+          activo?: boolean | null
+          centro_lat: number
+          centro_lng: number
+          cliente_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          descripcion?: string | null
+          horario_fin?: string | null
+          horario_inicio?: string | null
+          id?: string
+          nombre?: string | null
+          radio_metros?: number | null
+          ruta_id?: string | null
+          severidad_alerta?: string | null
+          tipo: string
+          trigger_entrada_alerta?: boolean | null
+          trigger_salida_alerta?: boolean | null
+        }
+        Update: {
+          activo?: boolean | null
+          centro_lat?: number
+          centro_lng?: number
+          cliente_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          descripcion?: string | null
+          horario_fin?: string | null
+          horario_inicio?: string | null
+          id?: string
+          nombre?: string | null
+          radio_metros?: number | null
+          ruta_id?: string | null
+          severidad_alerta?: string | null
+          tipo?: string
+          trigger_entrada_alerta?: boolean | null
+          trigger_salida_alerta?: boolean | null
+        }
+        Relationships: []
       }
       gmail_auditoria: {
         Row: {
@@ -3092,6 +4601,328 @@ export type Database = {
             columns: ["gmail_cuenta_id"]
             isOneToOne: true
             referencedRelation: "gmail_cuentas_segura"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hojas_salida: {
+        Row: {
+          avisos_especiales: string | null
+          carta_porte_id: string | null
+          chofer_inicio_at: string | null
+          chofer_llegada_at: string | null
+          cliente_contacto_nombre: string | null
+          cliente_contacto_telefono: string | null
+          cliente_direccion: string | null
+          cliente_notas: string | null
+          cliente_razon_social: string | null
+          cliente_rfc: string | null
+          created_at: string | null
+          entrega_id: string | null
+          entregada_chofer_at: string | null
+          entregada_chofer_por: string | null
+          entregada_cliente_at: string | null
+          estado: string | null
+          fecha_emision: string | null
+          fecha_entrega_programada: string | null
+          firma_chofer_url: string | null
+          firma_cliente_url: string | null
+          folio: string
+          foto_sellada_url: string | null
+          generada_at: string | null
+          generada_por: string | null
+          gps_entrega_lat: number | null
+          gps_entrega_lng: number | null
+          gps_inicio_lat: number | null
+          gps_inicio_lng: number | null
+          hora_estimada_llegada: string | null
+          ia_clasificacion: string | null
+          ia_firma_detectada: boolean | null
+          ia_observaciones_texto: string | null
+          ia_procesada_at: string | null
+          ia_raw_response: Json | null
+          ia_sello_detectado: boolean | null
+          id: string
+          impresa_at: string | null
+          motivo_no_entrega: string | null
+          notas_chofer: string | null
+          oc_cliente: string | null
+          pdf_url: string | null
+          pedido_id: string | null
+          peso_bruto_kg: number | null
+          recibe_cargo: string | null
+          recibe_nombre: string | null
+          reconciliacion_estado: string | null
+          reconciliacion_items_faltantes: Json | null
+          reconciliacion_observaciones: string | null
+          reconciliada_at: string | null
+          reconciliada_por: string | null
+          regresada_bodega_at: string | null
+          requiere_carta_porte: boolean | null
+          ruta_folio: string | null
+          ruta_id: string | null
+          salida_bodega_at: string | null
+          surtida_at: string | null
+          surtida_por: string | null
+          terminos_pago: string | null
+          tiene_fragiles: boolean | null
+          tiene_peligrosos: boolean | null
+          tiene_refrigerados: boolean | null
+          tipo_entrega: string | null
+          total_bultos: number | null
+          total_items_pedidos: number | null
+          total_items_surtidos: number | null
+          updated_at: string | null
+          vehiculo_descripcion: string | null
+          vehiculo_id: string | null
+          vehiculo_placa: string | null
+        }
+        Insert: {
+          avisos_especiales?: string | null
+          carta_porte_id?: string | null
+          chofer_inicio_at?: string | null
+          chofer_llegada_at?: string | null
+          cliente_contacto_nombre?: string | null
+          cliente_contacto_telefono?: string | null
+          cliente_direccion?: string | null
+          cliente_notas?: string | null
+          cliente_razon_social?: string | null
+          cliente_rfc?: string | null
+          created_at?: string | null
+          entrega_id?: string | null
+          entregada_chofer_at?: string | null
+          entregada_chofer_por?: string | null
+          entregada_cliente_at?: string | null
+          estado?: string | null
+          fecha_emision?: string | null
+          fecha_entrega_programada?: string | null
+          firma_chofer_url?: string | null
+          firma_cliente_url?: string | null
+          folio: string
+          foto_sellada_url?: string | null
+          generada_at?: string | null
+          generada_por?: string | null
+          gps_entrega_lat?: number | null
+          gps_entrega_lng?: number | null
+          gps_inicio_lat?: number | null
+          gps_inicio_lng?: number | null
+          hora_estimada_llegada?: string | null
+          ia_clasificacion?: string | null
+          ia_firma_detectada?: boolean | null
+          ia_observaciones_texto?: string | null
+          ia_procesada_at?: string | null
+          ia_raw_response?: Json | null
+          ia_sello_detectado?: boolean | null
+          id?: string
+          impresa_at?: string | null
+          motivo_no_entrega?: string | null
+          notas_chofer?: string | null
+          oc_cliente?: string | null
+          pdf_url?: string | null
+          pedido_id?: string | null
+          peso_bruto_kg?: number | null
+          recibe_cargo?: string | null
+          recibe_nombre?: string | null
+          reconciliacion_estado?: string | null
+          reconciliacion_items_faltantes?: Json | null
+          reconciliacion_observaciones?: string | null
+          reconciliada_at?: string | null
+          reconciliada_por?: string | null
+          regresada_bodega_at?: string | null
+          requiere_carta_porte?: boolean | null
+          ruta_folio?: string | null
+          ruta_id?: string | null
+          salida_bodega_at?: string | null
+          surtida_at?: string | null
+          surtida_por?: string | null
+          terminos_pago?: string | null
+          tiene_fragiles?: boolean | null
+          tiene_peligrosos?: boolean | null
+          tiene_refrigerados?: boolean | null
+          tipo_entrega?: string | null
+          total_bultos?: number | null
+          total_items_pedidos?: number | null
+          total_items_surtidos?: number | null
+          updated_at?: string | null
+          vehiculo_descripcion?: string | null
+          vehiculo_id?: string | null
+          vehiculo_placa?: string | null
+        }
+        Update: {
+          avisos_especiales?: string | null
+          carta_porte_id?: string | null
+          chofer_inicio_at?: string | null
+          chofer_llegada_at?: string | null
+          cliente_contacto_nombre?: string | null
+          cliente_contacto_telefono?: string | null
+          cliente_direccion?: string | null
+          cliente_notas?: string | null
+          cliente_razon_social?: string | null
+          cliente_rfc?: string | null
+          created_at?: string | null
+          entrega_id?: string | null
+          entregada_chofer_at?: string | null
+          entregada_chofer_por?: string | null
+          entregada_cliente_at?: string | null
+          estado?: string | null
+          fecha_emision?: string | null
+          fecha_entrega_programada?: string | null
+          firma_chofer_url?: string | null
+          firma_cliente_url?: string | null
+          folio?: string
+          foto_sellada_url?: string | null
+          generada_at?: string | null
+          generada_por?: string | null
+          gps_entrega_lat?: number | null
+          gps_entrega_lng?: number | null
+          gps_inicio_lat?: number | null
+          gps_inicio_lng?: number | null
+          hora_estimada_llegada?: string | null
+          ia_clasificacion?: string | null
+          ia_firma_detectada?: boolean | null
+          ia_observaciones_texto?: string | null
+          ia_procesada_at?: string | null
+          ia_raw_response?: Json | null
+          ia_sello_detectado?: boolean | null
+          id?: string
+          impresa_at?: string | null
+          motivo_no_entrega?: string | null
+          notas_chofer?: string | null
+          oc_cliente?: string | null
+          pdf_url?: string | null
+          pedido_id?: string | null
+          peso_bruto_kg?: number | null
+          recibe_cargo?: string | null
+          recibe_nombre?: string | null
+          reconciliacion_estado?: string | null
+          reconciliacion_items_faltantes?: Json | null
+          reconciliacion_observaciones?: string | null
+          reconciliada_at?: string | null
+          reconciliada_por?: string | null
+          regresada_bodega_at?: string | null
+          requiere_carta_porte?: boolean | null
+          ruta_folio?: string | null
+          ruta_id?: string | null
+          salida_bodega_at?: string | null
+          surtida_at?: string | null
+          surtida_por?: string | null
+          terminos_pago?: string | null
+          tiene_fragiles?: boolean | null
+          tiene_peligrosos?: boolean | null
+          tiene_refrigerados?: boolean | null
+          tipo_entrega?: string | null
+          total_bultos?: number | null
+          total_items_pedidos?: number | null
+          total_items_surtidos?: number | null
+          updated_at?: string | null
+          vehiculo_descripcion?: string | null
+          vehiculo_id?: string | null
+          vehiculo_placa?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hojas_salida_carta_porte_id_fkey"
+            columns: ["carta_porte_id"]
+            isOneToOne: false
+            referencedRelation: "cartas_porte"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hojas_salida_entrega_id_fkey"
+            columns: ["entrega_id"]
+            isOneToOne: false
+            referencedRelation: "entregas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hojas_salida_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hojas_salida_ruta_id_fkey"
+            columns: ["ruta_id"]
+            isOneToOne: false
+            referencedRelation: "rutas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hojas_salida_vehiculo_id_fkey"
+            columns: ["vehiculo_id"]
+            isOneToOne: false
+            referencedRelation: "vehiculos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hojas_salida_lineas: {
+        Row: {
+          cantidad_pedida: number | null
+          cantidad_surtida: number | null
+          codigo_producto: string | null
+          created_at: string | null
+          descripcion_producto: string | null
+          hoja_salida_id: string | null
+          id: string
+          lote: string | null
+          notas_linea: string | null
+          orden_linea: number
+          pedido_detalle_id: string | null
+          producto_id: string | null
+          unidad: string | null
+        }
+        Insert: {
+          cantidad_pedida?: number | null
+          cantidad_surtida?: number | null
+          codigo_producto?: string | null
+          created_at?: string | null
+          descripcion_producto?: string | null
+          hoja_salida_id?: string | null
+          id?: string
+          lote?: string | null
+          notas_linea?: string | null
+          orden_linea: number
+          pedido_detalle_id?: string | null
+          producto_id?: string | null
+          unidad?: string | null
+        }
+        Update: {
+          cantidad_pedida?: number | null
+          cantidad_surtida?: number | null
+          codigo_producto?: string | null
+          created_at?: string | null
+          descripcion_producto?: string | null
+          hoja_salida_id?: string | null
+          id?: string
+          lote?: string | null
+          notas_linea?: string | null
+          orden_linea?: number
+          pedido_detalle_id?: string | null
+          producto_id?: string | null
+          unidad?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hojas_salida_lineas_hoja_salida_id_fkey"
+            columns: ["hoja_salida_id"]
+            isOneToOne: false
+            referencedRelation: "hojas_salida"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hojas_salida_lineas_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hojas_salida_lineas_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos_stock_bajo"
             referencedColumns: ["id"]
           },
         ]
@@ -3347,6 +5178,66 @@ export type Database = {
           },
         ]
       }
+      metricas_empleado_diarias: {
+        Row: {
+          conteos_con_diferencia: number | null
+          conteos_exactos: number | null
+          created_at: string | null
+          empleado_id: string | null
+          entregas_con_problema: number | null
+          entregas_exitosas: number | null
+          fecha: string
+          hojas_sin_firma: number | null
+          hojas_sin_sello: number | null
+          id: string
+          km_recorridos: number | null
+          tiempo_ruta_minutos: number | null
+        }
+        Insert: {
+          conteos_con_diferencia?: number | null
+          conteos_exactos?: number | null
+          created_at?: string | null
+          empleado_id?: string | null
+          entregas_con_problema?: number | null
+          entregas_exitosas?: number | null
+          fecha: string
+          hojas_sin_firma?: number | null
+          hojas_sin_sello?: number | null
+          id?: string
+          km_recorridos?: number | null
+          tiempo_ruta_minutos?: number | null
+        }
+        Update: {
+          conteos_con_diferencia?: number | null
+          conteos_exactos?: number | null
+          created_at?: string | null
+          empleado_id?: string | null
+          entregas_con_problema?: number | null
+          entregas_exitosas?: number | null
+          fecha?: string
+          hojas_sin_firma?: number | null
+          hojas_sin_sello?: number | null
+          id?: string
+          km_recorridos?: number | null
+          tiempo_ruta_minutos?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "metricas_empleado_diarias_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "metricas_empleado_diarias_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados_vista_segura"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       migracion_productos_sugerencias: {
         Row: {
           aprobado_por: string | null
@@ -3457,6 +5348,135 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      momentos_clave: {
+        Row: {
+          bloqueante: boolean | null
+          created_at: string | null
+          descripcion: string | null
+          id: string
+          nombre: string
+          orden_secuencia: number
+          requiere_firma: boolean | null
+          requiere_foto: boolean | null
+          requiere_gps: boolean | null
+          rol_responsable: string | null
+        }
+        Insert: {
+          bloqueante?: boolean | null
+          created_at?: string | null
+          descripcion?: string | null
+          id: string
+          nombre: string
+          orden_secuencia: number
+          requiere_firma?: boolean | null
+          requiere_foto?: boolean | null
+          requiere_gps?: boolean | null
+          rol_responsable?: string | null
+        }
+        Update: {
+          bloqueante?: boolean | null
+          created_at?: string | null
+          descripcion?: string | null
+          id?: string
+          nombre?: string
+          orden_secuencia?: number
+          requiere_firma?: boolean | null
+          requiere_foto?: boolean | null
+          requiere_gps?: boolean | null
+          rol_responsable?: string | null
+        }
+        Relationships: []
+      }
+      notas_credito: {
+        Row: {
+          cfdi_error: string | null
+          cfdi_estado: string | null
+          cfdi_fecha_timbrado: string | null
+          cfdi_pdf_url: string | null
+          cfdi_uuid: string | null
+          cfdi_xml_url: string | null
+          cliente_id: string | null
+          created_at: string | null
+          created_by: string | null
+          factura_original_id: string | null
+          folio: string | null
+          forma_pago: string | null
+          id: string
+          impuestos: number | null
+          metodo_pago: string | null
+          motivo: string | null
+          notas: string | null
+          subtotal: number
+          tipo: string | null
+          total: number
+          updated_at: string | null
+          uso_cfdi: string | null
+        }
+        Insert: {
+          cfdi_error?: string | null
+          cfdi_estado?: string | null
+          cfdi_fecha_timbrado?: string | null
+          cfdi_pdf_url?: string | null
+          cfdi_uuid?: string | null
+          cfdi_xml_url?: string | null
+          cliente_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          factura_original_id?: string | null
+          folio?: string | null
+          forma_pago?: string | null
+          id?: string
+          impuestos?: number | null
+          metodo_pago?: string | null
+          motivo?: string | null
+          notas?: string | null
+          subtotal: number
+          tipo?: string | null
+          total: number
+          updated_at?: string | null
+          uso_cfdi?: string | null
+        }
+        Update: {
+          cfdi_error?: string | null
+          cfdi_estado?: string | null
+          cfdi_fecha_timbrado?: string | null
+          cfdi_pdf_url?: string | null
+          cfdi_uuid?: string | null
+          cfdi_xml_url?: string | null
+          cliente_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          factura_original_id?: string | null
+          folio?: string | null
+          forma_pago?: string | null
+          id?: string
+          impuestos?: number | null
+          metodo_pago?: string | null
+          motivo?: string | null
+          notas?: string | null
+          subtotal?: number
+          tipo?: string | null
+          total?: number
+          updated_at?: string | null
+          uso_cfdi?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notas_credito_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notas_credito_factura_original_id_fkey"
+            columns: ["factura_original_id"]
+            isOneToOne: false
+            referencedRelation: "facturas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notificaciones: {
         Row: {
@@ -4052,6 +6072,200 @@ export type Database = {
           },
         ]
       }
+      pac_configurations: {
+        Row: {
+          activo: boolean | null
+          api_key: string | null
+          api_secret: string | null
+          certificado_csd_url: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          llave_csd_url: string | null
+          modo: string | null
+          pac_provider_id: string
+          password_csd_encrypted: string | null
+          password_encrypted: string | null
+          razon_social_emisor: string
+          regimen_fiscal_emisor: string
+          rfc_emisor: string
+          ultimo_test_conexion: string | null
+          ultimo_test_exitoso: boolean | null
+          ultimo_test_mensaje: string | null
+          updated_at: string | null
+          updated_by: string | null
+          username: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          api_key?: string | null
+          api_secret?: string | null
+          certificado_csd_url?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          llave_csd_url?: string | null
+          modo?: string | null
+          pac_provider_id: string
+          password_csd_encrypted?: string | null
+          password_encrypted?: string | null
+          razon_social_emisor: string
+          regimen_fiscal_emisor: string
+          rfc_emisor: string
+          ultimo_test_conexion?: string | null
+          ultimo_test_exitoso?: boolean | null
+          ultimo_test_mensaje?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          username?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          api_key?: string | null
+          api_secret?: string | null
+          certificado_csd_url?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          llave_csd_url?: string | null
+          modo?: string | null
+          pac_provider_id?: string
+          password_csd_encrypted?: string | null
+          password_encrypted?: string | null
+          razon_social_emisor?: string
+          regimen_fiscal_emisor?: string
+          rfc_emisor?: string
+          ultimo_test_conexion?: string | null
+          ultimo_test_exitoso?: boolean | null
+          ultimo_test_mensaje?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pac_configurations_pac_provider_id_fkey"
+            columns: ["pac_provider_id"]
+            isOneToOne: false
+            referencedRelation: "pac_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pac_providers: {
+        Row: {
+          created_at: string | null
+          descripcion: string | null
+          documentacion_url: string | null
+          id: string
+          nombre: string
+          precio_promedio_timbre: number | null
+          soporta_carta_porte_31: boolean | null
+          soporta_cfdi_40: boolean | null
+          soporta_complemento_pagos: boolean | null
+          status: string | null
+          url_produccion: string | null
+          url_sandbox: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          descripcion?: string | null
+          documentacion_url?: string | null
+          id: string
+          nombre: string
+          precio_promedio_timbre?: number | null
+          soporta_carta_porte_31?: boolean | null
+          soporta_cfdi_40?: boolean | null
+          soporta_complemento_pagos?: boolean | null
+          status?: string | null
+          url_produccion?: string | null
+          url_sandbox?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          descripcion?: string | null
+          documentacion_url?: string | null
+          id?: string
+          nombre?: string
+          precio_promedio_timbre?: number | null
+          soporta_carta_porte_31?: boolean | null
+          soporta_cfdi_40?: boolean | null
+          soporta_complemento_pagos?: boolean | null
+          status?: string | null
+          url_produccion?: string | null
+          url_sandbox?: string | null
+        }
+        Relationships: []
+      }
+      pac_transacciones_log: {
+        Row: {
+          carta_porte_id: string | null
+          codigo_error: string | null
+          complemento_pago_id: string | null
+          created_at: string | null
+          created_by: string | null
+          duracion_ms: number | null
+          exitoso: boolean | null
+          factura_id: string | null
+          id: string
+          mensaje_error: string | null
+          nota_credito_id: string | null
+          pac_provider_id: string | null
+          request_payload: Json | null
+          response_payload: Json | null
+          tipo_operacion: string
+        }
+        Insert: {
+          carta_porte_id?: string | null
+          codigo_error?: string | null
+          complemento_pago_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          duracion_ms?: number | null
+          exitoso?: boolean | null
+          factura_id?: string | null
+          id?: string
+          mensaje_error?: string | null
+          nota_credito_id?: string | null
+          pac_provider_id?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          tipo_operacion: string
+        }
+        Update: {
+          carta_porte_id?: string | null
+          codigo_error?: string | null
+          complemento_pago_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          duracion_ms?: number | null
+          exitoso?: boolean | null
+          factura_id?: string | null
+          id?: string
+          mensaje_error?: string | null
+          nota_credito_id?: string | null
+          pac_provider_id?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          tipo_operacion?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pac_transacciones_log_carta_porte_id_fkey"
+            columns: ["carta_porte_id"]
+            isOneToOne: false
+            referencedRelation: "cartas_porte"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pac_transacciones_log_pac_provider_id_fkey"
+            columns: ["pac_provider_id"]
+            isOneToOne: false
+            referencedRelation: "pac_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pagos_cliente: {
         Row: {
           cliente_id: string
@@ -4167,6 +6381,7 @@ export type Database = {
           dia_fijo_semanal: string | null
           email_origen_id: string | null
           es_directo: boolean | null
+          estado_surtido: string | null
           factura_enviada_al_cliente: boolean
           factura_solicitada_por_cliente: boolean
           facturado: boolean
@@ -4191,6 +6406,9 @@ export type Database = {
           status: Database["public"]["Enums"]["order_status"]
           subtotal: number | null
           sucursal_id: string | null
+          surtido_fin_at: string | null
+          surtido_inicio_at: string | null
+          surtido_por: string | null
           tanda_id: string | null
           termino_credito: Database["public"]["Enums"]["credit_term"] | null
           total: number | null
@@ -4207,6 +6425,7 @@ export type Database = {
           dia_fijo_semanal?: string | null
           email_origen_id?: string | null
           es_directo?: boolean | null
+          estado_surtido?: string | null
           factura_enviada_al_cliente?: boolean
           factura_solicitada_por_cliente?: boolean
           facturado?: boolean
@@ -4231,6 +6450,9 @@ export type Database = {
           status?: Database["public"]["Enums"]["order_status"]
           subtotal?: number | null
           sucursal_id?: string | null
+          surtido_fin_at?: string | null
+          surtido_inicio_at?: string | null
+          surtido_por?: string | null
           tanda_id?: string | null
           termino_credito?: Database["public"]["Enums"]["credit_term"] | null
           total?: number | null
@@ -4247,6 +6469,7 @@ export type Database = {
           dia_fijo_semanal?: string | null
           email_origen_id?: string | null
           es_directo?: boolean | null
+          estado_surtido?: string | null
           factura_enviada_al_cliente?: boolean
           factura_solicitada_por_cliente?: boolean
           facturado?: boolean
@@ -4271,6 +6494,9 @@ export type Database = {
           status?: Database["public"]["Enums"]["order_status"]
           subtotal?: number | null
           sucursal_id?: string | null
+          surtido_fin_at?: string | null
+          surtido_inicio_at?: string | null
+          surtido_por?: string | null
           tanda_id?: string | null
           termino_credito?: Database["public"]["Enums"]["credit_term"] | null
           total?: number | null
@@ -4453,20 +6679,27 @@ export type Database = {
           autorizacion_status: string
           cantidad: number
           cantidad_original: number | null
+          cantidad_surtida_real: number | null
           created_at: string
           es_cortesia: boolean | null
+          estado_surtido: string | null
           fecha_ajuste_precio: string | null
+          foto_evidencia_url: string | null
           id: string
           kilos_totales: number | null
           linea_dividida_de: string | null
           notas_ajuste: string | null
+          notas_surtido: string | null
           pedido_id: string
           precio_ajustado_por: string | null
           precio_autorizado: number | null
           precio_original: number | null
           precio_unitario: number
           producto_id: string
+          producto_sustituto_id: string | null
           subtotal: number
+          surtido_at: string | null
+          surtido_por: string | null
           unidades_manual: number | null
         }
         Insert: {
@@ -4474,20 +6707,27 @@ export type Database = {
           autorizacion_status?: string
           cantidad: number
           cantidad_original?: number | null
+          cantidad_surtida_real?: number | null
           created_at?: string
           es_cortesia?: boolean | null
+          estado_surtido?: string | null
           fecha_ajuste_precio?: string | null
+          foto_evidencia_url?: string | null
           id?: string
           kilos_totales?: number | null
           linea_dividida_de?: string | null
           notas_ajuste?: string | null
+          notas_surtido?: string | null
           pedido_id: string
           precio_ajustado_por?: string | null
           precio_autorizado?: number | null
           precio_original?: number | null
           precio_unitario: number
           producto_id: string
+          producto_sustituto_id?: string | null
           subtotal: number
+          surtido_at?: string | null
+          surtido_por?: string | null
           unidades_manual?: number | null
         }
         Update: {
@@ -4495,20 +6735,27 @@ export type Database = {
           autorizacion_status?: string
           cantidad?: number
           cantidad_original?: number | null
+          cantidad_surtida_real?: number | null
           created_at?: string
           es_cortesia?: boolean | null
+          estado_surtido?: string | null
           fecha_ajuste_precio?: string | null
+          foto_evidencia_url?: string | null
           id?: string
           kilos_totales?: number | null
           linea_dividida_de?: string | null
           notas_ajuste?: string | null
+          notas_surtido?: string | null
           pedido_id?: string
           precio_ajustado_por?: string | null
           precio_autorizado?: number | null
           precio_original?: number | null
           precio_unitario?: number
           producto_id?: string
+          producto_sustituto_id?: string | null
           subtotal?: number
+          surtido_at?: string | null
+          surtido_por?: string | null
           unidades_manual?: number | null
         }
         Relationships: [
@@ -4593,6 +6840,56 @@ export type Database = {
             columns: ["pedido_id"]
             isOneToOne: false
             referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      permisos_sict: {
+        Row: {
+          created_at: string | null
+          documento_url: string | null
+          estado: string | null
+          fecha_emision: string | null
+          fecha_vencimiento: string | null
+          id: string
+          numero_permiso: string
+          observaciones: string | null
+          tipo_permiso: string
+          updated_at: string | null
+          vehiculo_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          documento_url?: string | null
+          estado?: string | null
+          fecha_emision?: string | null
+          fecha_vencimiento?: string | null
+          id?: string
+          numero_permiso: string
+          observaciones?: string | null
+          tipo_permiso: string
+          updated_at?: string | null
+          vehiculo_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          documento_url?: string | null
+          estado?: string | null
+          fecha_emision?: string | null
+          fecha_vencimiento?: string | null
+          id?: string
+          numero_permiso?: string
+          observaciones?: string | null
+          tipo_permiso?: string
+          updated_at?: string | null
+          vehiculo_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permisos_sict_vehiculo_id_fkey"
+            columns: ["vehiculo_id"]
+            isOneToOne: false
+            referencedRelation: "vehiculos"
             referencedColumns: ["id"]
           },
         ]
@@ -5822,6 +8119,190 @@ export type Database = {
           },
         ]
       }
+      remisiones: {
+        Row: {
+          cliente_id: string | null
+          convertida_a_factura: boolean | null
+          convertida_at: string | null
+          created_at: string | null
+          created_by: string | null
+          estado: string | null
+          factura_id: string | null
+          folio: string | null
+          id: string
+          impuestos: number | null
+          notas: string | null
+          pedido_id: string | null
+          subtotal: number | null
+          total: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          cliente_id?: string | null
+          convertida_a_factura?: boolean | null
+          convertida_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          estado?: string | null
+          factura_id?: string | null
+          folio?: string | null
+          id?: string
+          impuestos?: number | null
+          notas?: string | null
+          pedido_id?: string | null
+          subtotal?: number | null
+          total?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          cliente_id?: string | null
+          convertida_a_factura?: boolean | null
+          convertida_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          estado?: string | null
+          factura_id?: string | null
+          folio?: string | null
+          id?: string
+          impuestos?: number | null
+          notas?: string | null
+          pedido_id?: string | null
+          subtotal?: number | null
+          total?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "remisiones_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remisiones_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "facturas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remisiones_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reportes_diarios: {
+        Row: {
+          alertas_criticas: number | null
+          alertas_dia: number | null
+          cartera_total: number | null
+          cartera_vencida: number | null
+          cobros_dia: number | null
+          created_at: string | null
+          desviaciones_gps: number | null
+          discrepancias_nuevas: number | null
+          empleados_bandera_roja: number | null
+          entregas_dia: number | null
+          entregas_exitosas: number | null
+          enviado_email: boolean | null
+          facturas_timbradas: number | null
+          fecha: string
+          generado_at: string | null
+          hojas_procesadas_ia: number | null
+          hojas_salida_generadas: number | null
+          id: string
+          insights_texto: string | null
+          monto_cobrado_dia: number | null
+          monto_facturado_dia: number | null
+          notas_credito_dia: number | null
+          pedidos_completados: number | null
+          pedidos_dia: number | null
+          pedidos_pendientes: number | null
+          porcentaje_on_time: number | null
+          porcentaje_vencido: number | null
+          reps_generados: number | null
+          score_promedio_empleados: number | null
+          ticket_promedio: number | null
+          ventas_dia: number | null
+          ventas_mes: number | null
+          ventas_ytd: number | null
+        }
+        Insert: {
+          alertas_criticas?: number | null
+          alertas_dia?: number | null
+          cartera_total?: number | null
+          cartera_vencida?: number | null
+          cobros_dia?: number | null
+          created_at?: string | null
+          desviaciones_gps?: number | null
+          discrepancias_nuevas?: number | null
+          empleados_bandera_roja?: number | null
+          entregas_dia?: number | null
+          entregas_exitosas?: number | null
+          enviado_email?: boolean | null
+          facturas_timbradas?: number | null
+          fecha: string
+          generado_at?: string | null
+          hojas_procesadas_ia?: number | null
+          hojas_salida_generadas?: number | null
+          id?: string
+          insights_texto?: string | null
+          monto_cobrado_dia?: number | null
+          monto_facturado_dia?: number | null
+          notas_credito_dia?: number | null
+          pedidos_completados?: number | null
+          pedidos_dia?: number | null
+          pedidos_pendientes?: number | null
+          porcentaje_on_time?: number | null
+          porcentaje_vencido?: number | null
+          reps_generados?: number | null
+          score_promedio_empleados?: number | null
+          ticket_promedio?: number | null
+          ventas_dia?: number | null
+          ventas_mes?: number | null
+          ventas_ytd?: number | null
+        }
+        Update: {
+          alertas_criticas?: number | null
+          alertas_dia?: number | null
+          cartera_total?: number | null
+          cartera_vencida?: number | null
+          cobros_dia?: number | null
+          created_at?: string | null
+          desviaciones_gps?: number | null
+          discrepancias_nuevas?: number | null
+          empleados_bandera_roja?: number | null
+          entregas_dia?: number | null
+          entregas_exitosas?: number | null
+          enviado_email?: boolean | null
+          facturas_timbradas?: number | null
+          fecha?: string
+          generado_at?: string | null
+          hojas_procesadas_ia?: number | null
+          hojas_salida_generadas?: number | null
+          id?: string
+          insights_texto?: string | null
+          monto_cobrado_dia?: number | null
+          monto_facturado_dia?: number | null
+          notas_credito_dia?: number | null
+          pedidos_completados?: number | null
+          pedidos_dia?: number | null
+          pedidos_pendientes?: number | null
+          porcentaje_on_time?: number | null
+          porcentaje_vencido?: number | null
+          reps_generados?: number | null
+          score_promedio_empleados?: number | null
+          ticket_promedio?: number | null
+          ventas_dia?: number | null
+          ventas_mes?: number | null
+          ventas_ytd?: number | null
+        }
+        Relationships: []
+      }
       resumenes_diarios: {
         Row: {
           created_at: string | null
@@ -6053,6 +8534,248 @@ export type Database = {
             columns: ["vehiculo_id"]
             isOneToOne: false
             referencedRelation: "vehiculos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rutas_cobranza: {
+        Row: {
+          clientes_cobrados: number | null
+          clientes_visitados: number | null
+          cobrador_id: string | null
+          completada_at: string | null
+          created_at: string | null
+          estado: string | null
+          fecha_ruta: string
+          folio: string | null
+          id: string
+          iniciada_at: string | null
+          monto_total_cobrado: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          clientes_cobrados?: number | null
+          clientes_visitados?: number | null
+          cobrador_id?: string | null
+          completada_at?: string | null
+          created_at?: string | null
+          estado?: string | null
+          fecha_ruta: string
+          folio?: string | null
+          id?: string
+          iniciada_at?: string | null
+          monto_total_cobrado?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          clientes_cobrados?: number | null
+          clientes_visitados?: number | null
+          cobrador_id?: string | null
+          completada_at?: string | null
+          created_at?: string | null
+          estado?: string | null
+          fecha_ruta?: string
+          folio?: string | null
+          id?: string
+          iniciada_at?: string | null
+          monto_total_cobrado?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      rutas_cobranza_clientes: {
+        Row: {
+          cliente_id: string
+          cobro_id: string | null
+          created_at: string | null
+          dias_vencimiento_max: number | null
+          estado_visita: string | null
+          facturas_pendientes: number | null
+          id: string
+          notas: string | null
+          orden_visita: number | null
+          ruta_cobranza_id: string | null
+          saldo_total: number | null
+          visitado_at: string | null
+        }
+        Insert: {
+          cliente_id: string
+          cobro_id?: string | null
+          created_at?: string | null
+          dias_vencimiento_max?: number | null
+          estado_visita?: string | null
+          facturas_pendientes?: number | null
+          id?: string
+          notas?: string | null
+          orden_visita?: number | null
+          ruta_cobranza_id?: string | null
+          saldo_total?: number | null
+          visitado_at?: string | null
+        }
+        Update: {
+          cliente_id?: string
+          cobro_id?: string | null
+          created_at?: string | null
+          dias_vencimiento_max?: number | null
+          estado_visita?: string | null
+          facturas_pendientes?: number | null
+          id?: string
+          notas?: string | null
+          orden_visita?: number | null
+          ruta_cobranza_id?: string | null
+          saldo_total?: number | null
+          visitado_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rutas_cobranza_clientes_ruta_cobranza_id_fkey"
+            columns: ["ruta_cobranza_id"]
+            isOneToOne: false
+            referencedRelation: "rutas_cobranza"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sat_catalogos: {
+        Row: {
+          catalogo: string
+          clave: string
+          created_at: string | null
+          descripcion: string
+          id: string
+          metadata: Json | null
+          updated_at: string | null
+          vigente_desde: string | null
+          vigente_hasta: string | null
+        }
+        Insert: {
+          catalogo: string
+          clave: string
+          created_at?: string | null
+          descripcion: string
+          id?: string
+          metadata?: Json | null
+          updated_at?: string | null
+          vigente_desde?: string | null
+          vigente_hasta?: string | null
+        }
+        Update: {
+          catalogo?: string
+          clave?: string
+          created_at?: string | null
+          descripcion?: string
+          id?: string
+          metadata?: Json | null
+          updated_at?: string | null
+          vigente_desde?: string | null
+          vigente_hasta?: string | null
+        }
+        Relationships: []
+      }
+      score_confianza_empleado: {
+        Row: {
+          bandera_amarilla: boolean | null
+          bandera_roja: boolean | null
+          created_at: string | null
+          empleado_id: string | null
+          factor_discrepancias_30d: number | null
+          factor_entregas_exitosas: number | null
+          factor_robos_sospechados: number | null
+          id: string
+          score_actual: number | null
+          score_anterior: number | null
+          tendencia: string | null
+          ultimo_calculo: string | null
+        }
+        Insert: {
+          bandera_amarilla?: boolean | null
+          bandera_roja?: boolean | null
+          created_at?: string | null
+          empleado_id?: string | null
+          factor_discrepancias_30d?: number | null
+          factor_entregas_exitosas?: number | null
+          factor_robos_sospechados?: number | null
+          id?: string
+          score_actual?: number | null
+          score_anterior?: number | null
+          tendencia?: string | null
+          ultimo_calculo?: string | null
+        }
+        Update: {
+          bandera_amarilla?: boolean | null
+          bandera_roja?: boolean | null
+          created_at?: string | null
+          empleado_id?: string | null
+          factor_discrepancias_30d?: number | null
+          factor_entregas_exitosas?: number | null
+          factor_robos_sospechados?: number | null
+          id?: string
+          score_actual?: number | null
+          score_anterior?: number | null
+          tendencia?: string | null
+          ultimo_calculo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "score_confianza_empleado_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: true
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "score_confianza_empleado_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: true
+            referencedRelation: "empleados_vista_segura"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      score_confianza_historial: {
+        Row: {
+          calculado_por: string | null
+          cambio: number | null
+          created_at: string | null
+          empleado_id: string | null
+          factores_aplicados: Json | null
+          id: string
+          score_anterior: number | null
+          score_nuevo: number | null
+        }
+        Insert: {
+          calculado_por?: string | null
+          cambio?: number | null
+          created_at?: string | null
+          empleado_id?: string | null
+          factores_aplicados?: Json | null
+          id?: string
+          score_anterior?: number | null
+          score_nuevo?: number | null
+        }
+        Update: {
+          calculado_por?: string | null
+          cambio?: number | null
+          created_at?: string | null
+          empleado_id?: string | null
+          factores_aplicados?: Json | null
+          id?: string
+          score_anterior?: number | null
+          score_nuevo?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "score_confianza_historial_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "score_confianza_historial_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados_vista_segura"
             referencedColumns: ["id"]
           },
         ]
@@ -6369,6 +9092,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_dashboard_prefs: {
+        Row: {
+          canal_reporte: string | null
+          created_at: string | null
+          email_notificaciones: string | null
+          hora_reporte_diario: string | null
+          id: string
+          recibir_alertas_criticas_whatsapp: boolean | null
+          recibir_reporte_diario: boolean | null
+          updated_at: string | null
+          user_id: string | null
+          whatsapp_numero: string | null
+          widgets_visibles: Json | null
+        }
+        Insert: {
+          canal_reporte?: string | null
+          created_at?: string | null
+          email_notificaciones?: string | null
+          hora_reporte_diario?: string | null
+          id?: string
+          recibir_alertas_criticas_whatsapp?: boolean | null
+          recibir_reporte_diario?: boolean | null
+          updated_at?: string | null
+          user_id?: string | null
+          whatsapp_numero?: string | null
+          widgets_visibles?: Json | null
+        }
+        Update: {
+          canal_reporte?: string | null
+          created_at?: string | null
+          email_notificaciones?: string | null
+          hora_reporte_diario?: string | null
+          id?: string
+          recibir_alertas_criticas_whatsapp?: boolean | null
+          recibir_reporte_diario?: boolean | null
+          updated_at?: string | null
+          user_id?: string | null
+          whatsapp_numero?: string | null
+          widgets_visibles?: Json | null
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
