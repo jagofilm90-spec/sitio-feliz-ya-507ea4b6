@@ -24,6 +24,7 @@ import { ClienteCreditosExcepcionesTab } from "@/components/clientes/ClienteCred
 import { ClienteProgramacionTab } from "@/components/clientes/ClienteProgramacionTab";
 import { ClienteUsuarioTab } from "@/components/clientes/ClienteUsuarioTab";
 import { CreditCard } from "@/components/clientes/CreditCard";
+import { ClienteHierarchyTab } from "@/components/clientes/ClienteHierarchyTab";
 
 interface Zona {
   id: string;
@@ -311,6 +312,7 @@ export default function DetalleCliente() {
             <TabsTrigger value="credito" className="text-xs">Crédito</TabsTrigger>
             <TabsTrigger value="programacion" className="text-xs">Programación</TabsTrigger>
             <TabsTrigger value="usuario" className="text-xs">Portal</TabsTrigger>
+            <TabsTrigger value="hierarchy" className="text-xs">Jerarquía</TabsTrigger>
           </TabsList>
 
           <TabsContent value="general" className="space-y-6 mt-4">
@@ -470,6 +472,10 @@ export default function DetalleCliente() {
               }}
               onUserCreated={loadData}
             />
+          </TabsContent>
+
+          <TabsContent value="hierarchy" className="mt-4">
+            <ClienteHierarchyTab clienteId={id!} tipoCliente={cliente.tipo_cliente} />
           </TabsContent>
         </Tabs>
       </PageContainer>
