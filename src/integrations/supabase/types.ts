@@ -1213,6 +1213,7 @@ export type Database = {
           entre_calle: string | null
           es_grupo: boolean | null
           grupo_cliente_id: string | null
+          hereda_credito_padre: boolean | null
           id: string
           limite_credito: number | null
           logo_url: string | null
@@ -1224,6 +1225,7 @@ export type Database = {
           nombre_vialidad: string | null
           numero_exterior: string | null
           numero_interior: string | null
+          parent_cliente_id: string | null
           preferencia_facturacion: Database["public"]["Enums"]["preferencia_facturacion"]
           prioridad_entrega_default:
             | Database["public"]["Enums"]["delivery_priority"]
@@ -1235,6 +1237,7 @@ export type Database = {
           saldo_pendiente: number | null
           telefono: string | null
           termino_credito: Database["public"]["Enums"]["credit_term"]
+          tipo_cliente: string | null
           tipo_vialidad: string | null
           updated_at: string
           user_id: string | null
@@ -1256,6 +1259,7 @@ export type Database = {
           entre_calle?: string | null
           es_grupo?: boolean | null
           grupo_cliente_id?: string | null
+          hereda_credito_padre?: boolean | null
           id?: string
           limite_credito?: number | null
           logo_url?: string | null
@@ -1267,6 +1271,7 @@ export type Database = {
           nombre_vialidad?: string | null
           numero_exterior?: string | null
           numero_interior?: string | null
+          parent_cliente_id?: string | null
           preferencia_facturacion?: Database["public"]["Enums"]["preferencia_facturacion"]
           prioridad_entrega_default?:
             | Database["public"]["Enums"]["delivery_priority"]
@@ -1278,6 +1283,7 @@ export type Database = {
           saldo_pendiente?: number | null
           telefono?: string | null
           termino_credito?: Database["public"]["Enums"]["credit_term"]
+          tipo_cliente?: string | null
           tipo_vialidad?: string | null
           updated_at?: string
           user_id?: string | null
@@ -1299,6 +1305,7 @@ export type Database = {
           entre_calle?: string | null
           es_grupo?: boolean | null
           grupo_cliente_id?: string | null
+          hereda_credito_padre?: boolean | null
           id?: string
           limite_credito?: number | null
           logo_url?: string | null
@@ -1310,6 +1317,7 @@ export type Database = {
           nombre_vialidad?: string | null
           numero_exterior?: string | null
           numero_interior?: string | null
+          parent_cliente_id?: string | null
           preferencia_facturacion?: Database["public"]["Enums"]["preferencia_facturacion"]
           prioridad_entrega_default?:
             | Database["public"]["Enums"]["delivery_priority"]
@@ -1321,6 +1329,7 @@ export type Database = {
           saldo_pendiente?: number | null
           telefono?: string | null
           termino_credito?: Database["public"]["Enums"]["credit_term"]
+          tipo_cliente?: string | null
           tipo_vialidad?: string | null
           updated_at?: string
           user_id?: string | null
@@ -10145,6 +10154,16 @@ export type Database = {
       generar_folio_pedido: { Args: never; Returns: string }
       generar_folio_venta_mostrador: { Args: never; Returns: string }
       generar_notificaciones_fumigacion: { Args: never; Returns: undefined }
+      get_balance_consolidado: {
+        Args: { p_matriz_id: string }
+        Returns: {
+          balance_consolidado: number
+          clientes_en_hold: number
+          disponible_consolidado: number
+          limite_consolidado: number
+          total_clientes: number
+        }[]
+      }
       get_cliente_credito_status: {
         Args: { p_cliente_id: string }
         Returns: {
@@ -10156,6 +10175,17 @@ export type Database = {
           hold_activo: boolean
           hold_motivo: string
           porcentaje_usado: number
+        }[]
+      }
+      get_cliente_hierarchy: {
+        Args: { p_cliente_id: string }
+        Returns: {
+          cliente_id: string
+          hereda_credito: boolean
+          nivel: number
+          nombre: string
+          parent_id: string
+          tipo_cliente: string
         }[]
       }
       get_cliente_id_for_user: { Args: { user_uuid: string }; Returns: string }
