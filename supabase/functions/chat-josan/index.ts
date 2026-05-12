@@ -2,7 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-const MODEL = "claude-sonnet-4-20250514";
+const MODEL = "google/gemini-2.5-pro";
+const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 const SYSTEM_PROMPT = `Eres JOSAN, el asistente de IA de ALMASA-OS.
 ALMASA es una distribuidora de abarrotes mayorista fundada en 1904 en Hermosillo, Sonora.
@@ -20,85 +21,123 @@ REGLAS:
 4. Acompaña números con interpretación útil.
 5. Si hay alertas críticas, menciónalas.`;
 
+// OpenAI-compatible tool definitions (Lovable AI Gateway)
 const TOOLS = [
   {
-    name: "get_ventas",
-    description: "Ventas totales en un período. Usar para ventas/ingresos del día/semana/mes.",
-    input_schema: {
-      type: "object" as const,
-      properties: { periodo: { type: "string", enum: ["hoy", "ayer", "semana", "mes", "ytd"] } },
-      required: ["periodo"],
-    },
-  },
-  {
-    name: "get_top_clientes",
-    description: "Top clientes por ventas o cartera vencida.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        ordenar_por: { type: "string", enum: ["ventas_mes", "cartera_vencida", "cartera_total"] },
-        limit: { type: "integer" },
+    type: "function",
+    function: {
+      name: "get_ventas",
+      description: "Ventas totales en un período. Usar para ventas/ingresos del día/semana/mes.",
+      parameters: {
+        type: "object",
+        properties: { periodo: { type: "string", enum: ["hoy", "ayer", "semana", "mes", "ytd"] } },
+        required: ["periodo"],
+        additionalProperties: false,
       },
-      required: ["ordenar_por"],
     },
   },
   {
-    name: "get_pedidos_pendientes",
-    description: "Pedidos pendientes de surtir o entregar.",
-    input_schema: {
-      type: "object" as const,
-      properties: { estado: { type: "string", enum: ["todos", "sin_surtir", "en_transito"] } },
+    type: "function",
+    function: {
+      name: "get_top_clientes",
+      description: "Top clientes por ventas o cartera vencida.",
+      parameters: {
+        type: "object",
+        properties: {
+          ordenar_por: { type: "string", enum: ["ventas_mes", "cartera_vencida", "cartera_total"] },
+          limit: { type: "integer" },
+        },
+        required: ["ordenar_por"],
+        additionalProperties: false,
+      },
     },
   },
   {
-    name: "get_alertas_criticas",
-    description: "Alertas críticas activas LA CORONA: GPS, anti-robo, discrepancias.",
-    input_schema: { type: "object" as const, properties: {} },
-  },
-  {
-    name: "get_score_empleados",
-    description: "Score confianza empleados. Detecta banderas rojas (score < 60).",
-    input_schema: {
-      type: "object" as const,
-      properties: { solo_banderas_rojas: { type: "boolean" } },
+    type: "function",
+    function: {
+      name: "get_pedidos_pendientes",
+      description: "Pedidos pendientes de surtir o entregar.",
+      parameters: {
+        type: "object",
+        properties: { estado: { type: "string", enum: ["todos", "sin_surtir", "en_transito"] } },
+        additionalProperties: false,
+      },
     },
   },
   {
-    name: "get_inventario_bajo",
-    description: "Productos con inventario por debajo del mínimo.",
-    input_schema: {
-      type: "object" as const,
-      properties: { limit: { type: "integer" } },
+    type: "function",
+    function: {
+      name: "get_alertas_criticas",
+      description: "Alertas críticas activas LA CORONA: GPS, anti-robo, discrepancias.",
+      parameters: { type: "object", properties: {}, additionalProperties: false },
     },
   },
   {
-    name: "get_cobros_pendientes",
-    description: "Resumen cartera por antigüedad. Total vencido, cobros del día.",
-    input_schema: { type: "object" as const, properties: {} },
-  },
-  {
-    name: "get_dashboard_resumen",
-    description: "Resumen ejecutivo completo del día. Usar para 'cómo va el día' o 'dame un resumen'.",
-    input_schema: { type: "object" as const, properties: {} },
-  },
-  {
-    name: "buscar_cliente",
-    description: "Busca cliente por nombre o RFC con facturas pendientes.",
-    input_schema: {
-      type: "object" as const,
-      properties: { query: { type: "string", description: "Nombre o RFC" } },
-      required: ["query"],
+    type: "function",
+    function: {
+      name: "get_score_empleados",
+      description: "Score confianza empleados. Detecta banderas rojas (score < 60).",
+      parameters: {
+        type: "object",
+        properties: { solo_banderas_rojas: { type: "boolean" } },
+        additionalProperties: false,
+      },
     },
   },
   {
-    name: "get_top_productos",
-    description: "Top productos más vendidos por cantidad o monto.",
-    input_schema: {
-      type: "object" as const,
-      properties: {
-        ordenar_por: { type: "string", enum: ["cantidad", "monto"] },
-        periodo: { type: "string", enum: ["mes", "ytd"] },
-        limit: { type: "integer" },
+    type: "function",
+    function: {
+      name: "get_inventario_bajo",
+      description: "Productos con inventario por debajo del mínimo.",
+      parameters: {
+        type: "object",
+        properties: { limit: { type: "integer" } },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_cobros_pendientes",
+      description: "Resumen cartera por antigüedad. Total vencido, cobros del día.",
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_dashboard_resumen",
+      description: "Resumen ejecutivo completo del día. Usar para 'cómo va el día' o 'dame un resumen'.",
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "buscar_cliente",
+      description: "Busca cliente por nombre o RFC con facturas pendientes.",
+      parameters: {
+        type: "object",
+        properties: { query: { type: "string", description: "Nombre o RFC" } },
+        required: ["query"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_top_productos",
+      description: "Top productos más vendidos por cantidad o monto.",
+      parameters: {
+        type: "object",
+        properties: {
+          ordenar_por: { type: "string", enum: ["cantidad", "monto"] },
+          periodo: { type: "string", enum: ["mes", "ytd"] },
+          limit: { type: "integer" },
+        },
+        additionalProperties: false,
       },
     },
   },
@@ -112,7 +151,7 @@ async function executeTool(sb: any, name: string, input: any): Promise<any> {
 
   switch (name) {
     case "get_ventas": {
-      const desde = { hoy: fi, ayer: new Date(Date.now() - 86400000).toISOString().split("T")[0] + "T00:00:00Z", semana: new Date(Date.now() - 7 * 86400000).toISOString(), mes: mi, ytd: yi }[input.periodo] || fi;
+      const desde = { hoy: fi, ayer: new Date(Date.now() - 86400000).toISOString().split("T")[0] + "T00:00:00Z", semana: new Date(Date.now() - 7 * 86400000).toISOString(), mes: mi, ytd: yi }[input.periodo as string] || fi;
       const { data } = await sb.from("pedidos").select("total").gte("fecha_pedido", desde);
       const total = (data || []).reduce((s: number, p: any) => s + (p.total || 0), 0);
       return { periodo: input.periodo, total, pedidos: data?.length || 0, ticket_promedio: data?.length ? total / data.length : 0 };
@@ -150,8 +189,7 @@ async function executeTool(sb: any, name: string, input: any): Promise<any> {
       return { empleados: data };
     }
     case "get_inventario_bajo": {
-      const { data } = await sb.from("productos").select("codigo, nombre, stock_actual, stock_minimo").lt("stock_actual", sb.rpc ? 0 : 999999).eq("activo", true).order("stock_actual").limit(input.limit || 10);
-      // Filter client-side since we can't do column comparison in PostgREST easily
+      const { data } = await sb.from("productos").select("codigo, nombre, stock_actual, stock_minimo").eq("activo", true).order("stock_actual").limit(100);
       const bajo = (data || []).filter((p: any) => p.stock_actual < p.stock_minimo);
       return { productos_bajo_minimo: bajo.slice(0, input.limit || 10) };
     }
@@ -203,12 +241,11 @@ serve(async (req) => {
     const { conversacion_id, mensaje } = await req.json();
     if (!mensaje) return respond(400, { error: "mensaje requerido" });
 
-    const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!anthropicKey) return respond(400, { error: "ANTHROPIC_API_KEY no configurada" });
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) return respond(500, { error: "LOVABLE_API_KEY no configurada" });
 
     const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // Get user from auth
     const authHeader = req.headers.get("Authorization");
     let userId: string | null = null;
     if (authHeader) {
@@ -217,7 +254,6 @@ serve(async (req) => {
     }
     if (!userId) return respond(401, { error: "No autenticado" });
 
-    // Load or create conversation
     let conv: any = null;
     let mensajes: any[] = [];
 
@@ -229,43 +265,73 @@ serve(async (req) => {
 
     mensajes.push({ role: "user", content: mensaje });
 
-    // Tool use loop
     const toolsUsados: string[] = [];
     let respuestaFinal = "";
     let iter = 0;
 
     while (iter++ < 8) {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const apiMessages = [
+        { role: "system", content: SYSTEM_PROMPT },
+        ...mensajes,
+      ];
+
+      const res = await fetch(GATEWAY_URL, {
         method: "POST",
-        headers: { "x-api-key": anthropicKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+        headers: {
+          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-          model: MODEL, max_tokens: 2000, system: SYSTEM_PROMPT, tools: TOOLS,
-          messages: mensajes.map((m: any) => ({ role: m.role, content: m.content })),
+          model: MODEL,
+          messages: apiMessages,
+          tools: TOOLS,
         }),
       });
 
-      if (!res.ok) throw new Error(`Claude API: ${res.status} ${await res.text()}`);
+      if (res.status === 429) return respond(429, { error: "Rate limit excedido. Intenta de nuevo en un momento." });
+      if (res.status === 402) return respond(402, { error: "Créditos agotados. Agrega fondos en Settings > Workspace > Usage." });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`Lovable AI Gateway error ${res.status}: ${txt}`);
+      }
+
       const data = await res.json();
+      const choice = data.choices?.[0];
+      const msg = choice?.message;
+      if (!msg) throw new Error("Respuesta sin mensaje del gateway");
 
-      mensajes.push({ role: "assistant", content: data.content });
+      // Persist assistant message (with possible tool_calls)
+      mensajes.push({
+        role: "assistant",
+        content: msg.content || "",
+        ...(msg.tool_calls ? { tool_calls: msg.tool_calls } : {}),
+      });
 
-      if (data.stop_reason !== "tool_use") {
-        respuestaFinal = data.content.filter((b: any) => b.type === "text").map((b: any) => b.text).join("\n");
+      const toolCalls = msg.tool_calls || [];
+      if (!toolCalls.length || choice.finish_reason === "stop") {
+        respuestaFinal = msg.content || "";
         break;
       }
 
-      const results: any[] = [];
-      for (const block of data.content) {
-        if (block.type === "tool_use") {
-          toolsUsados.push(block.name);
-          const result = await executeTool(sb, block.name, block.input);
-          results.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
+      // Execute each tool call and append tool results
+      for (const tc of toolCalls) {
+        const fname = tc.function?.name;
+        let fargs: any = {};
+        try {
+          fargs = tc.function?.arguments ? JSON.parse(tc.function.arguments) : {};
+        } catch {
+          fargs = {};
         }
+        toolsUsados.push(fname);
+        const result = await executeTool(sb, fname, fargs);
+        mensajes.push({
+          role: "tool",
+          tool_call_id: tc.id,
+          content: JSON.stringify(result),
+        });
       }
-      mensajes.push({ role: "user", content: results });
     }
 
-    // Save conversation
     if (!conv) {
       const { data: nueva } = await sb.from("josan_conversaciones").insert({
         user_id: userId, titulo: mensaje.substring(0, 80), mensajes,
@@ -283,6 +349,7 @@ serve(async (req) => {
 
     return respond(200, { respuesta: respuestaFinal, conversacion_id: conv?.id, tools_usados: toolsUsados });
   } catch (error: any) {
+    console.error("chat-josan error:", error);
     return respond(500, { error: error.message });
   }
 });
