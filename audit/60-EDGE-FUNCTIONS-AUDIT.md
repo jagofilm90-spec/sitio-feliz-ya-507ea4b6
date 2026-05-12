@@ -112,4 +112,20 @@ Todas pending deploy (necesitan `supabase functions deploy`).
 
 ---
 
-*77 edge functions. 61 activas, 14 cron/webhook, 2 candidatas a kill.*
+---
+
+## FASE 2A.2 — Ejecutada 11 mayo 2026
+
+### Eliminadas (2 functions, 559 LoC)
+
+| Function | LoC | Razón |
+|----------|-----|-------|
+| migrate-proveedor-addresses | 322 | Migration one-time ya ejecutada |
+| generar-hoja-fisica-pdf | 237 | V1 reemplazada por generar-hoja-salida |
+
+### Verificaciones
+- TypeScript: 0 errores
+- Build: pasa (26.62s)
+- 0 refs rotas
+
+*75 edge functions restantes. 61 activas, 14 cron/webhook.*
