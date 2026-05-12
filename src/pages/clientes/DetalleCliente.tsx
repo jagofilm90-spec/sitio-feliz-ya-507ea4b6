@@ -23,6 +23,7 @@ import { ClienteCortesiasTab } from "@/components/clientes/ClienteCortesiasTab";
 import { ClienteCreditosExcepcionesTab } from "@/components/clientes/ClienteCreditosExcepcionesTab";
 import { ClienteProgramacionTab } from "@/components/clientes/ClienteProgramacionTab";
 import { ClienteUsuarioTab } from "@/components/clientes/ClienteUsuarioTab";
+import { CreditCard } from "@/components/clientes/CreditCard";
 
 interface Zona {
   id: string;
@@ -446,7 +447,8 @@ export default function DetalleCliente() {
             <ClienteCortesiasTab clienteId={id!} clienteNombre={cliente.razon_social || cliente.nombre} />
           </TabsContent>
 
-          <TabsContent value="credito" className="mt-4">
+          <TabsContent value="credito" className="mt-4 space-y-4">
+            <CreditCard clienteId={id!} />
             <ClienteCreditosExcepcionesTab
               clienteId={id!}
               clienteNombre={cliente.razon_social || cliente.nombre}
