@@ -18,6 +18,11 @@ import {
   AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { SucursalFormModal } from "@/components/clientes/SucursalFormModal";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ClienteCortesiasTab } from "@/components/clientes/ClienteCortesiasTab";
+import { ClienteCreditosExcepcionesTab } from "@/components/clientes/ClienteCreditosExcepcionesTab";
+import { ClienteProgramacionTab } from "@/components/clientes/ClienteProgramacionTab";
+import { ClienteUsuarioTab } from "@/components/clientes/ClienteUsuarioTab";
 
 interface Zona {
   id: string;
@@ -297,6 +302,17 @@ export default function DetalleCliente() {
           )}
         </div>
 
+        <Tabs defaultValue="general" className="w-full">
+          <TabsList className="flex-wrap">
+            <TabsTrigger value="general" className="text-xs">General</TabsTrigger>
+            <TabsTrigger value="sucursales" className="text-xs">Sucursales ({sucursales.length})</TabsTrigger>
+            <TabsTrigger value="cortesias" className="text-xs">Cortesías</TabsTrigger>
+            <TabsTrigger value="credito" className="text-xs">Crédito</TabsTrigger>
+            <TabsTrigger value="programacion" className="text-xs">Programación</TabsTrigger>
+            <TabsTrigger value="usuario" className="text-xs">Portal</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="general" className="space-y-6 mt-4">
         {/* Info fiscal */}
         {cliente.direccion && (
           <div className="text-sm text-muted-foreground">
@@ -417,6 +433,43 @@ export default function DetalleCliente() {
             Agregar punto de entrega
           </Button>
         </section>
+          </TabsContent>
+
+          <TabsContent value="sucursales" className="mt-4">
+            <p className="text-sm text-muted-foreground mb-4">
+              Gestión avanzada de sucursales disponible próximamente.
+              Los puntos de entrega se administran desde la pestaña General.
+            </p>
+          </TabsContent>
+
+          <TabsContent value="cortesias" className="mt-4">
+            <ClienteCortesiasTab clienteId={id!} clienteNombre={cliente.razon_social || cliente.nombre} />
+          </TabsContent>
+
+          <TabsContent value="credito" className="mt-4">
+            <ClienteCreditosExcepcionesTab
+              clienteId={id!}
+              clienteNombre={cliente.razon_social || cliente.nombre}
+              terminoDefault={cliente.termino_credito || "contado"}
+            />
+          </TabsContent>
+
+          <TabsContent value="programacion" className="mt-4">
+            <ClienteProgramacionTab clienteId={id!} clienteNombre={cliente.razon_social || cliente.nombre} />
+          </TabsContent>
+
+          <TabsContent value="usuario" className="mt-4">
+            <ClienteUsuarioTab
+              cliente={{
+                id: id!,
+                nombre: cliente.razon_social || cliente.nombre,
+                email: cliente.email,
+                user_id: cliente.user_id,
+              }}
+              onUserCreated={loadData}
+            />
+          </TabsContent>
+        </Tabs>
       </PageContainer>
 
       {/* Delete client dialog */}
