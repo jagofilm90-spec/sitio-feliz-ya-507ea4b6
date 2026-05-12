@@ -23,8 +23,9 @@ import { ClienteCortesiasTab } from "@/components/clientes/ClienteCortesiasTab";
 import { ClienteCreditosExcepcionesTab } from "@/components/clientes/ClienteCreditosExcepcionesTab";
 import { ClienteProgramacionTab } from "@/components/clientes/ClienteProgramacionTab";
 import { ClienteUsuarioTab } from "@/components/clientes/ClienteUsuarioTab";
-import { CreditCard } from "@/components/clientes/CreditCard";
-import { ClienteHierarchyTab } from "@/components/clientes/ClienteHierarchyTab";
+// Temporalmente desactivados (rollback FASES 2+3 — refactor pendiente)
+// import { CreditCard } from "@/components/clientes/CreditCard";
+// import { ClienteHierarchyTab } from "@/components/clientes/ClienteHierarchyTab";
 
 interface Zona {
   id: string;
@@ -309,10 +310,10 @@ export default function DetalleCliente() {
             <TabsTrigger value="general" className="text-xs">General</TabsTrigger>
             <TabsTrigger value="sucursales" className="text-xs">Sucursales ({sucursales.length})</TabsTrigger>
             <TabsTrigger value="cortesias" className="text-xs">Cortesías</TabsTrigger>
-            <TabsTrigger value="credito" className="text-xs">Crédito</TabsTrigger>
+            {/* <TabsTrigger value="credito" className="text-xs">Crédito</TabsTrigger> — rollback FASE 2 */}
             <TabsTrigger value="programacion" className="text-xs">Programación</TabsTrigger>
             <TabsTrigger value="usuario" className="text-xs">Portal</TabsTrigger>
-            <TabsTrigger value="hierarchy" className="text-xs">Jerarquía</TabsTrigger>
+            {/* <TabsTrigger value="hierarchy" className="text-xs">Jerarquía</TabsTrigger> — rollback FASE 3 */}
           </TabsList>
 
           <TabsContent value="general" className="space-y-6 mt-4">
@@ -449,14 +450,12 @@ export default function DetalleCliente() {
             <ClienteCortesiasTab clienteId={id!} clienteNombre={cliente.razon_social || cliente.nombre} />
           </TabsContent>
 
+          {/* Rollback FASE 2 — credito tab temporalmente desactivado
           <TabsContent value="credito" className="mt-4 space-y-4">
             <CreditCard clienteId={id!} />
-            <ClienteCreditosExcepcionesTab
-              clienteId={id!}
-              clienteNombre={cliente.razon_social || cliente.nombre}
-              terminoDefault={cliente.termino_credito || "contado"}
-            />
+            <ClienteCreditosExcepcionesTab ... />
           </TabsContent>
+          */}
 
           <TabsContent value="programacion" className="mt-4">
             <ClienteProgramacionTab clienteId={id!} clienteNombre={cliente.razon_social || cliente.nombre} />
@@ -474,9 +473,11 @@ export default function DetalleCliente() {
             />
           </TabsContent>
 
+          {/* Rollback FASE 3 — hierarchy tab temporalmente desactivado
           <TabsContent value="hierarchy" className="mt-4">
             <ClienteHierarchyTab clienteId={id!} tipoCliente={cliente.tipo_cliente} />
           </TabsContent>
+          */}
         </Tabs>
       </PageContainer>
 
