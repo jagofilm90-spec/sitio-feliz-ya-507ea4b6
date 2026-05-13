@@ -7027,7 +7027,10 @@ export type Database = {
           bloqueado_venta: boolean | null
           categoria: string | null
           categoria_id: string | null
+          clave_prod_serv: string | null
+          clave_unidad_sat: string | null
           codigo: string
+          codigo_barras: string | null
           codigo_sat: string | null
           contenido_empaque: string | null
           costo_promedio_ponderado: number | null
@@ -7042,10 +7045,15 @@ export type Database = {
           id: string
           maneja_caducidad: boolean | null
           marca: string | null
+          marca_propia: boolean
           nombre: string
           peso_kg: number | null
           piezas_por_unidad: number | null
           precio_compra: number
+          precio_mayoreo: number | null
+          precio_medio: number | null
+          precio_menudeo: number | null
+          precio_piso: number | null
           precio_por_kilo: boolean
           precio_venta: number
           producto_base_id: string | null
@@ -7068,7 +7076,10 @@ export type Database = {
           bloqueado_venta?: boolean | null
           categoria?: string | null
           categoria_id?: string | null
+          clave_prod_serv?: string | null
+          clave_unidad_sat?: string | null
           codigo: string
+          codigo_barras?: string | null
           codigo_sat?: string | null
           contenido_empaque?: string | null
           costo_promedio_ponderado?: number | null
@@ -7083,10 +7094,15 @@ export type Database = {
           id?: string
           maneja_caducidad?: boolean | null
           marca?: string | null
+          marca_propia?: boolean
           nombre: string
           peso_kg?: number | null
           piezas_por_unidad?: number | null
           precio_compra?: number
+          precio_mayoreo?: number | null
+          precio_medio?: number | null
+          precio_menudeo?: number | null
+          precio_piso?: number | null
           precio_por_kilo?: boolean
           precio_venta?: number
           producto_base_id?: string | null
@@ -7109,7 +7125,10 @@ export type Database = {
           bloqueado_venta?: boolean | null
           categoria?: string | null
           categoria_id?: string | null
+          clave_prod_serv?: string | null
+          clave_unidad_sat?: string | null
           codigo?: string
+          codigo_barras?: string | null
           codigo_sat?: string | null
           contenido_empaque?: string | null
           costo_promedio_ponderado?: number | null
@@ -7124,10 +7143,15 @@ export type Database = {
           id?: string
           maneja_caducidad?: boolean | null
           marca?: string | null
+          marca_propia?: boolean
           nombre?: string
           peso_kg?: number | null
           piezas_por_unidad?: number | null
           precio_compra?: number
+          precio_mayoreo?: number | null
+          precio_medio?: number | null
+          precio_menudeo?: number | null
+          precio_piso?: number | null
           precio_por_kilo?: boolean
           precio_venta?: number
           producto_base_id?: string | null
@@ -10164,6 +10188,8 @@ export type Database = {
         | "cubeta"
         | "balón"
         | "paquete"
+        | "balon"
+        | "bolsa"
       zona_region:
         | "cdmx_norte"
         | "cdmx_centro"
@@ -10357,6 +10383,8 @@ export const Constants = {
         "cubeta",
         "balón",
         "paquete",
+        "balon",
+        "bolsa",
       ],
       zona_region: [
         "cdmx_norte",
