@@ -23,9 +23,8 @@ import { ClienteCortesiasTab } from "@/components/clientes/ClienteCortesiasTab";
 import { ClienteCreditosExcepcionesTab } from "@/components/clientes/ClienteCreditosExcepcionesTab";
 import { ClienteProgramacionTab } from "@/components/clientes/ClienteProgramacionTab";
 import { ClienteUsuarioTab } from "@/components/clientes/ClienteUsuarioTab";
-// Temporalmente desactivados (rollback FASES 2+3 — refactor pendiente)
+// Temporalmente desactivado (rollback FASE 2 — refactor pendiente)
 // import { CreditCard } from "@/components/clientes/CreditCard";
-// import { ClienteHierarchyTab } from "@/components/clientes/ClienteHierarchyTab";
 
 interface Zona {
   id: string;
@@ -313,7 +312,6 @@ export default function DetalleCliente() {
             {/* <TabsTrigger value="credito" className="text-xs">Crédito</TabsTrigger> — rollback FASE 2 */}
             <TabsTrigger value="programacion" className="text-xs">Programación</TabsTrigger>
             <TabsTrigger value="usuario" className="text-xs">Portal</TabsTrigger>
-            {/* <TabsTrigger value="hierarchy" className="text-xs">Jerarquía</TabsTrigger> — rollback FASE 3 */}
           </TabsList>
 
           <TabsContent value="general" className="space-y-6 mt-4">
@@ -473,11 +471,6 @@ export default function DetalleCliente() {
             />
           </TabsContent>
 
-          {/* Rollback FASE 3 — hierarchy tab temporalmente desactivado
-          <TabsContent value="hierarchy" className="mt-4">
-            <ClienteHierarchyTab clienteId={id!} tipoCliente={cliente.tipo_cliente} />
-          </TabsContent>
-          */}
         </Tabs>
       </PageContainer>
 
